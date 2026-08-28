@@ -1,0 +1,596 @@
+{
+  "pipelineVersion": "spilltrace-0.1.0",
+  "generatedUtc": "2026-08-28T07:29:02Z",
+  "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+  "note": "8-bit previews rendered from the supplied GeoTIFFs; the 48 GB raw archive is never served to the browser",
+  "scenes": [
+    {
+      "scene": "00053",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        54.59810774238421,
+        25.501552815768058,
+        54.782082712571885,
+        25.685527785955735
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00053_vv.png",
+        "vh": "00053_vh.png",
+        "referenceMask": "00053_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -35.661,
+          "high": -20.574,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -39.912,
+          "high": -31.03,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "test",
+      "acquiredStart": "2017-03-11T02:15:12.182Z",
+      "region": "Persian Gulf",
+      "referenceOilFraction": 0.57374
+    },
+    {
+      "scene": "00052",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        54.51878650279645,
+        25.531826040842887,
+        54.70276147298413,
+        25.715801011030564
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00052_vv.png",
+        "vh": "00052_vh.png",
+        "referenceMask": "00052_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -35.687,
+          "high": -20.953,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -40.28,
+          "high": -31.988,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "test",
+      "acquiredStart": "2017-03-11T02:15:11.795Z",
+      "region": "Persian Gulf",
+      "referenceOilFraction": 0.494196
+    },
+    {
+      "scene": "00041",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        48.44553942207837,
+        28.52555446980896,
+        48.629514392266046,
+        28.709529439996636
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00041_vv.png",
+        "vh": "00041_vh.png",
+        "referenceMask": "00041_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -31.016,
+          "high": -16.588,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -36.408,
+          "high": -27.104,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "test",
+      "acquiredStart": "2017-08-10T02:47:23.753Z",
+      "region": "Persian Gulf",
+      "referenceOilFraction": 0.325914
+    },
+    {
+      "scene": "00188",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        50.2496607457989,
+        27.879647695383746,
+        50.433635715986576,
+        28.063622665571422
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00188_vv.png",
+        "vh": "00188_vh.png",
+        "referenceMask": "00188_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -25.701,
+          "high": -16.545,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -36.833,
+          "high": -26.811,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "test",
+      "acquiredStart": "2017-08-17T02:39:18.143Z",
+      "region": "Persian Gulf",
+      "referenceOilFraction": 0.097251
+    },
+    {
+      "scene": "00039",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        48.38975404293455,
+        28.608019812891133,
+        48.573729013122225,
+        28.79199478307881
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00039_vv.png",
+        "vh": "00039_vh.png",
+        "referenceMask": "00039_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -29.182,
+          "high": -16.585,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -36.594,
+          "high": -26.697,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "val",
+      "acquiredStart": "2017-08-10T02:47:22.692Z",
+      "region": "Persian Gulf",
+      "referenceOilFraction": 0.143501
+    },
+    {
+      "scene": "00256",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        -95.08276656125709,
+        26.20041372689808,
+        -94.89879159106941,
+        26.384388697085758
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00256_vv.png",
+        "vh": "00256_vh.png",
+        "referenceMask": "00256_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -28.625,
+          "high": -18.819,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -38.079,
+          "high": -29.133,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "val",
+      "acquiredStart": "2017-12-03T00:25:38.178Z",
+      "region": "Gulf of Mexico",
+      "referenceOilFraction": 0.081951
+    },
+    {
+      "scene": "00091",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        104.09847873293823,
+        3.290325618763523,
+        104.28245370312591,
+        3.4743005889512006
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00091_vv.png",
+        "vh": "00091_vh.png",
+        "referenceMask": "00091_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -28.187,
+          "high": -19.052,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -36.342,
+          "high": -28.775,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "val",
+      "acquiredStart": "2017-07-10T22:47:28.187Z",
+      "region": "Strait of Malacca",
+      "referenceOilFraction": 0.072438
+    },
+    {
+      "scene": "00240",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        10.89984459336895,
+        -6.343259066700538,
+        11.083819563556629,
+        -6.15928409651286
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00240_vv.png",
+        "vh": "00240_vh.png",
+        "referenceMask": "00240_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -32.509,
+          "high": -22.004,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -41.893,
+          "high": -32.913,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "val",
+      "acquiredStart": "2017-05-28T04:52:07.279Z",
+      "region": "South Atlantic Ocean",
+      "referenceOilFraction": 0.042528
+    },
+    {
+      "scene": "00057",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        54.49489131623888,
+        25.35593590821228,
+        54.678866286426555,
+        25.539910878399958
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00057_vv.png",
+        "vh": "00057_vh.png",
+        "referenceMask": "00057_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -35.508,
+          "high": -20.615,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -40.334,
+          "high": -31.414,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "train",
+      "acquiredStart": "2017-03-11T02:15:14.041Z",
+      "region": "Persian Gulf",
+      "referenceOilFraction": 0.497162
+    },
+    {
+      "scene": "00056",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        54.61724185793595,
+        25.34650359772903,
+        54.80121682812363,
+        25.530478567916706
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00056_vv.png",
+        "vh": "00056_vh.png",
+        "referenceMask": "00056_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -34.535,
+          "high": -19.677,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -39.242,
+          "high": -29.738,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "train",
+      "acquiredStart": "2017-03-11T02:15:14.161Z",
+      "region": "Persian Gulf",
+      "referenceOilFraction": 0.369688
+    },
+    {
+      "scene": "00042",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        48.484077147767096,
+        28.483333651455343,
+        48.66805211795477,
+        28.66730862164302
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00042_vv.png",
+        "vh": "00042_vh.png",
+        "referenceMask": "00042_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -31.069,
+          "high": -16.203,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -36.379,
+          "high": -26.86,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "train",
+      "acquiredStart": "2017-08-10T02:47:24.296Z",
+      "region": "Persian Gulf",
+      "referenceOilFraction": 0.318483
+    },
+    {
+      "scene": "00051",
+      "downsampleFactor": 4,
+      "previewSize": [
+        512,
+        512
+      ],
+      "sourceSize": [
+        2048,
+        2048
+      ],
+      "bounds": [
+        54.51420509484745,
+        25.58922838749812,
+        54.698180065035125,
+        25.773203357685798
+      ],
+      "epsg": 4326,
+      "files": {
+        "vv": "00051_vv.png",
+        "vh": "00051_vh.png",
+        "referenceMask": "00051_mask.png"
+      },
+      "contrastStretch": {
+        "vv": {
+          "low": -35.385,
+          "high": -20.739,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        },
+        "vh": {
+          "low": -40.116,
+          "high": -31.828,
+          "percentiles": [
+            2.0,
+            98.0
+          ],
+          "unit": "dB"
+        }
+      },
+      "label": "Satellite imagery: Supplied Sentinel-1 SAR dataset",
+      "split": "train",
+      "acquiredStart": "2017-03-11T02:15:11.062Z",
+      "region": "Persian Gulf",
+      "referenceOilFraction": 0.318341
+    }
+  ]
+}

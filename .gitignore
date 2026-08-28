@@ -1,0 +1,68 @@
+# ---------------------------------------------------------------------------
+# SpillTrace — what stays out of git
+#
+# The repository is the *product*: code, the trained model, the demo case and its
+# preview images. The ~91 GB of Sentinel-1 source rasters stay on local disk. A
+# clone can run the full dashboard and the whole test suite; it cannot retrain
+# without downloading the dataset. See README.md.
+# ---------------------------------------------------------------------------
+
+# -- the datasets (about 91 GB) ---------------------------------------------
+# Sentinel-1 GeoTIFF scenes and their masks, and the archives they arrived in.
+/Oil/
+/Mask_oil/
+*.7z
+*.zip
+*.tar
+*.tar.gz
+
+# Ocean forcing. The CMEMS NetCDF is ~370 MB and re-downloadable from Copernicus.
+*.nc
+*.nc4
+/data/raw/
+
+# -- generated intermediates -------------------------------------------------
+# Patch cache: ~242 MB of .npz rebuilt by scripts/run_preprocess.py. Two of the
+# three files are over GitHub's 100 MB hard limit on their own.
+/data/processed/cache/
+
+# -- the virtualenv ----------------------------------------------------------
+# Recreate with: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/
+venv/
+env/
+
+# -- python noise ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+# NOTE: not `dist/` — apps/web's offline bundle lives there and is committed
+# deliberately, as the demo's hot spare on port 8787.
+
+# -- editors and operating systems -------------------------------------------
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# ---------------------------------------------------------------------------
+# Deliberately committed, despite being generated. Listed here so nobody
+# "tidies" them away later:
+#
+#   models/unet_vv_vh.npz          7.3 MB  — the trained model. No model, no demo.
+#   data/processed/previews/       8.6 MB  — the PNGs the API serves to the
+#                                            dashboard. Without these the
+#                                            imagery screens render nothing.
+#   data/processed/cases/          1.9 MB  — the two stored cases, incl. `demo`.
+#   data/processed/*.json          ~3.3 MB — audit, splits, metrics, patch index.
+#   dist/                          3.3 MB  — offline static bundle.
+# ---------------------------------------------------------------------------

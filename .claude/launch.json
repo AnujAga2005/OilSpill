@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "spilltrace",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["scripts/run_api.py", "--port", "8765"],
+      "port": 8765
+    },
+    {
+      "name": "spilltrace-dist",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "http.server", "8787", "--directory", "dist"],
+      "port": 8787
+    }
+  ]
+}

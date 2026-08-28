@@ -1,0 +1,7397 @@
+{
+  "pipelineVersion": "spilltrace-0.1.0",
+  "generatedUtc": "2026-08-28T08:16:26Z",
+  "checkpoint": "unet_vv_vh.npz",
+  "modelParameters": 1963953,
+  "note": "Whole-scene evaluation at 2048x2048. The patch metrics in metrics.json are measured on 128 px crops sampled around labelled oil and therefore do not include the false positives that only appear at scene scale.",
+  "patchThreshold": 0.6,
+  "sceneThreshold": 0.8,
+  "thresholdSelection": "chosen on the validation scenes by mean per-scene IoU, then applied unchanged to the test scenes",
+  "thresholdGrid": [
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    0.95
+  ],
+  "validation": {
+    "grid": [
+      {
+        "threshold": 0.5,
+        "pooled": {
+          "iou": 0.561326,
+          "dice": 0.719037,
+          "precision": 0.587845,
+          "recall": 0.925609
+        },
+        "meanSceneIou": 0.610569,
+        "medianSceneIou": 0.688968,
+        "worstSceneIou": 0.04673,
+        "meanSceneDice": 0.731735,
+        "scenes": 37
+      },
+      {
+        "threshold": 0.6,
+        "pooled": {
+          "iou": 0.603895,
+          "dice": 0.753035,
+          "precision": 0.642829,
+          "recall": 0.908848
+        },
+        "meanSceneIou": 0.628969,
+        "medianSceneIou": 0.730047,
+        "worstSceneIou": 0.068514,
+        "meanSceneDice": 0.749786,
+        "scenes": 37
+      },
+      {
+        "threshold": 0.7,
+        "pooled": {
+          "iou": 0.6413,
+          "dice": 0.781454,
+          "precision": 0.698451,
+          "recall": 0.886846
+        },
+        "meanSceneIou": 0.643797,
+        "medianSceneIou": 0.745269,
+        "worstSceneIou": 0.104662,
+        "meanSceneDice": 0.765273,
+        "scenes": 37
+      },
+      {
+        "threshold": 0.8,
+        "pooled": {
+          "iou": 0.672571,
+          "dice": 0.804236,
+          "precision": 0.761635,
+          "recall": 0.851885
+        },
+        "meanSceneIou": 0.654245,
+        "medianSceneIou": 0.718713,
+        "worstSceneIou": 0.169043,
+        "meanSceneDice": 0.777764,
+        "scenes": 37
+      },
+      {
+        "threshold": 0.9,
+        "pooled": {
+          "iou": 0.683853,
+          "dice": 0.812248,
+          "precision": 0.842395,
+          "recall": 0.784184
+        },
+        "meanSceneIou": 0.646717,
+        "medianSceneIou": 0.651615,
+        "worstSceneIou": 0.294669,
+        "meanSceneDice": 0.775191,
+        "scenes": 37
+      },
+      {
+        "threshold": 0.95,
+        "pooled": {
+          "iou": 0.655848,
+          "dice": 0.79216,
+          "precision": 0.900178,
+          "recall": 0.707288
+        },
+        "meanSceneIou": 0.611976,
+        "medianSceneIou": 0.631088,
+        "worstSceneIou": 0.252543,
+        "meanSceneDice": 0.74558,
+        "scenes": 37
+      }
+    ],
+    "atSelected": {
+      "threshold": 0.8,
+      "pooled": {
+        "iou": 0.672571,
+        "dice": 0.804236,
+        "precision": 0.761635,
+        "recall": 0.851885
+      },
+      "meanSceneIou": 0.654245,
+      "medianSceneIou": 0.718713,
+      "worstSceneIou": 0.169043,
+      "meanSceneDice": 0.777764,
+      "scenes": 37
+    }
+  },
+  "test": {
+    "atPatchThreshold": {
+      "threshold": 0.6,
+      "pooled": {
+        "iou": 0.740973,
+        "dice": 0.851217,
+        "precision": 0.764799,
+        "recall": 0.959652
+      },
+      "meanSceneIou": 0.616832,
+      "medianSceneIou": 0.683728,
+      "worstSceneIou": 0.084766,
+      "meanSceneDice": 0.732471,
+      "scenes": 36
+    },
+    "atSceneThreshold": {
+      "threshold": 0.8,
+      "pooled": {
+        "iou": 0.781541,
+        "dice": 0.877376,
+        "precision": 0.82967,
+        "recall": 0.930903
+      },
+      "meanSceneIou": 0.640966,
+      "medianSceneIou": 0.674389,
+      "worstSceneIou": 0.131387,
+      "meanSceneDice": 0.755032,
+      "scenes": 36
+    },
+    "grid": [
+      {
+        "threshold": 0.5,
+        "pooled": {
+          "iou": 0.719495,
+          "dice": 0.836868,
+          "precision": 0.737036,
+          "recall": 0.967981
+        },
+        "meanSceneIou": 0.602344,
+        "medianSceneIou": 0.666605,
+        "worstSceneIou": 0.072663,
+        "meanSceneDice": 0.71907,
+        "scenes": 36
+      },
+      {
+        "threshold": 0.6,
+        "pooled": {
+          "iou": 0.740973,
+          "dice": 0.851217,
+          "precision": 0.764799,
+          "recall": 0.959652
+        },
+        "meanSceneIou": 0.616832,
+        "medianSceneIou": 0.683728,
+        "worstSceneIou": 0.084766,
+        "meanSceneDice": 0.732471,
+        "scenes": 36
+      },
+      {
+        "threshold": 0.7,
+        "pooled": {
+          "iou": 0.761139,
+          "dice": 0.864372,
+          "precision": 0.79393,
+          "recall": 0.948529
+        },
+        "meanSceneIou": 0.629646,
+        "medianSceneIou": 0.669252,
+        "worstSceneIou": 0.102197,
+        "meanSceneDice": 0.744383,
+        "scenes": 36
+      },
+      {
+        "threshold": 0.8,
+        "pooled": {
+          "iou": 0.781541,
+          "dice": 0.877376,
+          "precision": 0.82967,
+          "recall": 0.930903
+        },
+        "meanSceneIou": 0.640966,
+        "medianSceneIou": 0.674389,
+        "worstSceneIou": 0.131387,
+        "meanSceneDice": 0.755032,
+        "scenes": 36
+      },
+      {
+        "threshold": 0.9,
+        "pooled": {
+          "iou": 0.798544,
+          "dice": 0.887989,
+          "precision": 0.879938,
+          "recall": 0.896189
+        },
+        "meanSceneIou": 0.647784,
+        "medianSceneIou": 0.698388,
+        "worstSceneIou": 0.110977,
+        "meanSceneDice": 0.761567,
+        "scenes": 36
+      },
+      {
+        "threshold": 0.95,
+        "pooled": {
+          "iou": 0.791145,
+          "dice": 0.883396,
+          "precision": 0.917043,
+          "recall": 0.852131
+        },
+        "meanSceneIou": 0.637287,
+        "medianSceneIou": 0.647286,
+        "worstSceneIou": 0.080686,
+        "meanSceneDice": 0.75251,
+        "scenes": 36
+      }
+    ]
+  },
+  "perScene": [
+    {
+      "scene": "00007",
+      "split": "val",
+      "referenceOilFraction": 0.01687336,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 68187,
+            "fp": 16484,
+            "fn": 2585,
+            "tn": 4107048
+          },
+          "scores": {
+            "iou": 0.781459,
+            "dice": 0.877325,
+            "precision": 0.805317,
+            "recall": 0.963474
+          },
+          "predictedOilFraction": 0.02018714
+        },
+        "0.6": {
+          "counts": {
+            "tp": 66873,
+            "fp": 11736,
+            "fn": 3899,
+            "tn": 4111796
+          },
+          "scores": {
+            "iou": 0.810503,
+            "dice": 0.895335,
+            "precision": 0.850704,
+            "recall": 0.944908
+          },
+          "predictedOilFraction": 0.01874185
+        },
+        "0.7": {
+          "counts": {
+            "tp": 65050,
+            "fp": 7940,
+            "fn": 5722,
+            "tn": 4115592
+          },
+          "scores": {
+            "iou": 0.826431,
+            "dice": 0.904968,
+            "precision": 0.891218,
+            "recall": 0.919149
+          },
+          "predictedOilFraction": 0.01740217
+        },
+        "0.8": {
+          "counts": {
+            "tp": 61829,
+            "fp": 4283,
+            "fn": 8943,
+            "tn": 4119249
+          },
+          "scores": {
+            "iou": 0.823783,
+            "dice": 0.903378,
+            "precision": 0.935216,
+            "recall": 0.873636
+          },
+          "predictedOilFraction": 0.01576233
+        },
+        "0.9": {
+          "counts": {
+            "tp": 54562,
+            "fp": 1026,
+            "fn": 16210,
+            "tn": 4122506
+          },
+          "scores": {
+            "iou": 0.759938,
+            "dice": 0.863596,
+            "precision": 0.981543,
+            "recall": 0.770955
+          },
+          "predictedOilFraction": 0.01325321
+        },
+        "0.95": {
+          "counts": {
+            "tp": 44746,
+            "fp": 131,
+            "fn": 26026,
+            "tn": 4123401
+          },
+          "scores": {
+            "iou": 0.631088,
+            "dice": 0.773824,
+            "precision": 0.997081,
+            "recall": 0.632256
+          },
+          "predictedOilFraction": 0.01069951
+        }
+      }
+    },
+    {
+      "scene": "00012",
+      "split": "val",
+      "referenceOilFraction": 0.04009199,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 150328,
+            "fp": 10088,
+            "fn": 17830,
+            "tn": 4016058
+          },
+          "scores": {
+            "iou": 0.843374,
+            "dice": 0.915033,
+            "precision": 0.937114,
+            "recall": 0.893969
+          },
+          "predictedOilFraction": 0.03824615
+        },
+        "0.6": {
+          "counts": {
+            "tp": 145645,
+            "fp": 6663,
+            "fn": 22513,
+            "tn": 4019483
+          },
+          "scores": {
+            "iou": 0.833109,
+            "dice": 0.908958,
+            "precision": 0.956253,
+            "recall": 0.86612
+          },
+          "predictedOilFraction": 0.03631306
+        },
+        "0.7": {
+          "counts": {
+            "tp": 139373,
+            "fp": 4033,
+            "fn": 28785,
+            "tn": 4022113
+          },
+          "scores": {
+            "iou": 0.809409,
+            "dice": 0.894667,
+            "precision": 0.971877,
+            "recall": 0.828822
+          },
+          "predictedOilFraction": 0.03419065
+        },
+        "0.8": {
+          "counts": {
+            "tp": 128999,
+            "fp": 1646,
+            "fn": 39159,
+            "tn": 4024500
+          },
+          "scores": {
+            "iou": 0.759694,
+            "dice": 0.863438,
+            "precision": 0.987401,
+            "recall": 0.76713
+          },
+          "predictedOilFraction": 0.0311482
+        },
+        "0.9": {
+          "counts": {
+            "tp": 109799,
+            "fp": 345,
+            "fn": 58359,
+            "tn": 4025801
+          },
+          "scores": {
+            "iou": 0.651615,
+            "dice": 0.789064,
+            "precision": 0.996868,
+            "recall": 0.652951
+          },
+          "predictedOilFraction": 0.02626038
+        },
+        "0.95": {
+          "counts": {
+            "tp": 91260,
+            "fp": 1,
+            "fn": 76898,
+            "tn": 4026145
+          },
+          "scores": {
+            "iou": 0.542701,
+            "dice": 0.703572,
+            "precision": 0.999989,
+            "recall": 0.542704
+          },
+          "predictedOilFraction": 0.02175832
+        }
+      }
+    },
+    {
+      "scene": "00014",
+      "split": "val",
+      "referenceOilFraction": 0.00734544,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 30794,
+            "fp": 628172,
+            "fn": 15,
+            "tn": 3535323
+          },
+          "scores": {
+            "iou": 0.04673,
+            "dice": 0.089287,
+            "precision": 0.046731,
+            "recall": 0.999513
+          },
+          "predictedOilFraction": 0.15710974
+        },
+        "0.6": {
+          "counts": {
+            "tp": 30744,
+            "fp": 417915,
+            "fn": 65,
+            "tn": 3745580
+          },
+          "scores": {
+            "iou": 0.068514,
+            "dice": 0.128242,
+            "precision": 0.068524,
+            "recall": 0.99789
+          },
+          "predictedOilFraction": 0.10696864
+        },
+        "0.7": {
+          "counts": {
+            "tp": 30589,
+            "fp": 261456,
+            "fn": 220,
+            "tn": 3902039
+          },
+          "scores": {
+            "iou": 0.104662,
+            "dice": 0.189491,
+            "precision": 0.104741,
+            "recall": 0.992859
+          },
+          "predictedOilFraction": 0.06962895
+        },
+        "0.8": {
+          "counts": {
+            "tp": 30131,
+            "fp": 147436,
+            "fn": 678,
+            "tn": 4016059
+          },
+          "scores": {
+            "iou": 0.169043,
+            "dice": 0.289198,
+            "precision": 0.169688,
+            "recall": 0.977993
+          },
+          "predictedOilFraction": 0.04233527
+        },
+        "0.9": {
+          "counts": {
+            "tp": 28285,
+            "fp": 65180,
+            "fn": 2524,
+            "tn": 4098315
+          },
+          "scores": {
+            "iou": 0.294669,
+            "dice": 0.455204,
+            "precision": 0.302627,
+            "recall": 0.918076
+          },
+          "predictedOilFraction": 0.02228379
+        },
+        "0.95": {
+          "counts": {
+            "tp": 25422,
+            "fp": 31998,
+            "fn": 5387,
+            "tn": 4131497
+          },
+          "scores": {
+            "iou": 0.404764,
+            "dice": 0.576273,
+            "precision": 0.442738,
+            "recall": 0.825148
+          },
+          "predictedOilFraction": 0.01368999
+        }
+      }
+    },
+    {
+      "scene": "00018",
+      "split": "val",
+      "referenceOilFraction": 0.03060603,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 128362,
+            "fp": 328361,
+            "fn": 9,
+            "tn": 3737572
+          },
+          "scores": {
+            "iou": 0.281044,
+            "dice": 0.438774,
+            "precision": 0.28105,
+            "recall": 0.99993
+          },
+          "predictedOilFraction": 0.10889125
+        },
+        "0.6": {
+          "counts": {
+            "tp": 128347,
+            "fp": 271618,
+            "fn": 24,
+            "tn": 3794315
+          },
+          "scores": {
+            "iou": 0.320876,
+            "dice": 0.485854,
+            "precision": 0.320896,
+            "recall": 0.999813
+          },
+          "predictedOilFraction": 0.09535909
+        },
+        "0.7": {
+          "counts": {
+            "tp": 128308,
+            "fp": 212513,
+            "fn": 63,
+            "tn": 3853420
+          },
+          "scores": {
+            "iou": 0.376398,
+            "dice": 0.546932,
+            "precision": 0.376467,
+            "recall": 0.999509
+          },
+          "predictedOilFraction": 0.08125806
+        },
+        "0.8": {
+          "counts": {
+            "tp": 127996,
+            "fp": 145684,
+            "fn": 375,
+            "tn": 3920249
+          },
+          "scores": {
+            "iou": 0.467045,
+            "dice": 0.636715,
+            "precision": 0.467685,
+            "recall": 0.997079
+          },
+          "predictedOilFraction": 0.0652504
+        },
+        "0.9": {
+          "counts": {
+            "tp": 126166,
+            "fp": 76049,
+            "fn": 2205,
+            "tn": 3989884
+          },
+          "scores": {
+            "iou": 0.61719,
+            "dice": 0.763287,
+            "precision": 0.62392,
+            "recall": 0.982823
+          },
+          "predictedOilFraction": 0.04821181
+        },
+        "0.95": {
+          "counts": {
+            "tp": 122925,
+            "fp": 37105,
+            "fn": 5446,
+            "tn": 4028828
+          },
+          "scores": {
+            "iou": 0.742857,
+            "dice": 0.852459,
+            "precision": 0.768137,
+            "recall": 0.957576
+          },
+          "predictedOilFraction": 0.03815413
+        }
+      }
+    },
+    {
+      "scene": "00021",
+      "split": "val",
+      "referenceOilFraction": 0.02392697,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 100357,
+            "fp": 41410,
+            "fn": 0,
+            "tn": 4052537
+          },
+          "scores": {
+            "iou": 0.707901,
+            "dice": 0.828972,
+            "precision": 0.707901,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.03379989
+        },
+        "0.6": {
+          "counts": {
+            "tp": 100357,
+            "fp": 36226,
+            "fn": 0,
+            "tn": 4057721
+          },
+          "scores": {
+            "iou": 0.734769,
+            "dice": 0.847109,
+            "precision": 0.734769,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.03256392
+        },
+        "0.7": {
+          "counts": {
+            "tp": 100345,
+            "fp": 31968,
+            "fn": 12,
+            "tn": 4061979
+          },
+          "scores": {
+            "iou": 0.758322,
+            "dice": 0.862552,
+            "precision": 0.758391,
+            "recall": 0.99988
+          },
+          "predictedOilFraction": 0.03154588
+        },
+        "0.8": {
+          "counts": {
+            "tp": 100276,
+            "fp": 27516,
+            "fn": 81,
+            "tn": 4066431
+          },
+          "scores": {
+            "iou": 0.784184,
+            "dice": 0.87904,
+            "precision": 0.784681,
+            "recall": 0.999193
+          },
+          "predictedOilFraction": 0.03046799
+        },
+        "0.9": {
+          "counts": {
+            "tp": 100031,
+            "fp": 20295,
+            "fn": 326,
+            "tn": 4073652
+          },
+          "scores": {
+            "iou": 0.829087,
+            "dice": 0.906558,
+            "precision": 0.831333,
+            "recall": 0.996752
+          },
+          "predictedOilFraction": 0.02868795
+        },
+        "0.95": {
+          "counts": {
+            "tp": 99676,
+            "fp": 13949,
+            "fn": 681,
+            "tn": 4079998
+          },
+          "scores": {
+            "iou": 0.87201,
+            "dice": 0.93163,
+            "precision": 0.877237,
+            "recall": 0.993214
+          },
+          "predictedOilFraction": 0.02709031
+        }
+      }
+    },
+    {
+      "scene": "00026",
+      "split": "val",
+      "referenceOilFraction": 0.03755483,
+      "validFraction": 0.935858,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 146276,
+            "fp": 59200,
+            "fn": 1137,
+            "tn": 3718661
+          },
+          "scores": {
+            "iou": 0.707971,
+            "dice": 0.82902,
+            "precision": 0.711888,
+            "recall": 0.992287
+          },
+          "predictedOilFraction": 0.05234692
+        },
+        "0.6": {
+          "counts": {
+            "tp": 145583,
+            "fp": 46110,
+            "fn": 1830,
+            "tn": 3731751
+          },
+          "scores": {
+            "iou": 0.752278,
+            "dice": 0.858628,
+            "precision": 0.759459,
+            "recall": 0.987586
+          },
+          "predictedOilFraction": 0.04883557
+        },
+        "0.7": {
+          "counts": {
+            "tp": 144326,
+            "fp": 33952,
+            "fn": 3087,
+            "tn": 3743909
+          },
+          "scores": {
+            "iou": 0.795776,
+            "dice": 0.886276,
+            "precision": 0.809556,
+            "recall": 0.979059
+          },
+          "predictedOilFraction": 0.04541798
+        },
+        "0.8": {
+          "counts": {
+            "tp": 142035,
+            "fp": 21749,
+            "fn": 5378,
+            "tn": 3756112
+          },
+          "scores": {
+            "iou": 0.839639,
+            "dice": 0.91283,
+            "precision": 0.867209,
+            "recall": 0.963517
+          },
+          "predictedOilFraction": 0.04172549
+        },
+        "0.9": {
+          "counts": {
+            "tp": 136864,
+            "fp": 9964,
+            "fn": 10549,
+            "tn": 3767897
+          },
+          "scores": {
+            "iou": 0.869657,
+            "dice": 0.930285,
+            "precision": 0.932138,
+            "recall": 0.928439
+          },
+          "predictedOilFraction": 0.0374058
+        },
+        "0.95": {
+          "counts": {
+            "tp": 130682,
+            "fp": 4754,
+            "fn": 16731,
+            "tn": 3773107
+          },
+          "scores": {
+            "iou": 0.858806,
+            "dice": 0.924041,
+            "precision": 0.964899,
+            "recall": 0.886503
+          },
+          "predictedOilFraction": 0.03450358
+        }
+      }
+    },
+    {
+      "scene": "00039",
+      "split": "val",
+      "referenceOilFraction": 0.14350057,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 599716,
+            "fp": 202398,
+            "fn": 2169,
+            "tn": 3390021
+          },
+          "scores": {
+            "iou": 0.745653,
+            "dice": 0.854297,
+            "precision": 0.747669,
+            "recall": 0.996396
+          },
+          "predictedOilFraction": 0.19123888
+        },
+        "0.6": {
+          "counts": {
+            "tp": 598544,
+            "fp": 179289,
+            "fn": 3341,
+            "tn": 3413130
+          },
+          "scores": {
+            "iou": 0.766211,
+            "dice": 0.867632,
+            "precision": 0.769502,
+            "recall": 0.994449
+          },
+          "predictedOilFraction": 0.18544984
+        },
+        "0.7": {
+          "counts": {
+            "tp": 596358,
+            "fp": 154149,
+            "fn": 5527,
+            "tn": 3438270
+          },
+          "scores": {
+            "iou": 0.788798,
+            "dice": 0.881931,
+            "precision": 0.794607,
+            "recall": 0.990817
+          },
+          "predictedOilFraction": 0.17893481
+        },
+        "0.8": {
+          "counts": {
+            "tp": 591651,
+            "fp": 121317,
+            "fn": 10234,
+            "tn": 3471102
+          },
+          "scores": {
+            "iou": 0.818099,
+            "dice": 0.89995,
+            "precision": 0.829842,
+            "recall": 0.982997
+          },
+          "predictedOilFraction": 0.16998482
+        },
+        "0.9": {
+          "counts": {
+            "tp": 576026,
+            "fp": 76756,
+            "fn": 25859,
+            "tn": 3515663
+          },
+          "scores": {
+            "iou": 0.848793,
+            "dice": 0.918213,
+            "precision": 0.882417,
+            "recall": 0.957037
+          },
+          "predictedOilFraction": 0.15563536
+        },
+        "0.95": {
+          "counts": {
+            "tp": 544156,
+            "fp": 46999,
+            "fn": 57729,
+            "tn": 3545420
+          },
+          "scores": {
+            "iou": 0.838603,
+            "dice": 0.912218,
+            "precision": 0.920496,
+            "recall": 0.904086
+          },
+          "predictedOilFraction": 0.14094234
+        }
+      }
+    },
+    {
+      "scene": "00078",
+      "split": "val",
+      "referenceOilFraction": 0.03942275,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 145772,
+            "fp": 31883,
+            "fn": 19579,
+            "tn": 3997070
+          },
+          "scores": {
+            "iou": 0.739081,
+            "dice": 0.849968,
+            "precision": 0.820534,
+            "recall": 0.881591
+          },
+          "predictedOilFraction": 0.04235625
+        },
+        "0.6": {
+          "counts": {
+            "tp": 141539,
+            "fp": 24372,
+            "fn": 23812,
+            "tn": 4004581
+          },
+          "scores": {
+            "iou": 0.74603,
+            "dice": 0.854544,
+            "precision": 0.853102,
+            "recall": 0.855991
+          },
+          "predictedOilFraction": 0.03955626
+        },
+        "0.7": {
+          "counts": {
+            "tp": 135981,
+            "fp": 17108,
+            "fn": 29370,
+            "tn": 4011845
+          },
+          "scores": {
+            "iou": 0.745269,
+            "dice": 0.854045,
+            "precision": 0.888248,
+            "recall": 0.822378
+          },
+          "predictedOilFraction": 0.03649926
+        },
+        "0.8": {
+          "counts": {
+            "tp": 126964,
+            "fp": 9989,
+            "fn": 38387,
+            "tn": 4018964
+          },
+          "scores": {
+            "iou": 0.724102,
+            "dice": 0.839976,
+            "precision": 0.927063,
+            "recall": 0.767845
+          },
+          "predictedOilFraction": 0.03265214
+        },
+        "0.9": {
+          "counts": {
+            "tp": 110093,
+            "fp": 3404,
+            "fn": 55258,
+            "tn": 4025549
+          },
+          "scores": {
+            "iou": 0.652384,
+            "dice": 0.789627,
+            "precision": 0.970008,
+            "recall": 0.665814
+          },
+          "predictedOilFraction": 0.02705979
+        },
+        "0.95": {
+          "counts": {
+            "tp": 91571,
+            "fp": 545,
+            "fn": 73780,
+            "tn": 4028408
+          },
+          "scores": {
+            "iou": 0.551978,
+            "dice": 0.711322,
+            "precision": 0.994084,
+            "recall": 0.553798
+          },
+          "predictedOilFraction": 0.02196217
+        }
+      }
+    },
+    {
+      "scene": "00079",
+      "split": "val",
+      "referenceOilFraction": 0.04155207,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 144759,
+            "fp": 8310,
+            "fn": 29523,
+            "tn": 4011712
+          },
+          "scores": {
+            "iou": 0.7928,
+            "dice": 0.884427,
+            "precision": 0.945711,
+            "recall": 0.830602
+          },
+          "predictedOilFraction": 0.03649449
+        },
+        "0.6": {
+          "counts": {
+            "tp": 139608,
+            "fp": 6008,
+            "fn": 34674,
+            "tn": 4014014
+          },
+          "scores": {
+            "iou": 0.774352,
+            "dice": 0.872828,
+            "precision": 0.958741,
+            "recall": 0.801047
+          },
+          "predictedOilFraction": 0.03471756
+        },
+        "0.7": {
+          "counts": {
+            "tp": 132941,
+            "fp": 3768,
+            "fn": 41341,
+            "tn": 4016254
+          },
+          "scores": {
+            "iou": 0.74665,
+            "dice": 0.854951,
+            "precision": 0.972438,
+            "recall": 0.762792
+          },
+          "predictedOilFraction": 0.03259397
+        },
+        "0.8": {
+          "counts": {
+            "tp": 122585,
+            "fp": 1902,
+            "fn": 51697,
+            "tn": 4018120
+          },
+          "scores": {
+            "iou": 0.695778,
+            "dice": 0.820601,
+            "precision": 0.984721,
+            "recall": 0.703372
+          },
+          "predictedOilFraction": 0.02968001
+        },
+        "0.9": {
+          "counts": {
+            "tp": 104730,
+            "fp": 649,
+            "fn": 69552,
+            "tn": 4019373
+          },
+          "scores": {
+            "iou": 0.598693,
+            "dice": 0.748978,
+            "precision": 0.993841,
+            "recall": 0.600923
+          },
+          "predictedOilFraction": 0.02512431
+        },
+        "0.95": {
+          "counts": {
+            "tp": 86014,
+            "fp": 52,
+            "fn": 88268,
+            "tn": 4019970
+          },
+          "scores": {
+            "iou": 0.493386,
+            "dice": 0.660762,
+            "precision": 0.999396,
+            "recall": 0.493533
+          },
+          "predictedOilFraction": 0.02051973
+        }
+      }
+    },
+    {
+      "scene": "00082",
+      "split": "val",
+      "referenceOilFraction": 0.0073607,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 24928,
+            "fp": 6018,
+            "fn": 5945,
+            "tn": 4157413
+          },
+          "scores": {
+            "iou": 0.67572,
+            "dice": 0.806483,
+            "precision": 0.805532,
+            "recall": 0.807437
+          },
+          "predictedOilFraction": 0.0073781
+        },
+        "0.6": {
+          "counts": {
+            "tp": 23755,
+            "fp": 4116,
+            "fn": 7118,
+            "tn": 4159315
+          },
+          "scores": {
+            "iou": 0.678928,
+            "dice": 0.808763,
+            "precision": 0.85232,
+            "recall": 0.769443
+          },
+          "predictedOilFraction": 0.00664496
+        },
+        "0.7": {
+          "counts": {
+            "tp": 22162,
+            "fp": 2540,
+            "fn": 8711,
+            "tn": 4160891
+          },
+          "scores": {
+            "iou": 0.663275,
+            "dice": 0.797553,
+            "precision": 0.897174,
+            "recall": 0.717844
+          },
+          "predictedOilFraction": 0.00588942
+        },
+        "0.8": {
+          "counts": {
+            "tp": 19638,
+            "fp": 1053,
+            "fn": 11235,
+            "tn": 4162378
+          },
+          "scores": {
+            "iou": 0.61511,
+            "dice": 0.761694,
+            "precision": 0.949108,
+            "recall": 0.63609
+          },
+          "predictedOilFraction": 0.00493312
+        },
+        "0.9": {
+          "counts": {
+            "tp": 14460,
+            "fp": 148,
+            "fn": 16413,
+            "tn": 4163283
+          },
+          "scores": {
+            "iou": 0.466136,
+            "dice": 0.63587,
+            "precision": 0.989869,
+            "recall": 0.46837
+          },
+          "predictedOilFraction": 0.00348282
+        },
+        "0.95": {
+          "counts": {
+            "tp": 10337,
+            "fp": 19,
+            "fn": 20536,
+            "tn": 4163412
+          },
+          "scores": {
+            "iou": 0.334617,
+            "dice": 0.501443,
+            "precision": 0.998165,
+            "recall": 0.334823
+          },
+          "predictedOilFraction": 0.00246906
+        }
+      }
+    },
+    {
+      "scene": "00084",
+      "split": "val",
+      "referenceOilFraction": 0.01588473,
+      "validFraction": 0.920505,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 47820,
+            "fp": 11393,
+            "fn": 13509,
+            "tn": 3788155
+          },
+          "scores": {
+            "iou": 0.657573,
+            "dice": 0.793416,
+            "precision": 0.807593,
+            "recall": 0.779729
+          },
+          "predictedOilFraction": 0.01533667
+        },
+        "0.6": {
+          "counts": {
+            "tp": 44850,
+            "fp": 8734,
+            "fn": 16479,
+            "tn": 3790814
+          },
+          "scores": {
+            "iou": 0.640138,
+            "dice": 0.780591,
+            "precision": 0.837004,
+            "recall": 0.731302
+          },
+          "predictedOilFraction": 0.01387871
+        },
+        "0.7": {
+          "counts": {
+            "tp": 41423,
+            "fp": 6172,
+            "fn": 19906,
+            "tn": 3793376
+          },
+          "scores": {
+            "iou": 0.613665,
+            "dice": 0.760585,
+            "precision": 0.870323,
+            "recall": 0.675423
+          },
+          "predictedOilFraction": 0.01232751
+        },
+        "0.8": {
+          "counts": {
+            "tp": 36940,
+            "fp": 3980,
+            "fn": 24389,
+            "tn": 3795568
+          },
+          "scores": {
+            "iou": 0.565619,
+            "dice": 0.72255,
+            "precision": 0.902737,
+            "recall": 0.602325
+          },
+          "predictedOilFraction": 0.01059863
+        },
+        "0.9": {
+          "counts": {
+            "tp": 30164,
+            "fp": 1607,
+            "fn": 31165,
+            "tn": 3797941
+          },
+          "scores": {
+            "iou": 0.479281,
+            "dice": 0.647991,
+            "precision": 0.949419,
+            "recall": 0.491839
+          },
+          "predictedOilFraction": 0.00822896
+        },
+        "0.95": {
+          "counts": {
+            "tp": 23260,
+            "fp": 483,
+            "fn": 38069,
+            "tn": 3799065
+          },
+          "scores": {
+            "iou": 0.376302,
+            "dice": 0.546831,
+            "precision": 0.979657,
+            "recall": 0.379266
+          },
+          "predictedOilFraction": 0.00614964
+        }
+      }
+    },
+    {
+      "scene": "00087",
+      "split": "val",
+      "referenceOilFraction": 0.0076704,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 31787,
+            "fp": 58908,
+            "fn": 385,
+            "tn": 4103224
+          },
+          "scores": {
+            "iou": 0.349001,
+            "dice": 0.517421,
+            "precision": 0.350482,
+            "recall": 0.988033
+          },
+          "predictedOilFraction": 0.02162337
+        },
+        "0.6": {
+          "counts": {
+            "tp": 31649,
+            "fp": 51876,
+            "fn": 523,
+            "tn": 4110256
+          },
+          "scores": {
+            "iou": 0.376559,
+            "dice": 0.547101,
+            "precision": 0.378916,
+            "recall": 0.983744
+          },
+          "predictedOilFraction": 0.01991391
+        },
+        "0.7": {
+          "counts": {
+            "tp": 31477,
+            "fp": 44623,
+            "fn": 695,
+            "tn": 4117509
+          },
+          "scores": {
+            "iou": 0.409883,
+            "dice": 0.581443,
+            "precision": 0.413627,
+            "recall": 0.978397
+          },
+          "predictedOilFraction": 0.01814365
+        },
+        "0.8": {
+          "counts": {
+            "tp": 31203,
+            "fp": 36707,
+            "fn": 969,
+            "tn": 4125425
+          },
+          "scores": {
+            "iou": 0.453012,
+            "dice": 0.623549,
+            "precision": 0.459476,
+            "recall": 0.969881
+          },
+          "predictedOilFraction": 0.01619101
+        },
+        "0.9": {
+          "counts": {
+            "tp": 30553,
+            "fp": 25834,
+            "fn": 1619,
+            "tn": 4136298
+          },
+          "scores": {
+            "iou": 0.526721,
+            "dice": 0.690003,
+            "precision": 0.541845,
+            "recall": 0.949677
+          },
+          "predictedOilFraction": 0.01344371
+        },
+        "0.95": {
+          "counts": {
+            "tp": 29139,
+            "fp": 15284,
+            "fn": 3033,
+            "tn": 4146848
+          },
+          "scores": {
+            "iou": 0.614021,
+            "dice": 0.760859,
+            "precision": 0.655944,
+            "recall": 0.905725
+          },
+          "predictedOilFraction": 0.01059127
+        }
+      }
+    },
+    {
+      "scene": "00091",
+      "split": "val",
+      "referenceOilFraction": 0.07243752,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 298994,
+            "fp": 68618,
+            "fn": 4831,
+            "tn": 3821861
+          },
+          "scores": {
+            "iou": 0.802791,
+            "dice": 0.890609,
+            "precision": 0.813341,
+            "recall": 0.984099
+          },
+          "predictedOilFraction": 0.08764553
+        },
+        "0.6": {
+          "counts": {
+            "tp": 294002,
+            "fp": 64950,
+            "fn": 9823,
+            "tn": 3825529
+          },
+          "scores": {
+            "iou": 0.79724,
+            "dice": 0.887182,
+            "precision": 0.819057,
+            "recall": 0.967669
+          },
+          "predictedOilFraction": 0.08558083
+        },
+        "0.7": {
+          "counts": {
+            "tp": 284982,
+            "fp": 60851,
+            "fn": 18843,
+            "tn": 3829628
+          },
+          "scores": {
+            "iou": 0.781466,
+            "dice": 0.877329,
+            "precision": 0.824045,
+            "recall": 0.937981
+          },
+          "predictedOilFraction": 0.08245301
+        },
+        "0.8": {
+          "counts": {
+            "tp": 271394,
+            "fp": 55069,
+            "fn": 32431,
+            "tn": 3835410
+          },
+          "scores": {
+            "iou": 0.756195,
+            "dice": 0.861175,
+            "precision": 0.831316,
+            "recall": 0.893258
+          },
+          "predictedOilFraction": 0.07783484
+        },
+        "0.9": {
+          "counts": {
+            "tp": 250172,
+            "fp": 45348,
+            "fn": 53653,
+            "tn": 3845131
+          },
+          "scores": {
+            "iou": 0.71647,
+            "dice": 0.834818,
+            "precision": 0.846548,
+            "recall": 0.823408
+          },
+          "predictedOilFraction": 0.07045746
+        },
+        "0.95": {
+          "counts": {
+            "tp": 226941,
+            "fp": 36239,
+            "fn": 76884,
+            "tn": 3854240
+          },
+          "scores": {
+            "iou": 0.667348,
+            "dice": 0.80049,
+            "precision": 0.862303,
+            "recall": 0.746946
+          },
+          "predictedOilFraction": 0.062747
+        }
+      }
+    },
+    {
+      "scene": "00095",
+      "split": "val",
+      "referenceOilFraction": 0.01347494,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 56462,
+            "fp": 27768,
+            "fn": 56,
+            "tn": 4110018
+          },
+          "scores": {
+            "iou": 0.669886,
+            "dice": 0.802313,
+            "precision": 0.670331,
+            "recall": 0.999009
+          },
+          "predictedOilFraction": 0.020082
+        },
+        "0.6": {
+          "counts": {
+            "tp": 56389,
+            "fp": 23046,
+            "fn": 129,
+            "tn": 4114740
+          },
+          "scores": {
+            "iou": 0.708725,
+            "dice": 0.829537,
+            "precision": 0.709876,
+            "recall": 0.997718
+          },
+          "predictedOilFraction": 0.01893878
+        },
+        "0.7": {
+          "counts": {
+            "tp": 56298,
+            "fp": 19129,
+            "fn": 220,
+            "tn": 4118657
+          },
+          "scores": {
+            "iou": 0.74422,
+            "dice": 0.853356,
+            "precision": 0.746391,
+            "recall": 0.996107
+          },
+          "predictedOilFraction": 0.0179832
+        },
+        "0.8": {
+          "counts": {
+            "tp": 56049,
+            "fp": 14392,
+            "fn": 469,
+            "tn": 4123394
+          },
+          "scores": {
+            "iou": 0.790424,
+            "dice": 0.882946,
+            "precision": 0.795687,
+            "recall": 0.991702
+          },
+          "predictedOilFraction": 0.01679444
+        },
+        "0.9": {
+          "counts": {
+            "tp": 54944,
+            "fp": 7332,
+            "fn": 1574,
+            "tn": 4130454
+          },
+          "scores": {
+            "iou": 0.860517,
+            "dice": 0.92503,
+            "precision": 0.882266,
+            "recall": 0.97215
+          },
+          "predictedOilFraction": 0.01484776
+        },
+        "0.95": {
+          "counts": {
+            "tp": 52263,
+            "fp": 2652,
+            "fn": 4255,
+            "tn": 4135134
+          },
+          "scores": {
+            "iou": 0.883269,
+            "dice": 0.938017,
+            "precision": 0.951707,
+            "recall": 0.924714
+          },
+          "predictedOilFraction": 0.01309276
+        }
+      }
+    },
+    {
+      "scene": "00097",
+      "split": "val",
+      "referenceOilFraction": 0.02002978,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 46494,
+            "fp": 3,
+            "fn": 37517,
+            "tn": 4110290
+          },
+          "scores": {
+            "iou": 0.553408,
+            "dice": 0.712508,
+            "precision": 0.999935,
+            "recall": 0.553428
+          },
+          "predictedOilFraction": 0.01108575
+        },
+        "0.6": {
+          "counts": {
+            "tp": 44413,
+            "fp": 0,
+            "fn": 39598,
+            "tn": 4110293
+          },
+          "scores": {
+            "iou": 0.528657,
+            "dice": 0.691662,
+            "precision": 1.0,
+            "recall": 0.528657
+          },
+          "predictedOilFraction": 0.01058888
+        },
+        "0.7": {
+          "counts": {
+            "tp": 42209,
+            "fp": 0,
+            "fn": 41802,
+            "tn": 4110293
+          },
+          "scores": {
+            "iou": 0.502422,
+            "dice": 0.668816,
+            "precision": 1.0,
+            "recall": 0.502422
+          },
+          "predictedOilFraction": 0.01006341
+        },
+        "0.8": {
+          "counts": {
+            "tp": 39378,
+            "fp": 0,
+            "fn": 44633,
+            "tn": 4110293
+          },
+          "scores": {
+            "iou": 0.468724,
+            "dice": 0.638274,
+            "precision": 1.0,
+            "recall": 0.468724
+          },
+          "predictedOilFraction": 0.00938845
+        },
+        "0.9": {
+          "counts": {
+            "tp": 35121,
+            "fp": 0,
+            "fn": 48890,
+            "tn": 4110293
+          },
+          "scores": {
+            "iou": 0.418052,
+            "dice": 0.589615,
+            "precision": 1.0,
+            "recall": 0.418052
+          },
+          "predictedOilFraction": 0.0083735
+        },
+        "0.95": {
+          "counts": {
+            "tp": 31360,
+            "fp": 0,
+            "fn": 52651,
+            "tn": 4110293
+          },
+          "scores": {
+            "iou": 0.373284,
+            "dice": 0.543637,
+            "precision": 1.0,
+            "recall": 0.373284
+          },
+          "predictedOilFraction": 0.00747681
+        }
+      }
+    },
+    {
+      "scene": "00115",
+      "split": "val",
+      "referenceOilFraction": 0.00436091,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 17788,
+            "fp": 39785,
+            "fn": 503,
+            "tn": 4136228
+          },
+          "scores": {
+            "iou": 0.306288,
+            "dice": 0.468944,
+            "precision": 0.308964,
+            "recall": 0.9725
+          },
+          "predictedOilFraction": 0.01372647
+        },
+        "0.6": {
+          "counts": {
+            "tp": 17576,
+            "fp": 28889,
+            "fn": 715,
+            "tn": 4147124
+          },
+          "scores": {
+            "iou": 0.372531,
+            "dice": 0.542838,
+            "precision": 0.378263,
+            "recall": 0.96091
+          },
+          "predictedOilFraction": 0.01107812
+        },
+        "0.7": {
+          "counts": {
+            "tp": 17197,
+            "fp": 19724,
+            "fn": 1094,
+            "tn": 4156289
+          },
+          "scores": {
+            "iou": 0.452374,
+            "dice": 0.622944,
+            "precision": 0.465778,
+            "recall": 0.940189
+          },
+          "predictedOilFraction": 0.00880265
+        },
+        "0.8": {
+          "counts": {
+            "tp": 16514,
+            "fp": 11513,
+            "fn": 1777,
+            "tn": 4164500
+          },
+          "scores": {
+            "iou": 0.554087,
+            "dice": 0.713071,
+            "precision": 0.589218,
+            "recall": 0.902848
+          },
+          "predictedOilFraction": 0.00668216
+        },
+        "0.9": {
+          "counts": {
+            "tp": 14761,
+            "fp": 5098,
+            "fn": 3530,
+            "tn": 4170915
+          },
+          "scores": {
+            "iou": 0.631109,
+            "dice": 0.77384,
+            "precision": 0.74329,
+            "recall": 0.807009
+          },
+          "predictedOilFraction": 0.00473475
+        },
+        "0.95": {
+          "counts": {
+            "tp": 12336,
+            "fp": 2200,
+            "fn": 5955,
+            "tn": 4173813
+          },
+          "scores": {
+            "iou": 0.60202,
+            "dice": 0.751576,
+            "precision": 0.848652,
+            "recall": 0.67443
+          },
+          "predictedOilFraction": 0.00346565
+        }
+      }
+    },
+    {
+      "scene": "00116",
+      "split": "val",
+      "referenceOilFraction": 0.00810719,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 32961,
+            "fp": 70862,
+            "fn": 1043,
+            "tn": 4089438
+          },
+          "scores": {
+            "iou": 0.314315,
+            "dice": 0.478295,
+            "precision": 0.317473,
+            "recall": 0.969327
+          },
+          "predictedOilFraction": 0.02475333
+        },
+        "0.6": {
+          "counts": {
+            "tp": 32517,
+            "fp": 49371,
+            "fn": 1487,
+            "tn": 4110929
+          },
+          "scores": {
+            "iou": 0.390009,
+            "dice": 0.56116,
+            "precision": 0.397091,
+            "recall": 0.95627
+          },
+          "predictedOilFraction": 0.01952362
+        },
+        "0.7": {
+          "counts": {
+            "tp": 31847,
+            "fp": 31705,
+            "fn": 2157,
+            "tn": 4128595
+          },
+          "scores": {
+            "iou": 0.484667,
+            "dice": 0.652897,
+            "precision": 0.501117,
+            "recall": 0.936566
+          },
+          "predictedOilFraction": 0.01515198
+        },
+        "0.8": {
+          "counts": {
+            "tp": 30747,
+            "fp": 16547,
+            "fn": 3257,
+            "tn": 4143753
+          },
+          "scores": {
+            "iou": 0.608237,
+            "dice": 0.756402,
+            "precision": 0.650125,
+            "recall": 0.904217
+          },
+          "predictedOilFraction": 0.01127577
+        },
+        "0.9": {
+          "counts": {
+            "tp": 27200,
+            "fp": 4106,
+            "fn": 6804,
+            "tn": 4156194
+          },
+          "scores": {
+            "iou": 0.713723,
+            "dice": 0.832951,
+            "precision": 0.868843,
+            "recall": 0.799906
+          },
+          "predictedOilFraction": 0.00746393
+        },
+        "0.95": {
+          "counts": {
+            "tp": 22280,
+            "fp": 545,
+            "fn": 11724,
+            "tn": 4159755
+          },
+          "scores": {
+            "iou": 0.644881,
+            "dice": 0.784107,
+            "precision": 0.976123,
+            "recall": 0.655217
+          },
+          "predictedOilFraction": 0.0054419
+        }
+      }
+    },
+    {
+      "scene": "00145",
+      "split": "val",
+      "referenceOilFraction": 0.00951076,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 39891,
+            "fp": 63874,
+            "fn": 0,
+            "tn": 4090539
+          },
+          "scores": {
+            "iou": 0.384436,
+            "dice": 0.555368,
+            "precision": 0.384436,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.0247395
+        },
+        "0.6": {
+          "counts": {
+            "tp": 39891,
+            "fp": 52074,
+            "fn": 0,
+            "tn": 4102339
+          },
+          "scores": {
+            "iou": 0.433763,
+            "dice": 0.605069,
+            "precision": 0.433763,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.02192616
+        },
+        "0.7": {
+          "counts": {
+            "tp": 39882,
+            "fp": 41363,
+            "fn": 9,
+            "tn": 4113050
+          },
+          "scores": {
+            "iou": 0.490831,
+            "dice": 0.658467,
+            "precision": 0.490886,
+            "recall": 0.999774
+          },
+          "predictedOilFraction": 0.01937032
+        },
+        "0.8": {
+          "counts": {
+            "tp": 39841,
+            "fp": 29231,
+            "fn": 50,
+            "tn": 4125182
+          },
+          "scores": {
+            "iou": 0.576387,
+            "dice": 0.731276,
+            "precision": 0.576804,
+            "recall": 0.998747
+          },
+          "predictedOilFraction": 0.01646805
+        },
+        "0.9": {
+          "counts": {
+            "tp": 39658,
+            "fp": 15507,
+            "fn": 233,
+            "tn": 4138906
+          },
+          "scores": {
+            "iou": 0.715874,
+            "dice": 0.834413,
+            "precision": 0.718898,
+            "recall": 0.994159
+          },
+          "predictedOilFraction": 0.01315236
+        },
+        "0.95": {
+          "counts": {
+            "tp": 38977,
+            "fp": 8030,
+            "fn": 914,
+            "tn": 4146383
+          },
+          "scores": {
+            "iou": 0.813359,
+            "dice": 0.897075,
+            "precision": 0.829174,
+            "recall": 0.977088
+          },
+          "predictedOilFraction": 0.01120734
+        }
+      }
+    },
+    {
+      "scene": "00152",
+      "split": "val",
+      "referenceOilFraction": 0.02634382,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 110323,
+            "fp": 221881,
+            "fn": 171,
+            "tn": 3861929
+          },
+          "scores": {
+            "iou": 0.331923,
+            "dice": 0.498412,
+            "precision": 0.332094,
+            "recall": 0.998452
+          },
+          "predictedOilFraction": 0.07920361
+        },
+        "0.6": {
+          "counts": {
+            "tp": 110123,
+            "fp": 180633,
+            "fn": 371,
+            "tn": 3903177
+          },
+          "scores": {
+            "iou": 0.378264,
+            "dice": 0.5489,
+            "precision": 0.378747,
+            "recall": 0.996642
+          },
+          "predictedOilFraction": 0.06932163
+        },
+        "0.7": {
+          "counts": {
+            "tp": 109687,
+            "fp": 145970,
+            "fn": 807,
+            "tn": 3937840
+          },
+          "scores": {
+            "iou": 0.42769,
+            "dice": 0.599135,
+            "precision": 0.42904,
+            "recall": 0.992696
+          },
+          "predictedOilFraction": 0.06095338
+        },
+        "0.8": {
+          "counts": {
+            "tp": 108810,
+            "fp": 110244,
+            "fn": 1684,
+            "tn": 3973566
+          },
+          "scores": {
+            "iou": 0.492937,
+            "dice": 0.660359,
+            "precision": 0.496727,
+            "recall": 0.984759
+          },
+          "predictedOilFraction": 0.05222654
+        },
+        "0.9": {
+          "counts": {
+            "tp": 106364,
+            "fp": 66210,
+            "fn": 4130,
+            "tn": 4017600
+          },
+          "scores": {
+            "iou": 0.601933,
+            "dice": 0.751508,
+            "precision": 0.616338,
+            "recall": 0.962622
+          },
+          "predictedOilFraction": 0.04114485
+        },
+        "0.95": {
+          "counts": {
+            "tp": 102589,
+            "fp": 35241,
+            "fn": 7905,
+            "tn": 4048569
+          },
+          "scores": {
+            "iou": 0.703942,
+            "dice": 0.826251,
+            "precision": 0.744315,
+            "recall": 0.928458
+          },
+          "predictedOilFraction": 0.03286123
+        }
+      }
+    },
+    {
+      "scene": "00155",
+      "split": "val",
+      "referenceOilFraction": 0.01101517,
+      "validFraction": 0.9463,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 43563,
+            "fp": 252612,
+            "fn": 157,
+            "tn": 3672738
+          },
+          "scores": {
+            "iou": 0.147007,
+            "dice": 0.256332,
+            "precision": 0.147085,
+            "recall": 0.996409
+          },
+          "predictedOilFraction": 0.07462075
+        },
+        "0.6": {
+          "counts": {
+            "tp": 43432,
+            "fp": 194483,
+            "fn": 288,
+            "tn": 3730867
+          },
+          "scores": {
+            "iou": 0.182332,
+            "dice": 0.308428,
+            "precision": 0.182553,
+            "recall": 0.993413
+          },
+          "predictedOilFraction": 0.05994225
+        },
+        "0.7": {
+          "counts": {
+            "tp": 43182,
+            "fp": 146146,
+            "fn": 538,
+            "tn": 3779204
+          },
+          "scores": {
+            "iou": 0.227434,
+            "dice": 0.370585,
+            "precision": 0.22808,
+            "recall": 0.987694
+          },
+          "predictedOilFraction": 0.04770085
+        },
+        "0.8": {
+          "counts": {
+            "tp": 42518,
+            "fp": 99029,
+            "fn": 1202,
+            "tn": 3826321
+          },
+          "scores": {
+            "iou": 0.297851,
+            "dice": 0.458992,
+            "precision": 0.300381,
+            "recall": 0.972507
+          },
+          "predictedOilFraction": 0.03566251
+        },
+        "0.9": {
+          "counts": {
+            "tp": 40059,
+            "fp": 46795,
+            "fn": 3661,
+            "tn": 3878555
+          },
+          "scores": {
+            "iou": 0.442568,
+            "dice": 0.613583,
+            "precision": 0.461222,
+            "recall": 0.916263
+          },
+          "predictedOilFraction": 0.02188271
+        },
+        "0.95": {
+          "counts": {
+            "tp": 35474,
+            "fp": 19864,
+            "fn": 8246,
+            "tn": 3905486
+          },
+          "scores": {
+            "iou": 0.557908,
+            "dice": 0.716227,
+            "precision": 0.641042,
+            "recall": 0.811391
+          },
+          "predictedOilFraction": 0.01394231
+        }
+      }
+    },
+    {
+      "scene": "00168",
+      "split": "val",
+      "referenceOilFraction": 0.02684736,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 101950,
+            "fp": 35369,
+            "fn": 10656,
+            "tn": 4046329
+          },
+          "scores": {
+            "iou": 0.688968,
+            "dice": 0.815845,
+            "precision": 0.742432,
+            "recall": 0.905369
+          },
+          "predictedOilFraction": 0.0327394
+        },
+        "0.6": {
+          "counts": {
+            "tp": 99512,
+            "fp": 23703,
+            "fn": 13094,
+            "tn": 4057995
+          },
+          "scores": {
+            "iou": 0.730047,
+            "dice": 0.843962,
+            "precision": 0.807629,
+            "recall": 0.883718
+          },
+          "predictedOilFraction": 0.02937675
+        },
+        "0.7": {
+          "counts": {
+            "tp": 96619,
+            "fp": 15378,
+            "fn": 15987,
+            "tn": 4066320
+          },
+          "scores": {
+            "iou": 0.75493,
+            "dice": 0.860354,
+            "precision": 0.862693,
+            "recall": 0.858027
+          },
+          "predictedOilFraction": 0.02670217
+        },
+        "0.8": {
+          "counts": {
+            "tp": 91952,
+            "fp": 7577,
+            "fn": 20654,
+            "tn": 4074121
+          },
+          "scores": {
+            "iou": 0.7651,
+            "dice": 0.86692,
+            "precision": 0.923871,
+            "recall": 0.816582
+          },
+          "predictedOilFraction": 0.02372956
+        },
+        "0.9": {
+          "counts": {
+            "tp": 84110,
+            "fp": 2346,
+            "fn": 28496,
+            "tn": 4079352
+          },
+          "scores": {
+            "iou": 0.731697,
+            "dice": 0.845063,
+            "precision": 0.972865,
+            "recall": 0.746941
+          },
+          "predictedOilFraction": 0.02061272
+        },
+        "0.95": {
+          "counts": {
+            "tp": 76452,
+            "fp": 696,
+            "fn": 36154,
+            "tn": 4081002
+          },
+          "scores": {
+            "iou": 0.674763,
+            "dice": 0.805801,
+            "precision": 0.990978,
+            "recall": 0.678934
+          },
+          "predictedOilFraction": 0.01839352
+        }
+      }
+    },
+    {
+      "scene": "00210",
+      "split": "val",
+      "referenceOilFraction": 0.016011,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 64261,
+            "fp": 8625,
+            "fn": 2894,
+            "tn": 4118524
+          },
+          "scores": {
+            "iou": 0.847994,
+            "dice": 0.917746,
+            "precision": 0.881665,
+            "recall": 0.956906
+          },
+          "predictedOilFraction": 0.01737738
+        },
+        "0.6": {
+          "counts": {
+            "tp": 63440,
+            "fp": 6892,
+            "fn": 3715,
+            "tn": 4120257
+          },
+          "scores": {
+            "iou": 0.856753,
+            "dice": 0.922851,
+            "precision": 0.902008,
+            "recall": 0.94468
+          },
+          "predictedOilFraction": 0.01676846
+        },
+        "0.7": {
+          "counts": {
+            "tp": 62200,
+            "fp": 4965,
+            "fn": 4955,
+            "tn": 4122184
+          },
+          "scores": {
+            "iou": 0.862451,
+            "dice": 0.926147,
+            "precision": 0.926078,
+            "recall": 0.926215
+          },
+          "predictedOilFraction": 0.01601338
+        },
+        "0.8": {
+          "counts": {
+            "tp": 59679,
+            "fp": 2672,
+            "fn": 7476,
+            "tn": 4124477
+          },
+          "scores": {
+            "iou": 0.854669,
+            "dice": 0.921641,
+            "precision": 0.957146,
+            "recall": 0.888675
+          },
+          "predictedOilFraction": 0.01486564
+        },
+        "0.9": {
+          "counts": {
+            "tp": 53708,
+            "fp": 562,
+            "fn": 13447,
+            "tn": 4126587
+          },
+          "scores": {
+            "iou": 0.793124,
+            "dice": 0.884628,
+            "precision": 0.989644,
+            "recall": 0.799762
+          },
+          "predictedOilFraction": 0.01293898
+        },
+        "0.95": {
+          "counts": {
+            "tp": 46544,
+            "fp": 40,
+            "fn": 20611,
+            "tn": 4127109
+          },
+          "scores": {
+            "iou": 0.692671,
+            "dice": 0.818435,
+            "precision": 0.999141,
+            "recall": 0.693083
+          },
+          "predictedOilFraction": 0.01110649
+        }
+      }
+    },
+    {
+      "scene": "00215",
+      "split": "val",
+      "referenceOilFraction": 0.01696682,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 44574,
+            "fp": 1477,
+            "fn": 26590,
+            "tn": 4121663
+          },
+          "scores": {
+            "iou": 0.61362,
+            "dice": 0.760551,
+            "precision": 0.967927,
+            "recall": 0.626356
+          },
+          "predictedOilFraction": 0.01097941
+        },
+        "0.6": {
+          "counts": {
+            "tp": 41716,
+            "fp": 931,
+            "fn": 29448,
+            "tn": 4122209
+          },
+          "scores": {
+            "iou": 0.578625,
+            "dice": 0.733075,
+            "precision": 0.97817,
+            "recall": 0.586195
+          },
+          "predictedOilFraction": 0.01016784
+        },
+        "0.7": {
+          "counts": {
+            "tp": 38354,
+            "fp": 523,
+            "fn": 32810,
+            "tn": 4122617
+          },
+          "scores": {
+            "iou": 0.53502,
+            "dice": 0.697086,
+            "precision": 0.986547,
+            "recall": 0.538952
+          },
+          "predictedOilFraction": 0.009269
+        },
+        "0.8": {
+          "counts": {
+            "tp": 33605,
+            "fp": 253,
+            "fn": 37559,
+            "tn": 4122887
+          },
+          "scores": {
+            "iou": 0.470546,
+            "dice": 0.639961,
+            "precision": 0.992528,
+            "recall": 0.472219
+          },
+          "predictedOilFraction": 0.00807238
+        },
+        "0.9": {
+          "counts": {
+            "tp": 25248,
+            "fp": 51,
+            "fn": 45916,
+            "tn": 4123089
+          },
+          "scores": {
+            "iou": 0.354532,
+            "dice": 0.523475,
+            "precision": 0.997984,
+            "recall": 0.354786
+          },
+          "predictedOilFraction": 0.00603175
+        },
+        "0.95": {
+          "counts": {
+            "tp": 17972,
+            "fp": 0,
+            "fn": 53192,
+            "tn": 4123140
+          },
+          "scores": {
+            "iou": 0.252543,
+            "dice": 0.403249,
+            "precision": 1.0,
+            "recall": 0.252543
+          },
+          "predictedOilFraction": 0.00428486
+        }
+      }
+    },
+    {
+      "scene": "00218",
+      "split": "val",
+      "referenceOilFraction": 0.02311873,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 96152,
+            "fp": 61008,
+            "fn": 815,
+            "tn": 4036329
+          },
+          "scores": {
+            "iou": 0.608653,
+            "dice": 0.756724,
+            "precision": 0.61181,
+            "recall": 0.991595
+          },
+          "predictedOilFraction": 0.03746986
+        },
+        "0.6": {
+          "counts": {
+            "tp": 95756,
+            "fp": 54295,
+            "fn": 1211,
+            "tn": 4043042
+          },
+          "scores": {
+            "iou": 0.633047,
+            "dice": 0.775296,
+            "precision": 0.638156,
+            "recall": 0.987511
+          },
+          "predictedOilFraction": 0.03577495
+        },
+        "0.7": {
+          "counts": {
+            "tp": 95147,
+            "fp": 47331,
+            "fn": 1820,
+            "tn": 4050006
+          },
+          "scores": {
+            "iou": 0.659379,
+            "dice": 0.794729,
+            "precision": 0.667801,
+            "recall": 0.981231
+          },
+          "predictedOilFraction": 0.0339694
+        },
+        "0.8": {
+          "counts": {
+            "tp": 94256,
+            "fp": 38511,
+            "fn": 2711,
+            "tn": 4058826
+          },
+          "scores": {
+            "iou": 0.695729,
+            "dice": 0.820566,
+            "precision": 0.709935,
+            "recall": 0.972042
+          },
+          "predictedOilFraction": 0.03165412
+        },
+        "0.9": {
+          "counts": {
+            "tp": 92272,
+            "fp": 24752,
+            "fn": 4695,
+            "tn": 4072585
+          },
+          "scores": {
+            "iou": 0.758074,
+            "dice": 0.862391,
+            "precision": 0.788488,
+            "recall": 0.951581
+          },
+          "predictedOilFraction": 0.0279007
+        },
+        "0.95": {
+          "counts": {
+            "tp": 88746,
+            "fp": 13560,
+            "fn": 8221,
+            "tn": 4083777
+          },
+          "scores": {
+            "iou": 0.802935,
+            "dice": 0.890698,
+            "precision": 0.867456,
+            "recall": 0.915219
+          },
+          "predictedOilFraction": 0.02439165
+        }
+      }
+    },
+    {
+      "scene": "00228",
+      "split": "val",
+      "referenceOilFraction": 0.01870608,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 70457,
+            "fp": 7045,
+            "fn": 8002,
+            "tn": 4108800
+          },
+          "scores": {
+            "iou": 0.82402,
+            "dice": 0.903521,
+            "precision": 0.909099,
+            "recall": 0.89801
+          },
+          "predictedOilFraction": 0.01847792
+        },
+        "0.6": {
+          "counts": {
+            "tp": 68428,
+            "fp": 5425,
+            "fn": 10031,
+            "tn": 4110420
+          },
+          "scores": {
+            "iou": 0.815746,
+            "dice": 0.898524,
+            "precision": 0.926543,
+            "recall": 0.87215
+          },
+          "predictedOilFraction": 0.01760793
+        },
+        "0.7": {
+          "counts": {
+            "tp": 65805,
+            "fp": 3992,
+            "fn": 12654,
+            "tn": 4111853
+          },
+          "scores": {
+            "iou": 0.79811,
+            "dice": 0.887721,
+            "precision": 0.942806,
+            "recall": 0.838718
+          },
+          "predictedOilFraction": 0.0166409
+        },
+        "0.8": {
+          "counts": {
+            "tp": 60767,
+            "fp": 2003,
+            "fn": 17692,
+            "tn": 4113842
+          },
+          "scores": {
+            "iou": 0.755226,
+            "dice": 0.860546,
+            "precision": 0.96809,
+            "recall": 0.774506
+          },
+          "predictedOilFraction": 0.01496553
+        },
+        "0.9": {
+          "counts": {
+            "tp": 48658,
+            "fp": 169,
+            "fn": 29801,
+            "tn": 4115676
+          },
+          "scores": {
+            "iou": 0.618838,
+            "dice": 0.764546,
+            "precision": 0.996539,
+            "recall": 0.620171
+          },
+          "predictedOilFraction": 0.01164126
+        },
+        "0.95": {
+          "counts": {
+            "tp": 37071,
+            "fp": 0,
+            "fn": 41388,
+            "tn": 4115845
+          },
+          "scores": {
+            "iou": 0.472489,
+            "dice": 0.641755,
+            "precision": 1.0,
+            "recall": 0.472489
+          },
+          "predictedOilFraction": 0.00883842
+        }
+      }
+    },
+    {
+      "scene": "00236",
+      "split": "val",
+      "referenceOilFraction": 0.00751734,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 28746,
+            "fp": 9040,
+            "fn": 2784,
+            "tn": 4153734
+          },
+          "scores": {
+            "iou": 0.708553,
+            "dice": 0.829419,
+            "precision": 0.760758,
+            "recall": 0.911703
+          },
+          "predictedOilFraction": 0.00900888
+        },
+        "0.6": {
+          "counts": {
+            "tp": 28007,
+            "fp": 6351,
+            "fn": 3523,
+            "tn": 4156423
+          },
+          "scores": {
+            "iou": 0.739342,
+            "dice": 0.85014,
+            "precision": 0.815152,
+            "recall": 0.888265
+          },
+          "predictedOilFraction": 0.00819159
+        },
+        "0.7": {
+          "counts": {
+            "tp": 27094,
+            "fp": 4169,
+            "fn": 4436,
+            "tn": 4158605
+          },
+          "scores": {
+            "iou": 0.758957,
+            "dice": 0.862962,
+            "precision": 0.866647,
+            "recall": 0.859309
+          },
+          "predictedOilFraction": 0.00745368
+        },
+        "0.8": {
+          "counts": {
+            "tp": 25646,
+            "fp": 2211,
+            "fn": 5884,
+            "tn": 4160563
+          },
+          "scores": {
+            "iou": 0.760084,
+            "dice": 0.863691,
+            "precision": 0.92063,
+            "recall": 0.813384
+          },
+          "predictedOilFraction": 0.00664163
+        },
+        "0.9": {
+          "counts": {
+            "tp": 21987,
+            "fp": 386,
+            "fn": 9543,
+            "tn": 4162388
+          },
+          "scores": {
+            "iou": 0.688902,
+            "dice": 0.815799,
+            "precision": 0.982747,
+            "recall": 0.697336
+          },
+          "predictedOilFraction": 0.00533414
+        },
+        "0.95": {
+          "counts": {
+            "tp": 17851,
+            "fp": 21,
+            "fn": 13679,
+            "tn": 4162753
+          },
+          "scores": {
+            "iou": 0.565782,
+            "dice": 0.722683,
+            "precision": 0.998825,
+            "recall": 0.566159
+          },
+          "predictedOilFraction": 0.00426102
+        }
+      }
+    },
+    {
+      "scene": "00238",
+      "split": "val",
+      "referenceOilFraction": 0.0421474,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 170632,
+            "fp": 157468,
+            "fn": 6147,
+            "tn": 3860057
+          },
+          "scores": {
+            "iou": 0.510497,
+            "dice": 0.675932,
+            "precision": 0.520061,
+            "recall": 0.965228
+          },
+          "predictedOilFraction": 0.07822514
+        },
+        "0.6": {
+          "counts": {
+            "tp": 167387,
+            "fp": 141117,
+            "fn": 9392,
+            "tn": 3876408
+          },
+          "scores": {
+            "iou": 0.526546,
+            "dice": 0.689853,
+            "precision": 0.542576,
+            "recall": 0.946872
+          },
+          "predictedOilFraction": 0.07355309
+        },
+        "0.7": {
+          "counts": {
+            "tp": 162832,
+            "fp": 122489,
+            "fn": 13947,
+            "tn": 3895036
+          },
+          "scores": {
+            "iou": 0.544101,
+            "dice": 0.704748,
+            "precision": 0.570698,
+            "recall": 0.921105
+          },
+          "predictedOilFraction": 0.06802583
+        },
+        "0.8": {
+          "counts": {
+            "tp": 154588,
+            "fp": 99560,
+            "fn": 22191,
+            "tn": 3917965
+          },
+          "scores": {
+            "iou": 0.559414,
+            "dice": 0.717467,
+            "precision": 0.60826,
+            "recall": 0.87447
+          },
+          "predictedOilFraction": 0.06059361
+        },
+        "0.9": {
+          "counts": {
+            "tp": 137045,
+            "fp": 67145,
+            "fn": 39734,
+            "tn": 3950380
+          },
+          "scores": {
+            "iou": 0.561835,
+            "dice": 0.719455,
+            "precision": 0.671164,
+            "recall": 0.775233
+          },
+          "predictedOilFraction": 0.04868269
+        },
+        "0.95": {
+          "counts": {
+            "tp": 117072,
+            "fp": 41086,
+            "fn": 59707,
+            "tn": 3976439
+          },
+          "scores": {
+            "iou": 0.53736,
+            "dice": 0.699069,
+            "precision": 0.740222,
+            "recall": 0.662251
+          },
+          "predictedOilFraction": 0.03770781
+        }
+      }
+    },
+    {
+      "scene": "00240",
+      "split": "val",
+      "referenceOilFraction": 0.04252839,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 166032,
+            "fp": 24646,
+            "fn": 12345,
+            "tn": 3991281
+          },
+          "scores": {
+            "iou": 0.817799,
+            "dice": 0.899768,
+            "precision": 0.870745,
+            "recall": 0.930793
+          },
+          "predictedOilFraction": 0.04546118
+        },
+        "0.6": {
+          "counts": {
+            "tp": 163013,
+            "fp": 19974,
+            "fn": 15364,
+            "tn": 3995953
+          },
+          "scores": {
+            "iou": 0.821841,
+            "dice": 0.902209,
+            "precision": 0.890845,
+            "recall": 0.913868
+          },
+          "predictedOilFraction": 0.0436275
+        },
+        "0.7": {
+          "counts": {
+            "tp": 159415,
+            "fp": 15695,
+            "fn": 18962,
+            "tn": 4000232
+          },
+          "scores": {
+            "iou": 0.821422,
+            "dice": 0.901957,
+            "precision": 0.910371,
+            "recall": 0.893697
+          },
+          "predictedOilFraction": 0.04174948
+        },
+        "0.8": {
+          "counts": {
+            "tp": 154191,
+            "fp": 11462,
+            "fn": 24186,
+            "tn": 4004465
+          },
+          "scores": {
+            "iou": 0.81222,
+            "dice": 0.896381,
+            "precision": 0.930807,
+            "recall": 0.864411
+          },
+          "predictedOilFraction": 0.03949475
+        },
+        "0.9": {
+          "counts": {
+            "tp": 146318,
+            "fp": 5679,
+            "fn": 32059,
+            "tn": 4010248
+          },
+          "scores": {
+            "iou": 0.794965,
+            "dice": 0.885772,
+            "precision": 0.962637,
+            "recall": 0.820274
+          },
+          "predictedOilFraction": 0.03623891
+        },
+        "0.95": {
+          "counts": {
+            "tp": 139281,
+            "fp": 2001,
+            "fn": 39096,
+            "tn": 4013926
+          },
+          "scores": {
+            "iou": 0.772162,
+            "dice": 0.871435,
+            "precision": 0.985837,
+            "recall": 0.780824
+          },
+          "predictedOilFraction": 0.03368425
+        }
+      }
+    },
+    {
+      "scene": "00245",
+      "split": "val",
+      "referenceOilFraction": 0.01895976,
+      "validFraction": 0.986029,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 67013,
+            "fp": 1276,
+            "fn": 11399,
+            "tn": 4056019
+          },
+          "scores": {
+            "iou": 0.840942,
+            "dice": 0.9136,
+            "precision": 0.981315,
+            "recall": 0.854627
+          },
+          "predictedOilFraction": 0.01651205
+        },
+        "0.6": {
+          "counts": {
+            "tp": 64154,
+            "fp": 748,
+            "fn": 14258,
+            "tn": 4056547
+          },
+          "scores": {
+            "iou": 0.810435,
+            "dice": 0.895293,
+            "precision": 0.988475,
+            "recall": 0.818166
+          },
+          "predictedOilFraction": 0.01569308
+        },
+        "0.7": {
+          "counts": {
+            "tp": 61048,
+            "fp": 356,
+            "fn": 17364,
+            "tn": 4056939
+          },
+          "scores": {
+            "iou": 0.775036,
+            "dice": 0.873262,
+            "precision": 0.994202,
+            "recall": 0.778554
+          },
+          "predictedOilFraction": 0.01484728
+        },
+        "0.8": {
+          "counts": {
+            "tp": 56795,
+            "fp": 143,
+            "fn": 21617,
+            "tn": 4057152
+          },
+          "scores": {
+            "iou": 0.722997,
+            "dice": 0.839232,
+            "precision": 0.997488,
+            "recall": 0.724315
+          },
+          "predictedOilFraction": 0.01376742
+        },
+        "0.9": {
+          "counts": {
+            "tp": 49155,
+            "fp": 10,
+            "fn": 29257,
+            "tn": 4057285
+          },
+          "scores": {
+            "iou": 0.626801,
+            "dice": 0.770593,
+            "precision": 0.999797,
+            "recall": 0.626881
+          },
+          "predictedOilFraction": 0.01188793
+        },
+        "0.95": {
+          "counts": {
+            "tp": 41316,
+            "fp": 0,
+            "fn": 37096,
+            "tn": 4057295
+          },
+          "scores": {
+            "iou": 0.526909,
+            "dice": 0.690164,
+            "precision": 1.0,
+            "recall": 0.526909
+          },
+          "predictedOilFraction": 0.00999007
+        }
+      }
+    },
+    {
+      "scene": "00252",
+      "split": "val",
+      "referenceOilFraction": 0.03698874,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 149746,
+            "fp": 41075,
+            "fn": 5396,
+            "tn": 3998087
+          },
+          "scores": {
+            "iou": 0.763165,
+            "dice": 0.865676,
+            "precision": 0.784746,
+            "recall": 0.965219
+          },
+          "predictedOilFraction": 0.04549527
+        },
+        "0.6": {
+          "counts": {
+            "tp": 146604,
+            "fp": 24405,
+            "fn": 8538,
+            "tn": 4014757
+          },
+          "scores": {
+            "iou": 0.816522,
+            "dice": 0.898995,
+            "precision": 0.857288,
+            "recall": 0.944967
+          },
+          "predictedOilFraction": 0.04077172
+        },
+        "0.7": {
+          "counts": {
+            "tp": 142669,
+            "fp": 14361,
+            "fn": 12473,
+            "tn": 4024801
+          },
+          "scores": {
+            "iou": 0.84169,
+            "dice": 0.914041,
+            "precision": 0.908546,
+            "recall": 0.919603
+          },
+          "predictedOilFraction": 0.03743887
+        },
+        "0.8": {
+          "counts": {
+            "tp": 136922,
+            "fp": 7798,
+            "fn": 18220,
+            "tn": 4031364
+          },
+          "scores": {
+            "iou": 0.840322,
+            "dice": 0.913233,
+            "precision": 0.946117,
+            "recall": 0.882559
+          },
+          "predictedOilFraction": 0.03450394
+        },
+        "0.9": {
+          "counts": {
+            "tp": 125621,
+            "fp": 2951,
+            "fn": 29521,
+            "tn": 4036211
+          },
+          "scores": {
+            "iou": 0.794602,
+            "dice": 0.885547,
+            "precision": 0.977048,
+            "recall": 0.809716
+          },
+          "predictedOilFraction": 0.03065395
+        },
+        "0.95": {
+          "counts": {
+            "tp": 112978,
+            "fp": 948,
+            "fn": 42164,
+            "tn": 4038214
+          },
+          "scores": {
+            "iou": 0.7238,
+            "dice": 0.839773,
+            "precision": 0.991679,
+            "recall": 0.728223
+          },
+          "predictedOilFraction": 0.02716208
+        }
+      }
+    },
+    {
+      "scene": "00254",
+      "split": "val",
+      "referenceOilFraction": 0.03311806,
+      "validFraction": 0.995384,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 126502,
+            "fp": 14587,
+            "fn": 11764,
+            "tn": 4022089
+          },
+          "scores": {
+            "iou": 0.827606,
+            "dice": 0.905672,
+            "precision": 0.896611,
+            "recall": 0.914918
+          },
+          "predictedOilFraction": 0.03379424
+        },
+        "0.6": {
+          "counts": {
+            "tp": 123178,
+            "fp": 10632,
+            "fn": 15088,
+            "tn": 4026044
+          },
+          "scores": {
+            "iou": 0.827264,
+            "dice": 0.905468,
+            "precision": 0.920544,
+            "recall": 0.890877
+          },
+          "predictedOilFraction": 0.03205074
+        },
+        "0.7": {
+          "counts": {
+            "tp": 119350,
+            "fp": 7554,
+            "fn": 18916,
+            "tn": 4029122
+          },
+          "scores": {
+            "iou": 0.818475,
+            "dice": 0.900177,
+            "precision": 0.940475,
+            "recall": 0.863191
+          },
+          "predictedOilFraction": 0.03039659
+        },
+        "0.8": {
+          "counts": {
+            "tp": 113284,
+            "fp": 4782,
+            "fn": 24982,
+            "tn": 4031894
+          },
+          "scores": {
+            "iou": 0.79193,
+            "dice": 0.883885,
+            "precision": 0.959497,
+            "recall": 0.819319
+          },
+          "predictedOilFraction": 0.02827967
+        },
+        "0.9": {
+          "counts": {
+            "tp": 102244,
+            "fp": 2319,
+            "fn": 36022,
+            "tn": 4034357
+          },
+          "scores": {
+            "iou": 0.727275,
+            "dice": 0.842107,
+            "precision": 0.977822,
+            "recall": 0.739473
+          },
+          "predictedOilFraction": 0.02504538
+        },
+        "0.95": {
+          "counts": {
+            "tp": 91879,
+            "fp": 1059,
+            "fn": 46387,
+            "tn": 4035617
+          },
+          "scores": {
+            "iou": 0.659458,
+            "dice": 0.794787,
+            "precision": 0.988605,
+            "recall": 0.664509
+          },
+          "predictedOilFraction": 0.02226091
+        }
+      }
+    },
+    {
+      "scene": "00256",
+      "split": "val",
+      "referenceOilFraction": 0.0819509,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 303054,
+            "fp": 44180,
+            "fn": 40673,
+            "tn": 3806397
+          },
+          "scores": {
+            "iou": 0.781254,
+            "dice": 0.877196,
+            "precision": 0.872766,
+            "recall": 0.881671
+          },
+          "predictedOilFraction": 0.08278704
+        },
+        "0.6": {
+          "counts": {
+            "tp": 292804,
+            "fp": 35224,
+            "fn": 50923,
+            "tn": 3815353
+          },
+          "scores": {
+            "iou": 0.77267,
+            "dice": 0.871758,
+            "precision": 0.892619,
+            "recall": 0.85185
+          },
+          "predictedOilFraction": 0.07820797
+        },
+        "0.7": {
+          "counts": {
+            "tp": 280076,
+            "fp": 27176,
+            "fn": 63651,
+            "tn": 3823401
+          },
+          "scores": {
+            "iou": 0.755119,
+            "dice": 0.860476,
+            "precision": 0.911551,
+            "recall": 0.814821
+          },
+          "predictedOilFraction": 0.07325459
+        },
+        "0.8": {
+          "counts": {
+            "tp": 260062,
+            "fp": 18117,
+            "fn": 83665,
+            "tn": 3832460
+          },
+          "scores": {
+            "iou": 0.718713,
+            "dice": 0.836339,
+            "precision": 0.934873,
+            "recall": 0.756595
+          },
+          "predictedOilFraction": 0.06632304
+        },
+        "0.9": {
+          "counts": {
+            "tp": 225529,
+            "fp": 7707,
+            "fn": 118198,
+            "tn": 3842870
+          },
+          "scores": {
+            "iou": 0.641739,
+            "dice": 0.78178,
+            "precision": 0.966956,
+            "recall": 0.656128
+          },
+          "predictedOilFraction": 0.0556078
+        },
+        "0.95": {
+          "counts": {
+            "tp": 194384,
+            "fp": 2613,
+            "fn": 149343,
+            "tn": 3847964
+          },
+          "scores": {
+            "iou": 0.561252,
+            "dice": 0.718977,
+            "precision": 0.986736,
+            "recall": 0.565519
+          },
+          "predictedOilFraction": 0.04696774
+        }
+      }
+    },
+    {
+      "scene": "00261",
+      "split": "val",
+      "referenceOilFraction": 0.01661354,
+      "validFraction": 0.93447,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 60270,
+            "fp": 9877,
+            "fn": 4846,
+            "tn": 3844460
+          },
+          "scores": {
+            "iou": 0.803675,
+            "dice": 0.891153,
+            "precision": 0.859196,
+            "recall": 0.925579
+          },
+          "predictedOilFraction": 0.01789714
+        },
+        "0.6": {
+          "counts": {
+            "tp": 58967,
+            "fp": 7778,
+            "fn": 6149,
+            "tn": 3846559
+          },
+          "scores": {
+            "iou": 0.808942,
+            "dice": 0.894381,
+            "precision": 0.883467,
+            "recall": 0.905569
+          },
+          "predictedOilFraction": 0.01702916
+        },
+        "0.7": {
+          "counts": {
+            "tp": 57056,
+            "fp": 5578,
+            "fn": 8060,
+            "tn": 3848759
+          },
+          "scores": {
+            "iou": 0.807084,
+            "dice": 0.893245,
+            "precision": 0.910943,
+            "recall": 0.876221
+          },
+          "predictedOilFraction": 0.01598029
+        },
+        "0.8": {
+          "counts": {
+            "tp": 54106,
+            "fp": 3301,
+            "fn": 11010,
+            "tn": 3851036
+          },
+          "scores": {
+            "iou": 0.790827,
+            "dice": 0.883197,
+            "precision": 0.942498,
+            "recall": 0.830917
+          },
+          "predictedOilFraction": 0.01464669
+        },
+        "0.9": {
+          "counts": {
+            "tp": 48999,
+            "fp": 1236,
+            "fn": 16117,
+            "tn": 3853101
+          },
+          "scores": {
+            "iou": 0.738471,
+            "dice": 0.849564,
+            "precision": 0.975396,
+            "recall": 0.752488
+          },
+          "predictedOilFraction": 0.01281684
+        },
+        "0.95": {
+          "counts": {
+            "tp": 42873,
+            "fp": 406,
+            "fn": 22243,
+            "tn": 3853931
+          },
+          "scores": {
+            "iou": 0.65433,
+            "dice": 0.791051,
+            "precision": 0.990619,
+            "recall": 0.65841
+          },
+          "predictedOilFraction": 0.0110421
+        }
+      }
+    },
+    {
+      "scene": "00274",
+      "split": "val",
+      "referenceOilFraction": 0.00535154,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 16852,
+            "fp": 13825,
+            "fn": 5594,
+            "tn": 4158033
+          },
+          "scores": {
+            "iou": 0.464614,
+            "dice": 0.634452,
+            "precision": 0.549337,
+            "recall": 0.75078
+          },
+          "predictedOilFraction": 0.00731397
+        },
+        "0.6": {
+          "counts": {
+            "tp": 16175,
+            "fp": 8968,
+            "fn": 6271,
+            "tn": 4162890
+          },
+          "scores": {
+            "iou": 0.514898,
+            "dice": 0.679779,
+            "precision": 0.64332,
+            "recall": 0.720618
+          },
+          "predictedOilFraction": 0.00599456
+        },
+        "0.7": {
+          "counts": {
+            "tp": 15196,
+            "fp": 5673,
+            "fn": 7250,
+            "tn": 4166185
+          },
+          "scores": {
+            "iou": 0.540418,
+            "dice": 0.701651,
+            "precision": 0.728161,
+            "recall": 0.677003
+          },
+          "predictedOilFraction": 0.00497556
+        },
+        "0.8": {
+          "counts": {
+            "tp": 13508,
+            "fp": 3362,
+            "fn": 8938,
+            "tn": 4168496
+          },
+          "scores": {
+            "iou": 0.523404,
+            "dice": 0.68715,
+            "precision": 0.800711,
+            "recall": 0.6018
+          },
+          "predictedOilFraction": 0.00402212
+        },
+        "0.9": {
+          "counts": {
+            "tp": 10408,
+            "fp": 1328,
+            "fn": 12038,
+            "tn": 4170530
+          },
+          "scores": {
+            "iou": 0.437789,
+            "dice": 0.608975,
+            "precision": 0.886844,
+            "recall": 0.463691
+          },
+          "predictedOilFraction": 0.00279808
+        },
+        "0.95": {
+          "counts": {
+            "tp": 7301,
+            "fp": 370,
+            "fn": 15145,
+            "tn": 4171488
+          },
+          "scores": {
+            "iou": 0.319995,
+            "dice": 0.484842,
+            "precision": 0.951766,
+            "recall": 0.32527
+          },
+          "predictedOilFraction": 0.00182891
+        }
+      }
+    },
+    {
+      "scene": "00277",
+      "split": "val",
+      "referenceOilFraction": 0.01394677,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 58451,
+            "fp": 25964,
+            "fn": 46,
+            "tn": 4109843
+          },
+          "scores": {
+            "iou": 0.692047,
+            "dice": 0.818,
+            "precision": 0.692424,
+            "recall": 0.999214
+          },
+          "predictedOilFraction": 0.0201261
+        },
+        "0.6": {
+          "counts": {
+            "tp": 58316,
+            "fp": 20826,
+            "fn": 181,
+            "tn": 4114981
+          },
+          "scores": {
+            "iou": 0.735171,
+            "dice": 0.847376,
+            "precision": 0.736853,
+            "recall": 0.996906
+          },
+          "predictedOilFraction": 0.01886892
+        },
+        "0.7": {
+          "counts": {
+            "tp": 58025,
+            "fp": 16445,
+            "fn": 472,
+            "tn": 4119362
+          },
+          "scores": {
+            "iou": 0.774265,
+            "dice": 0.872773,
+            "precision": 0.779173,
+            "recall": 0.991931
+          },
+          "predictedOilFraction": 0.01775503
+        },
+        "0.8": {
+          "counts": {
+            "tp": 57287,
+            "fp": 11763,
+            "fn": 1210,
+            "tn": 4124044
+          },
+          "scores": {
+            "iou": 0.815357,
+            "dice": 0.898288,
+            "precision": 0.829645,
+            "recall": 0.979315
+          },
+          "predictedOilFraction": 0.0164628
+        },
+        "0.9": {
+          "counts": {
+            "tp": 55271,
+            "fp": 6435,
+            "fn": 3226,
+            "tn": 4129372
+          },
+          "scores": {
+            "iou": 0.851214,
+            "dice": 0.919628,
+            "precision": 0.895715,
+            "recall": 0.944852
+          },
+          "predictedOilFraction": 0.01471186
+        },
+        "0.95": {
+          "counts": {
+            "tp": 52372,
+            "fp": 3283,
+            "fn": 6125,
+            "tn": 4132524
+          },
+          "scores": {
+            "iou": 0.847718,
+            "dice": 0.917584,
+            "precision": 0.941012,
+            "recall": 0.895294
+          },
+          "predictedOilFraction": 0.01326919
+        }
+      }
+    },
+    {
+      "scene": "00288",
+      "split": "val",
+      "referenceOilFraction": 0.01468968,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 60368,
+            "fp": 131486,
+            "fn": 1245,
+            "tn": 4001205
+          },
+          "scores": {
+            "iou": 0.312627,
+            "dice": 0.476338,
+            "precision": 0.314656,
+            "recall": 0.979793
+          },
+          "predictedOilFraction": 0.04574156
+        },
+        "0.6": {
+          "counts": {
+            "tp": 59674,
+            "fp": 103924,
+            "fn": 1939,
+            "tn": 4028767
+          },
+          "scores": {
+            "iou": 0.360487,
+            "dice": 0.529939,
+            "precision": 0.36476,
+            "recall": 0.968529
+          },
+          "predictedOilFraction": 0.0390048
+        },
+        "0.7": {
+          "counts": {
+            "tp": 58797,
+            "fp": 78571,
+            "fn": 2816,
+            "tn": 4054120
+          },
+          "scores": {
+            "iou": 0.419427,
+            "dice": 0.590981,
+            "precision": 0.428025,
+            "recall": 0.954295
+          },
+          "predictedOilFraction": 0.03275108
+        },
+        "0.8": {
+          "counts": {
+            "tp": 57260,
+            "fp": 52585,
+            "fn": 4353,
+            "tn": 4080106
+          },
+          "scores": {
+            "iou": 0.50141,
+            "dice": 0.667919,
+            "precision": 0.52128,
+            "recall": 0.929349
+          },
+          "predictedOilFraction": 0.02618909
+        },
+        "0.9": {
+          "counts": {
+            "tp": 52682,
+            "fp": 24896,
+            "fn": 8931,
+            "tn": 4107795
+          },
+          "scores": {
+            "iou": 0.608977,
+            "dice": 0.756974,
+            "precision": 0.679084,
+            "recall": 0.855047
+          },
+          "predictedOilFraction": 0.01849604
+        },
+        "0.95": {
+          "counts": {
+            "tp": 45296,
+            "fp": 9116,
+            "fn": 16317,
+            "tn": 4123575
+          },
+          "scores": {
+            "iou": 0.640416,
+            "dice": 0.780797,
+            "precision": 0.832463,
+            "recall": 0.73517
+          },
+          "predictedOilFraction": 0.01297283
+        }
+      }
+    },
+    {
+      "scene": "00293",
+      "split": "val",
+      "referenceOilFraction": 0.0202961,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 59068,
+            "fp": 6217,
+            "fn": 26060,
+            "tn": 4102959
+          },
+          "scores": {
+            "iou": 0.646647,
+            "dice": 0.785411,
+            "precision": 0.904771,
+            "recall": 0.693873
+          },
+          "predictedOilFraction": 0.01556516
+        },
+        "0.6": {
+          "counts": {
+            "tp": 55924,
+            "fp": 3677,
+            "fn": 29204,
+            "tn": 4105499
+          },
+          "scores": {
+            "iou": 0.629739,
+            "dice": 0.77281,
+            "precision": 0.938306,
+            "recall": 0.65694
+          },
+          "predictedOilFraction": 0.01420999
+        },
+        "0.7": {
+          "counts": {
+            "tp": 52656,
+            "fp": 1911,
+            "fn": 32472,
+            "tn": 4107265
+          },
+          "scores": {
+            "iou": 0.60497,
+            "dice": 0.753871,
+            "precision": 0.964979,
+            "recall": 0.618551
+          },
+          "predictedOilFraction": 0.01300979
+        },
+        "0.8": {
+          "counts": {
+            "tp": 48880,
+            "fp": 750,
+            "fn": 36248,
+            "tn": 4108426
+          },
+          "scores": {
+            "iou": 0.56918,
+            "dice": 0.725449,
+            "precision": 0.984888,
+            "recall": 0.574194
+          },
+          "predictedOilFraction": 0.01183271
+        },
+        "0.9": {
+          "counts": {
+            "tp": 43056,
+            "fp": 85,
+            "fn": 42072,
+            "tn": 4109091
+          },
+          "scores": {
+            "iou": 0.505275,
+            "dice": 0.671339,
+            "precision": 0.99803,
+            "recall": 0.50578
+          },
+          "predictedOilFraction": 0.01028562
+        },
+        "0.95": {
+          "counts": {
+            "tp": 36723,
+            "fp": 0,
+            "fn": 48405,
+            "tn": 4109176
+          },
+          "scores": {
+            "iou": 0.431386,
+            "dice": 0.602753,
+            "precision": 1.0,
+            "recall": 0.431386
+          },
+          "predictedOilFraction": 0.00875545
+        }
+      }
+    },
+    {
+      "scene": "00003",
+      "split": "test",
+      "referenceOilFraction": 0.00591063,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 24775,
+            "fp": 15859,
+            "fn": 16,
+            "tn": 4153654
+          },
+          "scores": {
+            "iou": 0.609471,
+            "dice": 0.757356,
+            "precision": 0.609711,
+            "recall": 0.999355
+          },
+          "predictedOilFraction": 0.0096879
+        },
+        "0.6": {
+          "counts": {
+            "tp": 24759,
+            "fp": 14418,
+            "fn": 32,
+            "tn": 4155095
+          },
+          "scores": {
+            "iou": 0.631462,
+            "dice": 0.774106,
+            "precision": 0.631978,
+            "recall": 0.998709
+          },
+          "predictedOilFraction": 0.00934052
+        },
+        "0.7": {
+          "counts": {
+            "tp": 24751,
+            "fp": 13074,
+            "fn": 40,
+            "tn": 4156439
+          },
+          "scores": {
+            "iou": 0.653664,
+            "dice": 0.790565,
+            "precision": 0.654356,
+            "recall": 0.998387
+          },
+          "predictedOilFraction": 0.00901818
+        },
+        "0.8": {
+          "counts": {
+            "tp": 24732,
+            "fp": 11412,
+            "fn": 59,
+            "tn": 4158101
+          },
+          "scores": {
+            "iou": 0.683148,
+            "dice": 0.81175,
+            "precision": 0.684263,
+            "recall": 0.99762
+          },
+          "predictedOilFraction": 0.0086174
+        },
+        "0.9": {
+          "counts": {
+            "tp": 24700,
+            "fp": 8388,
+            "fn": 91,
+            "tn": 4161125
+          },
+          "scores": {
+            "iou": 0.744447,
+            "dice": 0.853505,
+            "precision": 0.746494,
+            "recall": 0.996329
+          },
+          "predictedOilFraction": 0.00788879
+        },
+        "0.95": {
+          "counts": {
+            "tp": 24500,
+            "fp": 5759,
+            "fn": 291,
+            "tn": 4163754
+          },
+          "scores": {
+            "iou": 0.801964,
+            "dice": 0.8901,
+            "precision": 0.809676,
+            "recall": 0.988262
+          },
+          "predictedOilFraction": 0.00721431
+        }
+      }
+    },
+    {
+      "scene": "00027",
+      "split": "test",
+      "referenceOilFraction": 0.01084232,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 45476,
+            "fp": 20125,
+            "fn": 0,
+            "tn": 4128703
+          },
+          "scores": {
+            "iou": 0.693221,
+            "dice": 0.818819,
+            "precision": 0.693221,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.0156405
+        },
+        "0.6": {
+          "counts": {
+            "tp": 45476,
+            "fp": 15728,
+            "fn": 0,
+            "tn": 4133100
+          },
+          "scores": {
+            "iou": 0.743023,
+            "dice": 0.852568,
+            "precision": 0.743023,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.01459217
+        },
+        "0.7": {
+          "counts": {
+            "tp": 45476,
+            "fp": 11965,
+            "fn": 0,
+            "tn": 4136863
+          },
+          "scores": {
+            "iou": 0.791699,
+            "dice": 0.883741,
+            "precision": 0.791699,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.013695
+        },
+        "0.8": {
+          "counts": {
+            "tp": 45476,
+            "fp": 8068,
+            "fn": 0,
+            "tn": 4140760
+          },
+          "scores": {
+            "iou": 0.84932,
+            "dice": 0.918522,
+            "precision": 0.84932,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.01276588
+        },
+        "0.9": {
+          "counts": {
+            "tp": 45432,
+            "fp": 4205,
+            "fn": 44,
+            "tn": 4144623
+          },
+          "scores": {
+            "iou": 0.914474,
+            "dice": 0.955327,
+            "precision": 0.915285,
+            "recall": 0.999032
+          },
+          "predictedOilFraction": 0.01183438
+        },
+        "0.95": {
+          "counts": {
+            "tp": 45203,
+            "fp": 2136,
+            "fn": 273,
+            "tn": 4146692
+          },
+          "scores": {
+            "iou": 0.949404,
+            "dice": 0.974045,
+            "precision": 0.954879,
+            "recall": 0.993997
+          },
+          "predictedOilFraction": 0.0112865
+        }
+      }
+    },
+    {
+      "scene": "00041",
+      "split": "test",
+      "referenceOilFraction": 0.32591367,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 1363305,
+            "fp": 175411,
+            "fn": 3676,
+            "tn": 2651912
+          },
+          "scores": {
+            "iou": 0.88389,
+            "dice": 0.938367,
+            "precision": 0.886002,
+            "recall": 0.997311
+          },
+          "predictedOilFraction": 0.36685848
+        },
+        "0.6": {
+          "counts": {
+            "tp": 1360482,
+            "fp": 153325,
+            "fn": 6499,
+            "tn": 2673998
+          },
+          "scores": {
+            "iou": 0.894874,
+            "dice": 0.944521,
+            "precision": 0.898716,
+            "recall": 0.995246
+          },
+          "predictedOilFraction": 0.36091971
+        },
+        "0.7": {
+          "counts": {
+            "tp": 1354796,
+            "fp": 129302,
+            "fn": 12185,
+            "tn": 2698021
+          },
+          "scores": {
+            "iou": 0.905441,
+            "dice": 0.950374,
+            "precision": 0.912875,
+            "recall": 0.991086
+          },
+          "predictedOilFraction": 0.35383654
+        },
+        "0.8": {
+          "counts": {
+            "tp": 1342412,
+            "fp": 97754,
+            "fn": 24569,
+            "tn": 2729569
+          },
+          "scores": {
+            "iou": 0.916488,
+            "dice": 0.956424,
+            "precision": 0.932123,
+            "recall": 0.982027
+          },
+          "predictedOilFraction": 0.34336233
+        },
+        "0.9": {
+          "counts": {
+            "tp": 1306427,
+            "fp": 57408,
+            "fn": 60554,
+            "tn": 2769915
+          },
+          "scores": {
+            "iou": 0.917184,
+            "dice": 0.956803,
+            "precision": 0.957907,
+            "recall": 0.955702
+          },
+          "predictedOilFraction": 0.3251636
+        },
+        "0.95": {
+          "counts": {
+            "tp": 1236970,
+            "fp": 31983,
+            "fn": 130011,
+            "tn": 2795340
+          },
+          "scores": {
+            "iou": 0.884204,
+            "dice": 0.938544,
+            "precision": 0.974796,
+            "recall": 0.904892
+          },
+          "predictedOilFraction": 0.30254197
+        }
+      }
+    },
+    {
+      "scene": "00045",
+      "split": "test",
+      "referenceOilFraction": 0.00713134,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 27481,
+            "fp": 5640,
+            "fn": 2430,
+            "tn": 4158753
+          },
+          "scores": {
+            "iou": 0.773002,
+            "dice": 0.87197,
+            "precision": 0.829715,
+            "recall": 0.918759
+          },
+          "predictedOilFraction": 0.00789666
+        },
+        "0.6": {
+          "counts": {
+            "tp": 26859,
+            "fp": 4288,
+            "fn": 3052,
+            "tn": 4160105
+          },
+          "scores": {
+            "iou": 0.785374,
+            "dice": 0.879786,
+            "precision": 0.86233,
+            "recall": 0.897964
+          },
+          "predictedOilFraction": 0.00742602
+        },
+        "0.7": {
+          "counts": {
+            "tp": 26131,
+            "fp": 3016,
+            "fn": 3780,
+            "tn": 4161377
+          },
+          "scores": {
+            "iou": 0.793604,
+            "dice": 0.884927,
+            "precision": 0.896525,
+            "recall": 0.873625
+          },
+          "predictedOilFraction": 0.00694919
+        },
+        "0.8": {
+          "counts": {
+            "tp": 24872,
+            "fp": 1603,
+            "fn": 5039,
+            "tn": 4162790
+          },
+          "scores": {
+            "iou": 0.789237,
+            "dice": 0.882205,
+            "precision": 0.939452,
+            "recall": 0.831534
+          },
+          "predictedOilFraction": 0.00631213
+        },
+        "0.9": {
+          "counts": {
+            "tp": 21742,
+            "fp": 339,
+            "fn": 8169,
+            "tn": 4164054
+          },
+          "scores": {
+            "iou": 0.718744,
+            "dice": 0.836359,
+            "precision": 0.984647,
+            "recall": 0.72689
+          },
+          "predictedOilFraction": 0.00526452
+        },
+        "0.95": {
+          "counts": {
+            "tp": 18190,
+            "fp": 39,
+            "fn": 11721,
+            "tn": 4164354
+          },
+          "scores": {
+            "iou": 0.607346,
+            "dice": 0.755713,
+            "precision": 0.997861,
+            "recall": 0.608137
+          },
+          "predictedOilFraction": 0.00434613
+        }
+      }
+    },
+    {
+      "scene": "00047",
+      "split": "test",
+      "referenceOilFraction": 0.00892567,
+      "validFraction": 0.933169,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 31329,
+            "fp": 181687,
+            "fn": 3606,
+            "tn": 3697372
+          },
+          "scores": {
+            "iou": 0.144625,
+            "dice": 0.252703,
+            "precision": 0.147073,
+            "recall": 0.89678
+          },
+          "predictedOilFraction": 0.0544242
+        },
+        "0.6": {
+          "counts": {
+            "tp": 30274,
+            "fp": 174629,
+            "fn": 4661,
+            "tn": 3704430
+          },
+          "scores": {
+            "iou": 0.144462,
+            "dice": 0.252454,
+            "precision": 0.147748,
+            "recall": 0.866581
+          },
+          "predictedOilFraction": 0.05235138
+        },
+        "0.7": {
+          "counts": {
+            "tp": 28889,
+            "fp": 168406,
+            "fn": 6046,
+            "tn": 3710653
+          },
+          "scores": {
+            "iou": 0.142072,
+            "dice": 0.248796,
+            "precision": 0.146425,
+            "recall": 0.826936
+          },
+          "predictedOilFraction": 0.05040759
+        },
+        "0.8": {
+          "counts": {
+            "tp": 26460,
+            "fp": 161157,
+            "fn": 8475,
+            "tn": 3717902
+          },
+          "scores": {
+            "iou": 0.134937,
+            "dice": 0.237787,
+            "precision": 0.141032,
+            "recall": 0.757407
+          },
+          "predictedOilFraction": 0.04793492
+        },
+        "0.9": {
+          "counts": {
+            "tp": 20904,
+            "fp": 153429,
+            "fn": 14031,
+            "tn": 3725630
+          },
+          "scores": {
+            "iou": 0.110977,
+            "dice": 0.199782,
+            "precision": 0.119908,
+            "recall": 0.598368
+          },
+          "predictedOilFraction": 0.04454095
+        },
+        "0.95": {
+          "counts": {
+            "tp": 14923,
+            "fp": 150017,
+            "fn": 20012,
+            "tn": 3729042
+          },
+          "scores": {
+            "iou": 0.080686,
+            "dice": 0.149323,
+            "precision": 0.090475,
+            "recall": 0.427165
+          },
+          "predictedOilFraction": 0.0421411
+        }
+      }
+    },
+    {
+      "scene": "00052",
+      "split": "test",
+      "referenceOilFraction": 0.49419641,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 2047706,
+            "fp": 114709,
+            "fn": 25104,
+            "tn": 2006785
+          },
+          "scores": {
+            "iou": 0.936086,
+            "dice": 0.966988,
+            "precision": 0.946953,
+            "recall": 0.987889
+          },
+          "predictedOilFraction": 0.51555991
+        },
+        "0.6": {
+          "counts": {
+            "tp": 2037426,
+            "fp": 99186,
+            "fn": 35384,
+            "tn": 2022308
+          },
+          "scores": {
+            "iou": 0.938043,
+            "dice": 0.968031,
+            "precision": 0.953578,
+            "recall": 0.982929
+          },
+          "predictedOilFraction": 0.509408
+        },
+        "0.7": {
+          "counts": {
+            "tp": 2025192,
+            "fp": 82900,
+            "fn": 47618,
+            "tn": 2038594
+          },
+          "scores": {
+            "iou": 0.939455,
+            "dice": 0.968782,
+            "precision": 0.960675,
+            "recall": 0.977027
+          },
+          "predictedOilFraction": 0.5026083
+        },
+        "0.8": {
+          "counts": {
+            "tp": 2008326,
+            "fp": 62312,
+            "fn": 64484,
+            "tn": 2059182
+          },
+          "scores": {
+            "iou": 0.940614,
+            "dice": 0.969398,
+            "precision": 0.969907,
+            "recall": 0.968891
+          },
+          "predictedOilFraction": 0.49367857
+        },
+        "0.9": {
+          "counts": {
+            "tp": 1977620,
+            "fp": 33935,
+            "fn": 95190,
+            "tn": 2087559
+          },
+          "scores": {
+            "iou": 0.938709,
+            "dice": 0.968386,
+            "precision": 0.98313,
+            "recall": 0.954077
+          },
+          "predictedOilFraction": 0.47959208
+        },
+        "0.95": {
+          "counts": {
+            "tp": 1935116,
+            "fp": 16732,
+            "fn": 137694,
+            "tn": 2104762
+          },
+          "scores": {
+            "iou": 0.926096,
+            "dice": 0.96163,
+            "precision": 0.991428,
+            "recall": 0.933571
+          },
+          "predictedOilFraction": 0.46535683
+        }
+      }
+    },
+    {
+      "scene": "00053",
+      "split": "test",
+      "referenceOilFraction": 0.57374001,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 2381922,
+            "fp": 264458,
+            "fn": 24518,
+            "tn": 1523406
+          },
+          "scores": {
+            "iou": 0.891806,
+            "dice": 0.942809,
+            "precision": 0.900068,
+            "recall": 0.989812
+          },
+          "predictedOilFraction": 0.63094616
+        },
+        "0.6": {
+          "counts": {
+            "tp": 2368440,
+            "fp": 234694,
+            "fn": 38000,
+            "tn": 1553170
+          },
+          "scores": {
+            "iou": 0.896751,
+            "dice": 0.945565,
+            "precision": 0.909842,
+            "recall": 0.984209
+          },
+          "predictedOilFraction": 0.62063551
+        },
+        "0.7": {
+          "counts": {
+            "tp": 2348840,
+            "fp": 202057,
+            "fn": 57600,
+            "tn": 1585807
+          },
+          "scores": {
+            "iou": 0.900457,
+            "dice": 0.947622,
+            "precision": 0.92079,
+            "recall": 0.976064
+          },
+          "predictedOilFraction": 0.60818124
+        },
+        "0.8": {
+          "counts": {
+            "tp": 2318922,
+            "fp": 161462,
+            "fn": 87518,
+            "tn": 1626402
+          },
+          "scores": {
+            "iou": 0.903041,
+            "dice": 0.949051,
+            "precision": 0.934904,
+            "recall": 0.963632
+          },
+          "predictedOilFraction": 0.59136963
+        },
+        "0.9": {
+          "counts": {
+            "tp": 2259206,
+            "fp": 102958,
+            "fn": 147234,
+            "tn": 1684906
+          },
+          "scores": {
+            "iou": 0.900298,
+            "dice": 0.947533,
+            "precision": 0.956414,
+            "recall": 0.938817
+          },
+          "predictedOilFraction": 0.56318378
+        },
+        "0.95": {
+          "counts": {
+            "tp": 2176108,
+            "fp": 57403,
+            "fn": 230332,
+            "tn": 1730461
+          },
+          "scores": {
+            "iou": 0.883217,
+            "dice": 0.937987,
+            "precision": 0.974299,
+            "recall": 0.904285
+          },
+          "predictedOilFraction": 0.53251052
+        }
+      }
+    },
+    {
+      "scene": "00062",
+      "split": "test",
+      "referenceOilFraction": 0.00576067,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 24123,
+            "fp": 101217,
+            "fn": 39,
+            "tn": 4068925
+          },
+          "scores": {
+            "iou": 0.192401,
+            "dice": 0.322711,
+            "precision": 0.192461,
+            "recall": 0.998386
+          },
+          "predictedOilFraction": 0.02988338
+        },
+        "0.6": {
+          "counts": {
+            "tp": 24066,
+            "fp": 85998,
+            "fn": 96,
+            "tn": 4084144
+          },
+          "scores": {
+            "iou": 0.218464,
+            "dice": 0.358589,
+            "precision": 0.218655,
+            "recall": 0.996027
+          },
+          "predictedOilFraction": 0.0262413
+        },
+        "0.7": {
+          "counts": {
+            "tp": 23966,
+            "fp": 71086,
+            "fn": 196,
+            "tn": 4099056
+          },
+          "scores": {
+            "iou": 0.251617,
+            "dice": 0.402067,
+            "precision": 0.252136,
+            "recall": 0.991888
+          },
+          "predictedOilFraction": 0.02266216
+        },
+        "0.8": {
+          "counts": {
+            "tp": 23620,
+            "fp": 52352,
+            "fn": 542,
+            "tn": 4117790
+          },
+          "scores": {
+            "iou": 0.308702,
+            "dice": 0.471768,
+            "precision": 0.310904,
+            "recall": 0.977568
+          },
+          "predictedOilFraction": 0.01811314
+        },
+        "0.9": {
+          "counts": {
+            "tp": 22094,
+            "fp": 26132,
+            "fn": 2068,
+            "tn": 4144010
+          },
+          "scores": {
+            "iou": 0.439297,
+            "dice": 0.610433,
+            "precision": 0.458135,
+            "recall": 0.914411
+          },
+          "predictedOilFraction": 0.01149797
+        },
+        "0.95": {
+          "counts": {
+            "tp": 19675,
+            "fp": 9257,
+            "fn": 4487,
+            "tn": 4160885
+          },
+          "scores": {
+            "iou": 0.588737,
+            "dice": 0.741138,
+            "precision": 0.680043,
+            "recall": 0.814295
+          },
+          "predictedOilFraction": 0.00689793
+        }
+      }
+    },
+    {
+      "scene": "00064",
+      "split": "test",
+      "referenceOilFraction": 0.01254559,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 52609,
+            "fp": 17399,
+            "fn": 11,
+            "tn": 4124285
+          },
+          "scores": {
+            "iou": 0.751353,
+            "dice": 0.858026,
+            "precision": 0.751471,
+            "recall": 0.999791
+          },
+          "predictedOilFraction": 0.01669121
+        },
+        "0.6": {
+          "counts": {
+            "tp": 52575,
+            "fp": 14412,
+            "fn": 45,
+            "tn": 4127272
+          },
+          "scores": {
+            "iou": 0.784327,
+            "dice": 0.879129,
+            "precision": 0.784854,
+            "recall": 0.999145
+          },
+          "predictedOilFraction": 0.01597095
+        },
+        "0.7": {
+          "counts": {
+            "tp": 52502,
+            "fp": 11957,
+            "fn": 118,
+            "tn": 4129727
+          },
+          "scores": {
+            "iou": 0.813014,
+            "dice": 0.896865,
+            "precision": 0.814502,
+            "recall": 0.997758
+          },
+          "predictedOilFraction": 0.01536822
+        },
+        "0.8": {
+          "counts": {
+            "tp": 52331,
+            "fp": 9233,
+            "fn": 289,
+            "tn": 4132451
+          },
+          "scores": {
+            "iou": 0.846054,
+            "dice": 0.916608,
+            "precision": 0.850026,
+            "recall": 0.994508
+          },
+          "predictedOilFraction": 0.014678
+        },
+        "0.9": {
+          "counts": {
+            "tp": 51796,
+            "fp": 5415,
+            "fn": 824,
+            "tn": 4136269
+          },
+          "scores": {
+            "iou": 0.892496,
+            "dice": 0.943195,
+            "precision": 0.90535,
+            "recall": 0.984341
+          },
+          "predictedOilFraction": 0.01364017
+        },
+        "0.95": {
+          "counts": {
+            "tp": 50634,
+            "fp": 2746,
+            "fn": 1986,
+            "tn": 4138938
+          },
+          "scores": {
+            "iou": 0.914532,
+            "dice": 0.955358,
+            "precision": 0.948558,
+            "recall": 0.962258
+          },
+          "predictedOilFraction": 0.01272678
+        }
+      }
+    },
+    {
+      "scene": "00080",
+      "split": "test",
+      "referenceOilFraction": 0.03063083,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 126310,
+            "fp": 97066,
+            "fn": 2165,
+            "tn": 3968763
+          },
+          "scores": {
+            "iou": 0.560031,
+            "dice": 0.717974,
+            "precision": 0.565459,
+            "recall": 0.983148
+          },
+          "predictedOilFraction": 0.05325699
+        },
+        "0.6": {
+          "counts": {
+            "tp": 125448,
+            "fp": 86087,
+            "fn": 3027,
+            "tn": 3979742
+          },
+          "scores": {
+            "iou": 0.58467,
+            "dice": 0.737908,
+            "precision": 0.593037,
+            "recall": 0.976439
+          },
+          "predictedOilFraction": 0.05043387
+        },
+        "0.7": {
+          "counts": {
+            "tp": 123927,
+            "fp": 73300,
+            "fn": 4548,
+            "tn": 3992529
+          },
+          "scores": {
+            "iou": 0.614184,
+            "dice": 0.760984,
+            "precision": 0.628347,
+            "recall": 0.9646
+          },
+          "predictedOilFraction": 0.04702258
+        },
+        "0.8": {
+          "counts": {
+            "tp": 120518,
+            "fp": 57605,
+            "fn": 7957,
+            "tn": 4008224
+          },
+          "scores": {
+            "iou": 0.647668,
+            "dice": 0.786163,
+            "precision": 0.6766,
+            "recall": 0.938066
+          },
+          "predictedOilFraction": 0.04246783
+        },
+        "0.9": {
+          "counts": {
+            "tp": 112715,
+            "fp": 35089,
+            "fn": 15760,
+            "tn": 4030740
+          },
+          "scores": {
+            "iou": 0.689119,
+            "dice": 0.815951,
+            "precision": 0.762598,
+            "recall": 0.87733
+          },
+          "predictedOilFraction": 0.03523922
+        },
+        "0.95": {
+          "counts": {
+            "tp": 101936,
+            "fp": 18693,
+            "fn": 26539,
+            "tn": 4047136
+          },
+          "scores": {
+            "iou": 0.692651,
+            "dice": 0.818421,
+            "precision": 0.845037,
+            "recall": 0.793431
+          },
+          "predictedOilFraction": 0.02876019
+        }
+      }
+    },
+    {
+      "scene": "00092",
+      "split": "test",
+      "referenceOilFraction": 0.09094167,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 380534,
+            "fp": 195332,
+            "fn": 903,
+            "tn": 3617535
+          },
+          "scores": {
+            "iou": 0.659768,
+            "dice": 0.795013,
+            "precision": 0.660803,
+            "recall": 0.997633
+          },
+          "predictedOilFraction": 0.13729715
+        },
+        "0.6": {
+          "counts": {
+            "tp": 380084,
+            "fp": 182633,
+            "fn": 1353,
+            "tn": 3630234
+          },
+          "scores": {
+            "iou": 0.673824,
+            "dice": 0.805131,
+            "precision": 0.675444,
+            "recall": 0.996453
+          },
+          "predictedOilFraction": 0.13416219
+        },
+        "0.7": {
+          "counts": {
+            "tp": 379220,
+            "fp": 169069,
+            "fn": 2217,
+            "tn": 3643798
+          },
+          "scores": {
+            "iou": 0.688857,
+            "dice": 0.815767,
+            "precision": 0.691643,
+            "recall": 0.994188
+          },
+          "predictedOilFraction": 0.13072228
+        },
+        "0.8": {
+          "counts": {
+            "tp": 377912,
+            "fp": 149976,
+            "fn": 3525,
+            "tn": 3662891
+          },
+          "scores": {
+            "iou": 0.711146,
+            "dice": 0.831192,
+            "precision": 0.715894,
+            "recall": 0.990759
+          },
+          "predictedOilFraction": 0.12585831
+        },
+        "0.9": {
+          "counts": {
+            "tp": 375177,
+            "fp": 118409,
+            "fn": 6260,
+            "tn": 3694458
+          },
+          "scores": {
+            "iou": 0.750585,
+            "dice": 0.857525,
+            "precision": 0.760105,
+            "recall": 0.983588
+          },
+          "predictedOilFraction": 0.11768007
+        },
+        "0.95": {
+          "counts": {
+            "tp": 369574,
+            "fp": 90084,
+            "fn": 11863,
+            "tn": 3722783
+          },
+          "scores": {
+            "iou": 0.783791,
+            "dice": 0.878793,
+            "precision": 0.80402,
+            "recall": 0.968899
+          },
+          "predictedOilFraction": 0.10959101
+        }
+      }
+    },
+    {
+      "scene": "00104",
+      "split": "test",
+      "referenceOilFraction": 0.01185203,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 43000,
+            "fp": 542058,
+            "fn": 6711,
+            "tn": 3602535
+          },
+          "scores": {
+            "iou": 0.072663,
+            "dice": 0.135482,
+            "precision": 0.073497,
+            "recall": 0.865
+          },
+          "predictedOilFraction": 0.1394887
+        },
+        "0.6": {
+          "counts": {
+            "tp": 42087,
+            "fp": 446797,
+            "fn": 7624,
+            "tn": 3697796
+          },
+          "scores": {
+            "iou": 0.084766,
+            "dice": 0.156284,
+            "precision": 0.086088,
+            "recall": 0.846634
+          },
+          "predictedOilFraction": 0.11655903
+        },
+        "0.7": {
+          "counts": {
+            "tp": 40755,
+            "fp": 349076,
+            "fn": 8956,
+            "tn": 3795517
+          },
+          "scores": {
+            "iou": 0.102197,
+            "dice": 0.185443,
+            "precision": 0.104545,
+            "recall": 0.819839
+          },
+          "predictedOilFraction": 0.09294295
+        },
+        "0.8": {
+          "counts": {
+            "tp": 38686,
+            "fp": 244733,
+            "fn": 11025,
+            "tn": 3899860
+          },
+          "scores": {
+            "iou": 0.131387,
+            "dice": 0.232258,
+            "precision": 0.136498,
+            "recall": 0.778218
+          },
+          "predictedOilFraction": 0.06757236
+        },
+        "0.9": {
+          "counts": {
+            "tp": 35167,
+            "fp": 128917,
+            "fn": 14544,
+            "tn": 4015676
+          },
+          "scores": {
+            "iou": 0.196873,
+            "dice": 0.328979,
+            "precision": 0.214323,
+            "recall": 0.707429
+          },
+          "predictedOilFraction": 0.03912067
+        },
+        "0.95": {
+          "counts": {
+            "tp": 31529,
+            "fp": 59092,
+            "fn": 18182,
+            "tn": 4085501
+          },
+          "scores": {
+            "iou": 0.289781,
+            "dice": 0.449349,
+            "precision": 0.347922,
+            "recall": 0.634246
+          },
+          "predictedOilFraction": 0.02160573
+        }
+      }
+    },
+    {
+      "scene": "00127",
+      "split": "test",
+      "referenceOilFraction": 0.03194809,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 132525,
+            "fp": 218346,
+            "fn": 1475,
+            "tn": 3841958
+          },
+          "scores": {
+            "iou": 0.376122,
+            "dice": 0.54664,
+            "precision": 0.377703,
+            "recall": 0.988993
+          },
+          "predictedOilFraction": 0.08365417
+        },
+        "0.6": {
+          "counts": {
+            "tp": 131601,
+            "fp": 182906,
+            "fn": 2399,
+            "tn": 3877398
+          },
+          "scores": {
+            "iou": 0.415268,
+            "dice": 0.58684,
+            "precision": 0.418436,
+            "recall": 0.982097
+          },
+          "predictedOilFraction": 0.07498431
+        },
+        "0.7": {
+          "counts": {
+            "tp": 130221,
+            "fp": 150387,
+            "fn": 3779,
+            "tn": 3909917
+          },
+          "scores": {
+            "iou": 0.457901,
+            "dice": 0.628164,
+            "precision": 0.464067,
+            "recall": 0.971799
+          },
+          "predictedOilFraction": 0.06690216
+        },
+        "0.8": {
+          "counts": {
+            "tp": 127988,
+            "fp": 112820,
+            "fn": 6012,
+            "tn": 3947484
+          },
+          "scores": {
+            "iou": 0.518548,
+            "dice": 0.682952,
+            "precision": 0.531494,
+            "recall": 0.955134
+          },
+          "predictedOilFraction": 0.0574131
+        },
+        "0.9": {
+          "counts": {
+            "tp": 120226,
+            "fp": 65897,
+            "fn": 13774,
+            "tn": 3994407
+          },
+          "scores": {
+            "iou": 0.60144,
+            "dice": 0.751124,
+            "precision": 0.645949,
+            "recall": 0.897209
+          },
+          "predictedOilFraction": 0.04437518
+        },
+        "0.95": {
+          "counts": {
+            "tp": 106806,
+            "fp": 38460,
+            "fn": 27194,
+            "tn": 4021844
+          },
+          "scores": {
+            "iou": 0.619309,
+            "dice": 0.764905,
+            "precision": 0.735244,
+            "recall": 0.79706
+          },
+          "predictedOilFraction": 0.03463411
+        }
+      }
+    },
+    {
+      "scene": "00154",
+      "split": "test",
+      "referenceOilFraction": 0.00968909,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 40593,
+            "fp": 342848,
+            "fn": 46,
+            "tn": 3810817
+          },
+          "scores": {
+            "iou": 0.105852,
+            "dice": 0.19144,
+            "precision": 0.105865,
+            "recall": 0.998868
+          },
+          "predictedOilFraction": 0.09141946
+        },
+        "0.6": {
+          "counts": {
+            "tp": 40570,
+            "fp": 273873,
+            "fn": 69,
+            "tn": 3879792
+          },
+          "scores": {
+            "iou": 0.128993,
+            "dice": 0.228511,
+            "precision": 0.129022,
+            "recall": 0.998302
+          },
+          "predictedOilFraction": 0.07496905
+        },
+        "0.7": {
+          "counts": {
+            "tp": 40538,
+            "fp": 214978,
+            "fn": 101,
+            "tn": 3938687
+          },
+          "scores": {
+            "iou": 0.158589,
+            "dice": 0.273762,
+            "precision": 0.158652,
+            "recall": 0.997515
+          },
+          "predictedOilFraction": 0.06091976
+        },
+        "0.8": {
+          "counts": {
+            "tp": 40474,
+            "fp": 159368,
+            "fn": 165,
+            "tn": 3994297
+          },
+          "scores": {
+            "iou": 0.202363,
+            "dice": 0.336609,
+            "precision": 0.20253,
+            "recall": 0.99594
+          },
+          "predictedOilFraction": 0.04764605
+        },
+        "0.9": {
+          "counts": {
+            "tp": 40270,
+            "fp": 95884,
+            "fn": 369,
+            "tn": 4057781
+          },
+          "scores": {
+            "iou": 0.294969,
+            "dice": 0.455561,
+            "precision": 0.295768,
+            "recall": 0.99092
+          },
+          "predictedOilFraction": 0.03246164
+        },
+        "0.95": {
+          "counts": {
+            "tp": 39974,
+            "fp": 55378,
+            "fn": 665,
+            "tn": 4098287
+          },
+          "scores": {
+            "iou": 0.416322,
+            "dice": 0.587892,
+            "precision": 0.419226,
+            "recall": 0.983636
+          },
+          "predictedOilFraction": 0.02273369
+        }
+      }
+    },
+    {
+      "scene": "00157",
+      "split": "test",
+      "referenceOilFraction": 0.02158858,
+      "validFraction": 0.857259,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 77624,
+            "fp": 136304,
+            "fn": 0,
+            "tn": 3381676
+          },
+          "scores": {
+            "iou": 0.362851,
+            "dice": 0.532488,
+            "precision": 0.362851,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.0594971
+        },
+        "0.6": {
+          "counts": {
+            "tp": 77618,
+            "fp": 127015,
+            "fn": 6,
+            "tn": 3390965
+          },
+          "scores": {
+            "iou": 0.379292,
+            "dice": 0.549981,
+            "precision": 0.379303,
+            "recall": 0.999923
+          },
+          "predictedOilFraction": 0.056912
+        },
+        "0.7": {
+          "counts": {
+            "tp": 77614,
+            "fp": 116198,
+            "fn": 10,
+            "tn": 3401782
+          },
+          "scores": {
+            "iou": 0.40044,
+            "dice": 0.571877,
+            "precision": 0.40046,
+            "recall": 0.999871
+          },
+          "predictedOilFraction": 0.05390249
+        },
+        "0.8": {
+          "counts": {
+            "tp": 77610,
+            "fp": 100567,
+            "fn": 14,
+            "tn": 3417413
+          },
+          "scores": {
+            "iou": 0.435544,
+            "dice": 0.6068,
+            "precision": 0.435578,
+            "recall": 0.99982
+          },
+          "predictedOilFraction": 0.04955412
+        },
+        "0.9": {
+          "counts": {
+            "tp": 77513,
+            "fp": 76493,
+            "fn": 111,
+            "tn": 3441487
+          },
+          "scores": {
+            "iou": 0.502949,
+            "dice": 0.669283,
+            "precision": 0.503312,
+            "recall": 0.99857
+          },
+          "predictedOilFraction": 0.04283175
+        },
+        "0.95": {
+          "counts": {
+            "tp": 77035,
+            "fp": 56246,
+            "fn": 589,
+            "tn": 3461734
+          },
+          "scores": {
+            "iou": 0.575446,
+            "dice": 0.730518,
+            "precision": 0.577989,
+            "recall": 0.992412
+          },
+          "predictedOilFraction": 0.03706776
+        }
+      }
+    },
+    {
+      "scene": "00161",
+      "split": "test",
+      "referenceOilFraction": 0.01409125,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 55231,
+            "fp": 8657,
+            "fn": 3872,
+            "tn": 4126544
+          },
+          "scores": {
+            "iou": 0.815097,
+            "dice": 0.898131,
+            "precision": 0.864497,
+            "recall": 0.934487
+          },
+          "predictedOilFraction": 0.01523209
+        },
+        "0.6": {
+          "counts": {
+            "tp": 53955,
+            "fp": 6544,
+            "fn": 5148,
+            "tn": 4128657
+          },
+          "scores": {
+            "iou": 0.821896,
+            "dice": 0.902242,
+            "precision": 0.891833,
+            "recall": 0.912898
+          },
+          "predictedOilFraction": 0.01442409
+        },
+        "0.7": {
+          "counts": {
+            "tp": 52099,
+            "fp": 4297,
+            "fn": 7004,
+            "tn": 4130904
+          },
+          "scores": {
+            "iou": 0.821751,
+            "dice": 0.902155,
+            "precision": 0.923807,
+            "recall": 0.881495
+          },
+          "predictedOilFraction": 0.01344585
+        },
+        "0.8": {
+          "counts": {
+            "tp": 48607,
+            "fp": 1940,
+            "fn": 10496,
+            "tn": 4133261
+          },
+          "scores": {
+            "iou": 0.796275,
+            "dice": 0.886585,
+            "precision": 0.96162,
+            "recall": 0.822412
+          },
+          "predictedOilFraction": 0.01205134
+        },
+        "0.9": {
+          "counts": {
+            "tp": 41673,
+            "fp": 454,
+            "fn": 17430,
+            "tn": 4134747
+          },
+          "scores": {
+            "iou": 0.699716,
+            "dice": 0.823333,
+            "precision": 0.989223,
+            "recall": 0.705091
+          },
+          "predictedOilFraction": 0.01004386
+        },
+        "0.95": {
+          "counts": {
+            "tp": 35150,
+            "fp": 53,
+            "fn": 23953,
+            "tn": 4135148
+          },
+          "scores": {
+            "iou": 0.594192,
+            "dice": 0.745446,
+            "precision": 0.998494,
+            "recall": 0.594724
+          },
+          "predictedOilFraction": 0.00839305
+        }
+      }
+    },
+    {
+      "scene": "00164",
+      "split": "test",
+      "referenceOilFraction": 0.05772838,
+      "validFraction": 0.890409,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 203315,
+            "fp": 22867,
+            "fn": 12280,
+            "tn": 3496183
+          },
+          "scores": {
+            "iou": 0.85261,
+            "dice": 0.920442,
+            "precision": 0.8989,
+            "recall": 0.943041
+          },
+          "predictedOilFraction": 0.06056319
+        },
+        "0.6": {
+          "counts": {
+            "tp": 200061,
+            "fp": 16710,
+            "fn": 15534,
+            "tn": 3502340
+          },
+          "scores": {
+            "iou": 0.8612,
+            "dice": 0.925424,
+            "precision": 0.922914,
+            "recall": 0.927948
+          },
+          "predictedOilFraction": 0.05804327
+        },
+        "0.7": {
+          "counts": {
+            "tp": 195667,
+            "fp": 10797,
+            "fn": 19928,
+            "tn": 3508253
+          },
+          "scores": {
+            "iou": 0.864284,
+            "dice": 0.927202,
+            "precision": 0.947705,
+            "recall": 0.907567
+          },
+          "predictedOilFraction": 0.05528343
+        },
+        "0.8": {
+          "counts": {
+            "tp": 188124,
+            "fp": 5217,
+            "fn": 27471,
+            "tn": 3513833
+          },
+          "scores": {
+            "iou": 0.851965,
+            "dice": 0.920066,
+            "precision": 0.973017,
+            "recall": 0.872581
+          },
+          "predictedOilFraction": 0.05176958
+        },
+        "0.9": {
+          "counts": {
+            "tp": 172337,
+            "fp": 1412,
+            "fn": 43258,
+            "tn": 3517638
+          },
+          "scores": {
+            "iou": 0.794154,
+            "dice": 0.885269,
+            "precision": 0.991873,
+            "recall": 0.799355
+          },
+          "predictedOilFraction": 0.04652357
+        },
+        "0.95": {
+          "counts": {
+            "tp": 157066,
+            "fp": 306,
+            "fn": 58529,
+            "tn": 3518744
+          },
+          "scores": {
+            "iou": 0.727491,
+            "dice": 0.842251,
+            "precision": 0.998056,
+            "recall": 0.728523
+          },
+          "predictedOilFraction": 0.04213841
+        }
+      }
+    },
+    {
+      "scene": "00176",
+      "split": "test",
+      "referenceOilFraction": 0.0042417,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 17591,
+            "fp": 36973,
+            "fn": 200,
+            "tn": 4139540
+          },
+          "scores": {
+            "iou": 0.321215,
+            "dice": 0.486241,
+            "precision": 0.322392,
+            "recall": 0.988758
+          },
+          "predictedOilFraction": 0.01300907
+        },
+        "0.6": {
+          "counts": {
+            "tp": 17532,
+            "fp": 27884,
+            "fn": 259,
+            "tn": 4148629
+          },
+          "scores": {
+            "iou": 0.383842,
+            "dice": 0.554749,
+            "precision": 0.386031,
+            "recall": 0.985442
+          },
+          "predictedOilFraction": 0.01082802
+        },
+        "0.7": {
+          "counts": {
+            "tp": 17370,
+            "fp": 20099,
+            "fn": 421,
+            "tn": 4156414
+          },
+          "scores": {
+            "iou": 0.458432,
+            "dice": 0.628664,
+            "precision": 0.463583,
+            "recall": 0.976336
+          },
+          "predictedOilFraction": 0.00893331
+        },
+        "0.8": {
+          "counts": {
+            "tp": 16887,
+            "fp": 12614,
+            "fn": 904,
+            "tn": 4163899
+          },
+          "scores": {
+            "iou": 0.555402,
+            "dice": 0.714159,
+            "precision": 0.572421,
+            "recall": 0.949188
+          },
+          "predictedOilFraction": 0.00703359
+        },
+        "0.9": {
+          "counts": {
+            "tp": 15283,
+            "fp": 4757,
+            "fn": 2508,
+            "tn": 4171756
+          },
+          "scores": {
+            "iou": 0.677798,
+            "dice": 0.807962,
+            "precision": 0.762625,
+            "recall": 0.85903
+          },
+          "predictedOilFraction": 0.00477791
+        },
+        "0.95": {
+          "counts": {
+            "tp": 12541,
+            "fp": 1398,
+            "fn": 5250,
+            "tn": 4175115
+          },
+          "scores": {
+            "iou": 0.653552,
+            "dice": 0.790482,
+            "precision": 0.899706,
+            "recall": 0.704907
+          },
+          "predictedOilFraction": 0.00332332
+        }
+      }
+    },
+    {
+      "scene": "00177",
+      "split": "test",
+      "referenceOilFraction": 0.02543926,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 86937,
+            "fp": 16532,
+            "fn": 19763,
+            "tn": 4071072
+          },
+          "scores": {
+            "iou": 0.705474,
+            "dice": 0.827306,
+            "precision": 0.840223,
+            "recall": 0.81478
+          },
+          "predictedOilFraction": 0.02466893
+        },
+        "0.6": {
+          "counts": {
+            "tp": 81864,
+            "fp": 11322,
+            "fn": 24836,
+            "tn": 4076282
+          },
+          "scores": {
+            "iou": 0.693633,
+            "dice": 0.819107,
+            "precision": 0.878501,
+            "recall": 0.767235
+          },
+          "predictedOilFraction": 0.02221727
+        },
+        "0.7": {
+          "counts": {
+            "tp": 75489,
+            "fp": 6813,
+            "fn": 31211,
+            "tn": 4080791
+          },
+          "scores": {
+            "iou": 0.665025,
+            "dice": 0.798817,
+            "precision": 0.91722,
+            "recall": 0.707488
+          },
+          "predictedOilFraction": 0.01962233
+        },
+        "0.8": {
+          "counts": {
+            "tp": 66569,
+            "fp": 3045,
+            "fn": 40131,
+            "tn": 4084559
+          },
+          "scores": {
+            "iou": 0.606579,
+            "dice": 0.755119,
+            "precision": 0.956259,
+            "recall": 0.623889
+          },
+          "predictedOilFraction": 0.01659727
+        },
+        "0.9": {
+          "counts": {
+            "tp": 52422,
+            "fp": 802,
+            "fn": 54278,
+            "tn": 4086802
+          },
+          "scores": {
+            "iou": 0.487637,
+            "dice": 0.655586,
+            "precision": 0.984932,
+            "recall": 0.491303
+          },
+          "predictedOilFraction": 0.01268959
+        },
+        "0.95": {
+          "counts": {
+            "tp": 41150,
+            "fp": 265,
+            "fn": 65550,
+            "tn": 4087339
+          },
+          "scores": {
+            "iou": 0.384705,
+            "dice": 0.555649,
+            "precision": 0.993601,
+            "recall": 0.385661
+          },
+          "predictedOilFraction": 0.00987411
+        }
+      }
+    },
+    {
+      "scene": "00188",
+      "split": "test",
+      "referenceOilFraction": 0.0972507,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 343855,
+            "fp": 13879,
+            "fn": 64044,
+            "tn": 3772526
+          },
+          "scores": {
+            "iou": 0.815251,
+            "dice": 0.898224,
+            "precision": 0.961203,
+            "recall": 0.842991
+          },
+          "predictedOilFraction": 0.08529043
+        },
+        "0.6": {
+          "counts": {
+            "tp": 331816,
+            "fp": 9101,
+            "fn": 76083,
+            "tn": 3777304
+          },
+          "scores": {
+            "iou": 0.795722,
+            "dice": 0.886242,
+            "precision": 0.973304,
+            "recall": 0.813476
+          },
+          "predictedOilFraction": 0.08128095
+        },
+        "0.7": {
+          "counts": {
+            "tp": 316722,
+            "fp": 5248,
+            "fn": 91177,
+            "tn": 3781157
+          },
+          "scores": {
+            "iou": 0.766608,
+            "dice": 0.867887,
+            "precision": 0.9837,
+            "recall": 0.776472
+          },
+          "predictedOilFraction": 0.07676363
+        },
+        "0.8": {
+          "counts": {
+            "tp": 294120,
+            "fp": 2316,
+            "fn": 113779,
+            "tn": 3784089
+          },
+          "scores": {
+            "iou": 0.71699,
+            "dice": 0.835171,
+            "precision": 0.992187,
+            "recall": 0.721061
+          },
+          "predictedOilFraction": 0.07067585
+        },
+        "0.9": {
+          "counts": {
+            "tp": 256638,
+            "fp": 537,
+            "fn": 151261,
+            "tn": 3785868
+          },
+          "scores": {
+            "iou": 0.628343,
+            "dice": 0.771758,
+            "precision": 0.997912,
+            "recall": 0.62917
+          },
+          "predictedOilFraction": 0.0613153
+        },
+        "0.95": {
+          "counts": {
+            "tp": 222369,
+            "fp": 22,
+            "fn": 185530,
+            "tn": 3786383
+          },
+          "scores": {
+            "iou": 0.545128,
+            "dice": 0.705609,
+            "precision": 0.999901,
+            "recall": 0.545157
+          },
+          "predictedOilFraction": 0.05302215
+        }
+      }
+    },
+    {
+      "scene": "00191",
+      "split": "test",
+      "referenceOilFraction": 0.00846052,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 17055,
+            "fp": 654,
+            "fn": 18431,
+            "tn": 4158164
+          },
+          "scores": {
+            "iou": 0.471915,
+            "dice": 0.641226,
+            "precision": 0.96307,
+            "recall": 0.480612
+          },
+          "predictedOilFraction": 0.00422215
+        },
+        "0.6": {
+          "counts": {
+            "tp": 15183,
+            "fp": 335,
+            "fn": 20303,
+            "tn": 4158483
+          },
+          "scores": {
+            "iou": 0.423858,
+            "dice": 0.595365,
+            "precision": 0.978412,
+            "recall": 0.427859
+          },
+          "predictedOilFraction": 0.00369978
+        },
+        "0.7": {
+          "counts": {
+            "tp": 13130,
+            "fp": 118,
+            "fn": 22356,
+            "tn": 4158700
+          },
+          "scores": {
+            "iou": 0.368779,
+            "dice": 0.538844,
+            "precision": 0.991093,
+            "recall": 0.370005
+          },
+          "predictedOilFraction": 0.00315857
+        },
+        "0.8": {
+          "counts": {
+            "tp": 10601,
+            "fp": 16,
+            "fn": 24885,
+            "tn": 4158802
+          },
+          "scores": {
+            "iou": 0.298603,
+            "dice": 0.459883,
+            "precision": 0.998493,
+            "recall": 0.298738
+          },
+          "predictedOilFraction": 0.00253129
+        },
+        "0.9": {
+          "counts": {
+            "tp": 7489,
+            "fp": 0,
+            "fn": 27997,
+            "tn": 4158818
+          },
+          "scores": {
+            "iou": 0.211041,
+            "dice": 0.348528,
+            "precision": 1.0,
+            "recall": 0.211041
+          },
+          "predictedOilFraction": 0.00178552
+        },
+        "0.95": {
+          "counts": {
+            "tp": 4976,
+            "fp": 0,
+            "fn": 30510,
+            "tn": 4158818
+          },
+          "scores": {
+            "iou": 0.140224,
+            "dice": 0.245959,
+            "precision": 1.0,
+            "recall": 0.140224
+          },
+          "predictedOilFraction": 0.00118637
+        }
+      }
+    },
+    {
+      "scene": "00196",
+      "split": "test",
+      "referenceOilFraction": 0.00409126,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 14905,
+            "fp": 1544,
+            "fn": 2255,
+            "tn": 4175600
+          },
+          "scores": {
+            "iou": 0.796888,
+            "dice": 0.886965,
+            "precision": 0.906134,
+            "recall": 0.86859
+          },
+          "predictedOilFraction": 0.00392175
+        },
+        "0.6": {
+          "counts": {
+            "tp": 14107,
+            "fp": 997,
+            "fn": 3053,
+            "tn": 4176147
+          },
+          "scores": {
+            "iou": 0.776946,
+            "dice": 0.874473,
+            "precision": 0.933991,
+            "recall": 0.822086
+          },
+          "predictedOilFraction": 0.00360107
+        },
+        "0.7": {
+          "counts": {
+            "tp": 13133,
+            "fp": 623,
+            "fn": 4027,
+            "tn": 4176521
+          },
+          "scores": {
+            "iou": 0.738514,
+            "dice": 0.849592,
+            "precision": 0.954711,
+            "recall": 0.765326
+          },
+          "predictedOilFraction": 0.00327969
+        },
+        "0.8": {
+          "counts": {
+            "tp": 11781,
+            "fp": 325,
+            "fn": 5379,
+            "tn": 4176819
+          },
+          "scores": {
+            "iou": 0.673778,
+            "dice": 0.805098,
+            "precision": 0.973154,
+            "recall": 0.686538
+          },
+          "predictedOilFraction": 0.0028863
+        },
+        "0.9": {
+          "counts": {
+            "tp": 9592,
+            "fp": 79,
+            "fn": 7568,
+            "tn": 4177065
+          },
+          "scores": {
+            "iou": 0.556413,
+            "dice": 0.714994,
+            "precision": 0.991831,
+            "recall": 0.558974
+          },
+          "predictedOilFraction": 0.00230575
+        },
+        "0.95": {
+          "counts": {
+            "tp": 7576,
+            "fp": 39,
+            "fn": 9584,
+            "tn": 4177105
+          },
+          "scores": {
+            "iou": 0.440491,
+            "dice": 0.611584,
+            "precision": 0.994879,
+            "recall": 0.441492
+          },
+          "predictedOilFraction": 0.00181556
+        }
+      }
+    },
+    {
+      "scene": "00197",
+      "split": "test",
+      "referenceOilFraction": 0.01344395,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 48503,
+            "fp": 11274,
+            "fn": 7885,
+            "tn": 4126642
+          },
+          "scores": {
+            "iou": 0.716843,
+            "dice": 0.835071,
+            "precision": 0.811399,
+            "recall": 0.860165
+          },
+          "predictedOilFraction": 0.01425195
+        },
+        "0.6": {
+          "counts": {
+            "tp": 45919,
+            "fp": 9482,
+            "fn": 10469,
+            "tn": 4128434
+          },
+          "scores": {
+            "iou": 0.697116,
+            "dice": 0.82153,
+            "precision": 0.828848,
+            "recall": 0.81434
+          },
+          "predictedOilFraction": 0.01320863
+        },
+        "0.7": {
+          "counts": {
+            "tp": 43267,
+            "fp": 7856,
+            "fn": 13121,
+            "tn": 4130060
+          },
+          "scores": {
+            "iou": 0.673479,
+            "dice": 0.804885,
+            "precision": 0.846331,
+            "recall": 0.767309
+          },
+          "predictedOilFraction": 0.01218867
+        },
+        "0.8": {
+          "counts": {
+            "tp": 39650,
+            "fp": 5932,
+            "fn": 16738,
+            "tn": 4131984
+          },
+          "scores": {
+            "iou": 0.636232,
+            "dice": 0.77768,
+            "precision": 0.869861,
+            "recall": 0.703164
+          },
+          "predictedOilFraction": 0.0108676
+        },
+        "0.9": {
+          "counts": {
+            "tp": 34411,
+            "fp": 3448,
+            "fn": 21977,
+            "tn": 4134468
+          },
+          "scores": {
+            "iou": 0.575089,
+            "dice": 0.73023,
+            "precision": 0.908925,
+            "recall": 0.610254
+          },
+          "predictedOilFraction": 0.00902629
+        },
+        "0.95": {
+          "counts": {
+            "tp": 29778,
+            "fp": 1462,
+            "fn": 26610,
+            "tn": 4136454
+          },
+          "scores": {
+            "iou": 0.514745,
+            "dice": 0.679646,
+            "precision": 0.953201,
+            "recall": 0.528091
+          },
+          "predictedOilFraction": 0.0074482
+        }
+      }
+    },
+    {
+      "scene": "00199",
+      "split": "test",
+      "referenceOilFraction": 0.01354027,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 42323,
+            "fp": 5729,
+            "fn": 14469,
+            "tn": 4131783
+          },
+          "scores": {
+            "iou": 0.676941,
+            "dice": 0.807352,
+            "precision": 0.880775,
+            "recall": 0.745228
+          },
+          "predictedOilFraction": 0.01145649
+        },
+        "0.6": {
+          "counts": {
+            "tp": 39952,
+            "fp": 4317,
+            "fn": 16840,
+            "tn": 4133195
+          },
+          "scores": {
+            "iou": 0.653783,
+            "dice": 0.790651,
+            "precision": 0.902483,
+            "recall": 0.703479
+          },
+          "predictedOilFraction": 0.01055455
+        },
+        "0.7": {
+          "counts": {
+            "tp": 37227,
+            "fp": 3003,
+            "fn": 19565,
+            "tn": 4134509
+          },
+          "scores": {
+            "iou": 0.622577,
+            "dice": 0.767393,
+            "precision": 0.925354,
+            "recall": 0.655497
+          },
+          "predictedOilFraction": 0.00959158
+        },
+        "0.8": {
+          "counts": {
+            "tp": 33344,
+            "fp": 1923,
+            "fn": 23448,
+            "tn": 4135589
+          },
+          "scores": {
+            "iou": 0.567896,
+            "dice": 0.724405,
+            "precision": 0.945473,
+            "recall": 0.587125
+          },
+          "predictedOilFraction": 0.00840831
+        },
+        "0.9": {
+          "counts": {
+            "tp": 26846,
+            "fp": 895,
+            "fn": 29946,
+            "tn": 4136617
+          },
+          "scores": {
+            "iou": 0.465373,
+            "dice": 0.63516,
+            "precision": 0.967737,
+            "recall": 0.472707
+          },
+          "predictedOilFraction": 0.00661397
+        },
+        "0.95": {
+          "counts": {
+            "tp": 21032,
+            "fp": 525,
+            "fn": 35760,
+            "tn": 4136987
+          },
+          "scores": {
+            "iou": 0.366942,
+            "dice": 0.53688,
+            "precision": 0.975646,
+            "recall": 0.370334
+          },
+          "predictedOilFraction": 0.00513959
+        }
+      }
+    },
+    {
+      "scene": "00207",
+      "split": "test",
+      "referenceOilFraction": 0.02031994,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 73864,
+            "fp": 1851,
+            "fn": 11364,
+            "tn": 4107225
+          },
+          "scores": {
+            "iou": 0.848241,
+            "dice": 0.91789,
+            "precision": 0.975553,
+            "recall": 0.866664
+          },
+          "predictedOilFraction": 0.01805186
+        },
+        "0.6": {
+          "counts": {
+            "tp": 72005,
+            "fp": 1508,
+            "fn": 13223,
+            "tn": 4107568
+          },
+          "scores": {
+            "iou": 0.830163,
+            "dice": 0.907201,
+            "precision": 0.979487,
+            "recall": 0.844851
+          },
+          "predictedOilFraction": 0.01752687
+        },
+        "0.7": {
+          "counts": {
+            "tp": 69641,
+            "fp": 1226,
+            "fn": 15587,
+            "tn": 4107850
+          },
+          "scores": {
+            "iou": 0.805527,
+            "dice": 0.89229,
+            "precision": 0.9827,
+            "recall": 0.817114
+          },
+          "predictedOilFraction": 0.01689601
+        },
+        "0.8": {
+          "counts": {
+            "tp": 65850,
+            "fp": 913,
+            "fn": 19378,
+            "tn": 4108163
+          },
+          "scores": {
+            "iou": 0.764444,
+            "dice": 0.866499,
+            "precision": 0.986325,
+            "recall": 0.772633
+          },
+          "predictedOilFraction": 0.01591754
+        },
+        "0.9": {
+          "counts": {
+            "tp": 59805,
+            "fp": 568,
+            "fn": 25423,
+            "tn": 4108508
+          },
+          "scores": {
+            "iou": 0.69706,
+            "dice": 0.821492,
+            "precision": 0.990592,
+            "recall": 0.701706
+          },
+          "predictedOilFraction": 0.01439404
+        },
+        "0.95": {
+          "counts": {
+            "tp": 54845,
+            "fp": 331,
+            "fn": 30383,
+            "tn": 4108745
+          },
+          "scores": {
+            "iou": 0.64102,
+            "dice": 0.781246,
+            "precision": 0.994001,
+            "recall": 0.643509
+          },
+          "predictedOilFraction": 0.01315498
+        }
+      }
+    },
+    {
+      "scene": "00214",
+      "split": "test",
+      "referenceOilFraction": 0.02010131,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 50796,
+            "fp": 1761,
+            "fn": 33515,
+            "tn": 4108232
+          },
+          "scores": {
+            "iou": 0.590157,
+            "dice": 0.742263,
+            "precision": 0.966494,
+            "recall": 0.602484
+          },
+          "predictedOilFraction": 0.01253057
+        },
+        "0.6": {
+          "counts": {
+            "tp": 48022,
+            "fp": 1482,
+            "fn": 36289,
+            "tn": 4108511
+          },
+          "scores": {
+            "iou": 0.559743,
+            "dice": 0.717737,
+            "precision": 0.970063,
+            "recall": 0.569582
+          },
+          "predictedOilFraction": 0.01180267
+        },
+        "0.7": {
+          "counts": {
+            "tp": 44963,
+            "fp": 1189,
+            "fn": 39348,
+            "tn": 4108804
+          },
+          "scores": {
+            "iou": 0.525883,
+            "dice": 0.689284,
+            "precision": 0.974237,
+            "recall": 0.533299
+          },
+          "predictedOilFraction": 0.01100349
+        },
+        "0.8": {
+          "counts": {
+            "tp": 40844,
+            "fp": 843,
+            "fn": 43467,
+            "tn": 4109150
+          },
+          "scores": {
+            "iou": 0.479649,
+            "dice": 0.648328,
+            "precision": 0.979778,
+            "recall": 0.484444
+          },
+          "predictedOilFraction": 0.00993896
+        },
+        "0.9": {
+          "counts": {
+            "tp": 33483,
+            "fp": 391,
+            "fn": 50828,
+            "tn": 4109602
+          },
+          "scores": {
+            "iou": 0.395304,
+            "dice": 0.56662,
+            "precision": 0.988457,
+            "recall": 0.397137
+          },
+          "predictedOilFraction": 0.00807619
+        },
+        "0.95": {
+          "counts": {
+            "tp": 25921,
+            "fp": 174,
+            "fn": 58390,
+            "tn": 4109819
+          },
+          "scores": {
+            "iou": 0.306812,
+            "dice": 0.469558,
+            "precision": 0.993332,
+            "recall": 0.307445
+          },
+          "predictedOilFraction": 0.00622153
+        }
+      }
+    },
+    {
+      "scene": "00219",
+      "split": "test",
+      "referenceOilFraction": 0.02143669,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 89894,
+            "fp": 64566,
+            "fn": 18,
+            "tn": 4039826
+          },
+          "scores": {
+            "iou": 0.581921,
+            "dice": 0.735714,
+            "precision": 0.581989,
+            "recall": 0.9998
+          },
+          "predictedOilFraction": 0.03682613
+        },
+        "0.6": {
+          "counts": {
+            "tp": 89881,
+            "fp": 58526,
+            "fn": 31,
+            "tn": 4045866
+          },
+          "scores": {
+            "iou": 0.605512,
+            "dice": 0.754292,
+            "precision": 0.605639,
+            "recall": 0.999655
+          },
+          "predictedOilFraction": 0.03538299
+        },
+        "0.7": {
+          "counts": {
+            "tp": 89857,
+            "fp": 51922,
+            "fn": 55,
+            "tn": 4052470
+          },
+          "scores": {
+            "iou": 0.633536,
+            "dice": 0.775662,
+            "precision": 0.633782,
+            "recall": 0.999388
+          },
+          "predictedOilFraction": 0.03380275
+        },
+        "0.8": {
+          "counts": {
+            "tp": 89767,
+            "fp": 43076,
+            "fn": 145,
+            "tn": 4061316
+          },
+          "scores": {
+            "iou": 0.675001,
+            "dice": 0.805971,
+            "precision": 0.675738,
+            "recall": 0.998387
+          },
+          "predictedOilFraction": 0.03167224
+        },
+        "0.9": {
+          "counts": {
+            "tp": 89245,
+            "fp": 28018,
+            "fn": 667,
+            "tn": 4076374
+          },
+          "scores": {
+            "iou": 0.756762,
+            "dice": 0.861542,
+            "precision": 0.761067,
+            "recall": 0.992582
+          },
+          "predictedOilFraction": 0.02795768
+        },
+        "0.95": {
+          "counts": {
+            "tp": 87311,
+            "fp": 15005,
+            "fn": 2601,
+            "tn": 4089387
+          },
+          "scores": {
+            "iou": 0.832191,
+            "dice": 0.908411,
+            "precision": 0.853346,
+            "recall": 0.971072
+          },
+          "predictedOilFraction": 0.02439404
+        }
+      }
+    },
+    {
+      "scene": "00231",
+      "split": "test",
+      "referenceOilFraction": 0.00814629,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 33069,
+            "fp": 15774,
+            "fn": 1099,
+            "tn": 4144362
+          },
+          "scores": {
+            "iou": 0.662148,
+            "dice": 0.796738,
+            "precision": 0.677047,
+            "recall": 0.967835
+          },
+          "predictedOilFraction": 0.01164508
+        },
+        "0.6": {
+          "counts": {
+            "tp": 32538,
+            "fp": 11177,
+            "fn": 1630,
+            "tn": 4148959
+          },
+          "scores": {
+            "iou": 0.717565,
+            "dice": 0.835561,
+            "precision": 0.744321,
+            "recall": 0.952295
+          },
+          "predictedOilFraction": 0.01042247
+        },
+        "0.7": {
+          "counts": {
+            "tp": 32036,
+            "fp": 7768,
+            "fn": 2132,
+            "tn": 4152368
+          },
+          "scores": {
+            "iou": 0.763926,
+            "dice": 0.866166,
+            "precision": 0.804844,
+            "recall": 0.937602
+          },
+          "predictedOilFraction": 0.00949001
+        },
+        "0.8": {
+          "counts": {
+            "tp": 31278,
+            "fp": 4767,
+            "fn": 2890,
+            "tn": 4155369
+          },
+          "scores": {
+            "iou": 0.803339,
+            "dice": 0.890946,
+            "precision": 0.867749,
+            "recall": 0.915418
+          },
+          "predictedOilFraction": 0.0085938
+        },
+        "0.9": {
+          "counts": {
+            "tp": 29386,
+            "fp": 1598,
+            "fn": 4782,
+            "tn": 4158538
+          },
+          "scores": {
+            "iou": 0.821618,
+            "dice": 0.902075,
+            "precision": 0.948425,
+            "recall": 0.860044
+          },
+          "predictedOilFraction": 0.00738716
+        },
+        "0.95": {
+          "counts": {
+            "tp": 26441,
+            "fp": 302,
+            "fn": 7727,
+            "tn": 4159834
+          },
+          "scores": {
+            "iou": 0.767073,
+            "dice": 0.868185,
+            "precision": 0.988707,
+            "recall": 0.773853
+          },
+          "predictedOilFraction": 0.00637603
+        }
+      }
+    },
+    {
+      "scene": "00232",
+      "split": "test",
+      "referenceOilFraction": 0.01188254,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 49197,
+            "fp": 23473,
+            "fn": 642,
+            "tn": 4120992
+          },
+          "scores": {
+            "iou": 0.671063,
+            "dice": 0.803157,
+            "precision": 0.676992,
+            "recall": 0.987119
+          },
+          "predictedOilFraction": 0.01732588
+        },
+        "0.6": {
+          "counts": {
+            "tp": 48906,
+            "fp": 19128,
+            "fn": 933,
+            "tn": 4125337
+          },
+          "scores": {
+            "iou": 0.709122,
+            "dice": 0.829808,
+            "precision": 0.718846,
+            "recall": 0.98128
+          },
+          "predictedOilFraction": 0.01622057
+        },
+        "0.7": {
+          "counts": {
+            "tp": 48440,
+            "fp": 14949,
+            "fn": 1399,
+            "tn": 4129516
+          },
+          "scores": {
+            "iou": 0.747669,
+            "dice": 0.855619,
+            "precision": 0.76417,
+            "recall": 0.97193
+          },
+          "predictedOilFraction": 0.01511312
+        },
+        "0.8": {
+          "counts": {
+            "tp": 47409,
+            "fp": 10319,
+            "fn": 2430,
+            "tn": 4134146
+          },
+          "scores": {
+            "iou": 0.788075,
+            "dice": 0.881479,
+            "precision": 0.821248,
+            "recall": 0.951243
+          },
+          "predictedOilFraction": 0.01376343
+        },
+        "0.9": {
+          "counts": {
+            "tp": 44951,
+            "fp": 4704,
+            "fn": 4888,
+            "tn": 4139761
+          },
+          "scores": {
+            "iou": 0.824139,
+            "dice": 0.903592,
+            "precision": 0.905266,
+            "recall": 0.901924
+          },
+          "predictedOilFraction": 0.01183867
+        },
+        "0.95": {
+          "counts": {
+            "tp": 41656,
+            "fp": 1515,
+            "fn": 8183,
+            "tn": 4142950
+          },
+          "scores": {
+            "iou": 0.811154,
+            "dice": 0.895732,
+            "precision": 0.964907,
+            "recall": 0.835811
+          },
+          "predictedOilFraction": 0.01029277
+        }
+      }
+    },
+    {
+      "scene": "00233",
+      "split": "test",
+      "referenceOilFraction": 0.01442385,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 59856,
+            "fp": 18869,
+            "fn": 642,
+            "tn": 4114937
+          },
+          "scores": {
+            "iou": 0.754167,
+            "dice": 0.859858,
+            "precision": 0.760318,
+            "recall": 0.989388
+          },
+          "predictedOilFraction": 0.0187695
+        },
+        "0.6": {
+          "counts": {
+            "tp": 59756,
+            "fp": 15689,
+            "fn": 742,
+            "tn": 4118117
+          },
+          "scores": {
+            "iou": 0.784333,
+            "dice": 0.879133,
+            "precision": 0.792047,
+            "recall": 0.987735
+          },
+          "predictedOilFraction": 0.01798749
+        },
+        "0.7": {
+          "counts": {
+            "tp": 59551,
+            "fp": 12327,
+            "fn": 947,
+            "tn": 4121479
+          },
+          "scores": {
+            "iou": 0.817727,
+            "dice": 0.899725,
+            "precision": 0.828501,
+            "recall": 0.984347
+          },
+          "predictedOilFraction": 0.01713705
+        },
+        "0.8": {
+          "counts": {
+            "tp": 58994,
+            "fp": 8389,
+            "fn": 1504,
+            "tn": 4125417
+          },
+          "scores": {
+            "iou": 0.856388,
+            "dice": 0.922639,
+            "precision": 0.875503,
+            "recall": 0.97514
+          },
+          "predictedOilFraction": 0.01606536
+        },
+        "0.9": {
+          "counts": {
+            "tp": 57141,
+            "fp": 3585,
+            "fn": 3357,
+            "tn": 4130221
+          },
+          "scores": {
+            "iou": 0.891672,
+            "dice": 0.942734,
+            "precision": 0.940964,
+            "recall": 0.944511
+          },
+          "predictedOilFraction": 0.01447821
+        },
+        "0.95": {
+          "counts": {
+            "tp": 53251,
+            "fp": 1242,
+            "fn": 7247,
+            "tn": 4132564
+          },
+          "scores": {
+            "iou": 0.862504,
+            "dice": 0.926177,
+            "precision": 0.977208,
+            "recall": 0.880211
+          },
+          "predictedOilFraction": 0.01299214
+        }
+      }
+    },
+    {
+      "scene": "00237",
+      "split": "test",
+      "referenceOilFraction": 0.04040571,
+      "validFraction": 0.989651,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 151519,
+            "fp": 165427,
+            "fn": 16201,
+            "tn": 3817751
+          },
+          "scores": {
+            "iou": 0.454811,
+            "dice": 0.625251,
+            "precision": 0.478059,
+            "recall": 0.903404
+          },
+          "predictedOilFraction": 0.07635601
+        },
+        "0.6": {
+          "counts": {
+            "tp": 146593,
+            "fp": 139333,
+            "fn": 21127,
+            "tn": 3843845
+          },
+          "scores": {
+            "iou": 0.477419,
+            "dice": 0.646288,
+            "precision": 0.512696,
+            "recall": 0.874034
+          },
+          "predictedOilFraction": 0.06888293
+        },
+        "0.7": {
+          "counts": {
+            "tp": 139692,
+            "fp": 114045,
+            "fn": 28028,
+            "tn": 3869133
+          },
+          "scores": {
+            "iou": 0.495775,
+            "dice": 0.6629,
+            "precision": 0.550539,
+            "recall": 0.832888
+          },
+          "predictedOilFraction": 0.06112822
+        },
+        "0.8": {
+          "counts": {
+            "tp": 128054,
+            "fp": 84840,
+            "fn": 39666,
+            "tn": 3898338
+          },
+          "scores": {
+            "iou": 0.507024,
+            "dice": 0.672881,
+            "precision": 0.601492,
+            "recall": 0.763499
+          },
+          "predictedOilFraction": 0.05128866
+        },
+        "0.9": {
+          "counts": {
+            "tp": 110806,
+            "fp": 48247,
+            "fn": 56914,
+            "tn": 3934931
+          },
+          "scores": {
+            "iou": 0.513069,
+            "dice": 0.678183,
+            "precision": 0.696661,
+            "recall": 0.660661
+          },
+          "predictedOilFraction": 0.03831773
+        },
+        "0.95": {
+          "counts": {
+            "tp": 97227,
+            "fp": 26577,
+            "fn": 70493,
+            "tn": 3956601
+          },
+          "scores": {
+            "iou": 0.500404,
+            "dice": 0.667026,
+            "precision": 0.78533,
+            "recall": 0.579698
+          },
+          "predictedOilFraction": 0.02982584
+        }
+      }
+    },
+    {
+      "scene": "00251",
+      "split": "test",
+      "referenceOilFraction": 0.02663279,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 111387,
+            "fp": 9532,
+            "fn": 319,
+            "tn": 4073066
+          },
+          "scores": {
+            "iou": 0.918747,
+            "dice": 0.957653,
+            "precision": 0.92117,
+            "recall": 0.997144
+          },
+          "predictedOilFraction": 0.02882934
+        },
+        "0.6": {
+          "counts": {
+            "tp": 110811,
+            "fp": 6065,
+            "fn": 895,
+            "tn": 4076533
+          },
+          "scores": {
+            "iou": 0.940902,
+            "dice": 0.969551,
+            "precision": 0.948107,
+            "recall": 0.991988
+          },
+          "predictedOilFraction": 0.02786541
+        },
+        "0.7": {
+          "counts": {
+            "tp": 109899,
+            "fp": 3763,
+            "fn": 1807,
+            "tn": 4078835
+          },
+          "scores": {
+            "iou": 0.951762,
+            "dice": 0.975285,
+            "precision": 0.966893,
+            "recall": 0.983824
+          },
+          "predictedOilFraction": 0.02709913
+        },
+        "0.8": {
+          "counts": {
+            "tp": 108125,
+            "fp": 1719,
+            "fn": 3581,
+            "tn": 4080879
+          },
+          "scores": {
+            "iou": 0.953273,
+            "dice": 0.976078,
+            "precision": 0.984351,
+            "recall": 0.967943
+          },
+          "predictedOilFraction": 0.02618885
+        },
+        "0.9": {
+          "counts": {
+            "tp": 102804,
+            "fp": 229,
+            "fn": 8902,
+            "tn": 4082369
+          },
+          "scores": {
+            "iou": 0.918426,
+            "dice": 0.957479,
+            "precision": 0.997777,
+            "recall": 0.920309
+          },
+          "predictedOilFraction": 0.02456498
+        },
+        "0.95": {
+          "counts": {
+            "tp": 96881,
+            "fp": 28,
+            "fn": 14825,
+            "tn": 4082570
+          },
+          "scores": {
+            "iou": 0.867068,
+            "dice": 0.928802,
+            "precision": 0.999711,
+            "recall": 0.867286
+          },
+          "predictedOilFraction": 0.02310491
+        }
+      }
+    },
+    {
+      "scene": "00253",
+      "split": "test",
+      "referenceOilFraction": 0.00876737,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 36590,
+            "fp": 11409,
+            "fn": 183,
+            "tn": 4146122
+          },
+          "scores": {
+            "iou": 0.759412,
+            "dice": 0.863257,
+            "precision": 0.762308,
+            "recall": 0.995024
+          },
+          "predictedOilFraction": 0.01144385
+        },
+        "0.6": {
+          "counts": {
+            "tp": 36448,
+            "fp": 9836,
+            "fn": 325,
+            "tn": 4147695
+          },
+          "scores": {
+            "iou": 0.781995,
+            "dice": 0.877662,
+            "precision": 0.787486,
+            "recall": 0.991162
+          },
+          "predictedOilFraction": 0.01103497
+        },
+        "0.7": {
+          "counts": {
+            "tp": 36240,
+            "fp": 8362,
+            "fn": 533,
+            "tn": 4149169
+          },
+          "scores": {
+            "iou": 0.802925,
+            "dice": 0.890691,
+            "precision": 0.81252,
+            "recall": 0.985506
+          },
+          "predictedOilFraction": 0.01063395
+        },
+        "0.8": {
+          "counts": {
+            "tp": 35768,
+            "fp": 6710,
+            "fn": 1005,
+            "tn": 4150821
+          },
+          "scores": {
+            "iou": 0.822574,
+            "dice": 0.902651,
+            "precision": 0.842036,
+            "recall": 0.97267
+          },
+          "predictedOilFraction": 0.01012754
+        },
+        "0.9": {
+          "counts": {
+            "tp": 34362,
+            "fp": 4114,
+            "fn": 2411,
+            "tn": 4153417
+          },
+          "scores": {
+            "iou": 0.840414,
+            "dice": 0.913288,
+            "precision": 0.893076,
+            "recall": 0.934436
+          },
+          "predictedOilFraction": 0.00917339
+        },
+        "0.95": {
+          "counts": {
+            "tp": 32303,
+            "fp": 2409,
+            "fn": 4470,
+            "tn": 4155122
+          },
+          "scores": {
+            "iou": 0.824435,
+            "dice": 0.90377,
+            "precision": 0.9306,
+            "recall": 0.878443
+          },
+          "predictedOilFraction": 0.00827599
+        }
+      }
+    },
+    {
+      "scene": "00259",
+      "split": "test",
+      "referenceOilFraction": 0.00406909,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 17067,
+            "fp": 18675,
+            "fn": 0,
+            "tn": 4158562
+          },
+          "scores": {
+            "iou": 0.477505,
+            "dice": 0.646367,
+            "precision": 0.477505,
+            "recall": 1.0
+          },
+          "predictedOilFraction": 0.00852156
+        },
+        "0.6": {
+          "counts": {
+            "tp": 17065,
+            "fp": 14947,
+            "fn": 2,
+            "tn": 4162290
+          },
+          "scores": {
+            "iou": 0.533048,
+            "dice": 0.695409,
+            "precision": 0.533081,
+            "recall": 0.999883
+          },
+          "predictedOilFraction": 0.00763226
+        },
+        "0.7": {
+          "counts": {
+            "tp": 17046,
+            "fp": 11627,
+            "fn": 21,
+            "tn": 4165610
+          },
+          "scores": {
+            "iou": 0.594061,
+            "dice": 0.745343,
+            "precision": 0.594497,
+            "recall": 0.99877
+          },
+          "predictedOilFraction": 0.00683618
+        },
+        "0.8": {
+          "counts": {
+            "tp": 16921,
+            "fp": 8474,
+            "fn": 146,
+            "tn": 4168763
+          },
+          "scores": {
+            "iou": 0.662503,
+            "dice": 0.796995,
+            "precision": 0.666312,
+            "recall": 0.991445
+          },
+          "predictedOilFraction": 0.00605464
+        },
+        "0.9": {
+          "counts": {
+            "tp": 16404,
+            "fp": 4739,
+            "fn": 663,
+            "tn": 4172498
+          },
+          "scores": {
+            "iou": 0.75227,
+            "dice": 0.858623,
+            "precision": 0.77586,
+            "recall": 0.961153
+          },
+          "predictedOilFraction": 0.00504088
+        },
+        "0.95": {
+          "counts": {
+            "tp": 15500,
+            "fp": 1855,
+            "fn": 1567,
+            "tn": 4175382
+          },
+          "scores": {
+            "iou": 0.819152,
+            "dice": 0.900587,
+            "precision": 0.893114,
+            "recall": 0.908185
+          },
+          "predictedOilFraction": 0.00413775
+        }
+      }
+    },
+    {
+      "scene": "00267",
+      "split": "test",
+      "referenceOilFraction": 0.00356078,
+      "validFraction": 1.0,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 14923,
+            "fp": 47513,
+            "fn": 12,
+            "tn": 4131856
+          },
+          "scores": {
+            "iou": 0.238967,
+            "dice": 0.385752,
+            "precision": 0.239013,
+            "recall": 0.999197
+          },
+          "predictedOilFraction": 0.0148859
+        },
+        "0.6": {
+          "counts": {
+            "tp": 14920,
+            "fp": 38422,
+            "fn": 15,
+            "tn": 4140947
+          },
+          "scores": {
+            "iou": 0.279626,
+            "dice": 0.437043,
+            "precision": 0.279705,
+            "recall": 0.998996
+          },
+          "predictedOilFraction": 0.01271772
+        },
+        "0.7": {
+          "counts": {
+            "tp": 14911,
+            "fp": 30687,
+            "fn": 24,
+            "tn": 4148682
+          },
+          "scores": {
+            "iou": 0.326838,
+            "dice": 0.492657,
+            "precision": 0.32701,
+            "recall": 0.998393
+          },
+          "predictedOilFraction": 0.01087141
+        },
+        "0.8": {
+          "counts": {
+            "tp": 14903,
+            "fp": 23411,
+            "fn": 32,
+            "tn": 4155958
+          },
+          "scores": {
+            "iou": 0.388645,
+            "dice": 0.559748,
+            "precision": 0.38897,
+            "recall": 0.997857
+          },
+          "predictedOilFraction": 0.00913477
+        },
+        "0.9": {
+          "counts": {
+            "tp": 14811,
+            "fp": 15529,
+            "fn": 124,
+            "tn": 4163840
+          },
+          "scores": {
+            "iou": 0.48618,
+            "dice": 0.654268,
+            "precision": 0.488167,
+            "recall": 0.991697
+          },
+          "predictedOilFraction": 0.00723362
+        },
+        "0.95": {
+          "counts": {
+            "tp": 14553,
+            "fp": 9318,
+            "fn": 382,
+            "tn": 4170051
+          },
+          "scores": {
+            "iou": 0.600049,
+            "dice": 0.750039,
+            "precision": 0.609652,
+            "recall": 0.974422
+          },
+          "predictedOilFraction": 0.00569129
+        }
+      }
+    },
+    {
+      "scene": "00283",
+      "split": "test",
+      "referenceOilFraction": 0.02421321,
+      "validFraction": 0.84939,
+      "thresholds": {
+        "0.5": {
+          "counts": {
+            "tp": 86188,
+            "fp": 72792,
+            "fn": 74,
+            "tn": 3403547
+          },
+          "scores": {
+            "iou": 0.541879,
+            "dice": 0.702881,
+            "precision": 0.542131,
+            "recall": 0.999142
+          },
+          "predictedOilFraction": 0.0446247
+        },
+        "0.6": {
+          "counts": {
+            "tp": 85975,
+            "fp": 63280,
+            "fn": 287,
+            "tn": 3413059
+          },
+          "scores": {
+            "iou": 0.574922,
+            "dice": 0.730096,
+            "precision": 0.576028,
+            "recall": 0.996673
+          },
+          "predictedOilFraction": 0.04189495
+        },
+        "0.7": {
+          "counts": {
+            "tp": 85313,
+            "fp": 53829,
+            "fn": 949,
+            "tn": 3422510
+          },
+          "scores": {
+            "iou": 0.608983,
+            "dice": 0.756979,
+            "precision": 0.613136,
+            "recall": 0.988999
+          },
+          "predictedOilFraction": 0.0390563
+        },
+        "0.8": {
+          "counts": {
+            "tp": 83556,
+            "fp": 41904,
+            "fn": 2706,
+            "tn": 3434435
+          },
+          "scores": {
+            "iou": 0.651936,
+            "dice": 0.789299,
+            "precision": 0.665997,
+            "recall": 0.96863
+          },
+          "predictedOilFraction": 0.03521584
+        },
+        "0.9": {
+          "counts": {
+            "tp": 79246,
+            "fp": 24541,
+            "fn": 7016,
+            "tn": 3451798
+          },
+          "scores": {
+            "iou": 0.715197,
+            "dice": 0.833953,
+            "precision": 0.763545,
+            "recall": 0.918666
+          },
+          "predictedOilFraction": 0.02913237
+        },
+        "0.95": {
+          "counts": {
+            "tp": 71940,
+            "fp": 12353,
+            "fn": 14322,
+            "tn": 3463986
+          },
+          "scores": {
+            "iou": 0.729504,
+            "dice": 0.843599,
+            "precision": 0.853452,
+            "recall": 0.833971
+          },
+          "predictedOilFraction": 0.02366052
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Every supplied scene contains labelled oil, so these figures still measure delineation on scenes known to contain a slick and are not a false-alarm rate on clean sea.",
+    "Scene-scale IoU is markedly lower than patch-scale IoU because the patch sampler never visited most of each frame; the scene figure is the one that reflects operating on a full acquisition.",
+    "The reference masks are the supplied labels and are treated as ground truth; their own accuracy is unknown."
+  ]
+}

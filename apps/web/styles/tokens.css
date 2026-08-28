@@ -1,0 +1,186 @@
+/* SpillTrace design tokens.
+ *
+ * A light, quiet instrument. The page is a soft grey canvas, content sits on white cards
+ * with a large corner radius and a diffuse shadow instead of a hard border, and nothing
+ * in the chrome is saturated. Everything saturated on the screen is data.
+ *
+ * The imagery stages stay dark. A greyscale SAR tile needs a dark surround to read, so the
+ * map and the viewer are near-black panels inside the light chrome -- the same way a photo
+ * editor keeps a dark stage inside a light window. That is the one place the two tones meet,
+ * and the glass controls that sit on those panels are styled for the dark side of it.
+ *
+ * Colour is assigned, not decorative:
+ *
+ * * amber is oil, everywhere, without exception
+ * * blue is supplied ground truth and the estimated origin
+ * * green is agreement between prediction and reference
+ * * violet is drift -- hindcast, forecast, corridor
+ * * yellow marks anything synthetic
+ *
+ * Each of those has a `-text` variant. The graphic value is the exact colour the rendered
+ * rasters and the map canvas use, so a legend swatch has to keep it; that same value as
+ * 11 px text on white would fail contrast, so labels use the darker `-text` one. Interface
+ * chrome -- buttons, switches, focus, selection -- uses `--tint`, which is deliberately
+ * outside the data palette so a control can never be mistaken for a measurement.
+ *
+ * Two type families, both from the system: the UI face (SF on Apple platforms) and the
+ * system serif (New York) for display headings only. No webfont, no layout shift, no
+ * licence question. Numbers are tabular wherever they sit in a column.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* -- surfaces --------------------------------------------------------- */
+  --bg: #f4f4f6; /* the page canvas */
+  --bg-elevated: #ffffff; /* anything that floats: cards, sheets, popovers */
+  --surface: #ffffff; /* card fill */
+  --surface-strong: #eff0f2; /* secondary fill: neutral chips, tracks */
+  --surface-hover: rgba(0, 0, 0, 0.04); /* a wash, laid over whatever is beneath */
+  --sunken: #f6f6f8; /* recessed: code, segmented tracks */
+
+  /* -- hairlines -------------------------------------------------------- */
+  --line: rgba(0, 0, 0, 0.07);
+  --line-strong: rgba(0, 0, 0, 0.13);
+
+  /* -- text ------------------------------------------------------------- */
+  --text: #1d1d1f;
+  --text-secondary: #55575c;
+  --text-tertiary: #86868b;
+  --text-quaternary: #a3a3a8;
+  --on-dark: #ffffff;
+  --on-dark-secondary: rgba(255, 255, 255, 0.72);
+  --on-dark-tertiary: rgba(255, 255, 255, 0.48);
+
+  /* -- interface accent ------------------------------------------------- */
+  /* Chrome only. Never used for a measured quantity. */
+  --tint: #0071e3;
+  --tint-dim: rgba(0, 113, 227, 0.1);
+  --tint-line: rgba(0, 113, 227, 0.32);
+  --ink: #1d1d1f; /* solid fill for a primary action */
+
+  /* -- data palette ----------------------------------------------------- */
+  /* Amber is oil. The graphic value matches the rendered rasters exactly. */
+  --oil: #ff8a4c;
+  --oil-text: #c2410c;
+  --oil-dim: rgba(255, 138, 76, 0.14);
+  --oil-line: rgba(255, 138, 76, 0.4);
+  /* Blue is supplied ground truth and the estimated origin. */
+  --reference: #5ec8ff;
+  --reference-text: #0369a1;
+  --reference-dim: rgba(56, 165, 226, 0.13);
+  --reference-line: rgba(56, 165, 226, 0.34);
+  /* Green is agreement, and only agreement. */
+  --agree: #6ee7b7;
+  --agree-text: #047857;
+  --agree-dim: rgba(16, 185, 129, 0.12);
+  --agree-line: rgba(16, 185, 129, 0.3);
+  /* Violet is drift: hindcast, forecast, corridor. */
+  --drift: #a78bfa;
+  --drift-text: #6d28d9;
+  --drift-dim: rgba(139, 92, 246, 0.12);
+  --drift-line: rgba(139, 92, 246, 0.3);
+  /* Yellow marks anything synthetic. It appears on every synthetic-data badge. */
+  --synthetic: #fcd34d;
+  --synthetic-text: #92400e;
+  --synthetic-dim: rgba(245, 158, 11, 0.14);
+  --synthetic-line: rgba(217, 119, 6, 0.3);
+  --danger: #fb7185;
+  --danger-text: #be123c;
+  --danger-dim: rgba(244, 63, 94, 0.11);
+  --danger-line: rgba(244, 63, 94, 0.3);
+
+  --focus: #0071e3;
+
+  /* -- radii ------------------------------------------------------------ */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+  --r-pill: 999px;
+
+  /* -- spacing: 4 pt grid ---------------------------------------------- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 28px;
+  --s8: 32px;
+  --s10: 40px;
+  --s12: 48px;
+  --s14: 56px;
+
+  /* -- type ------------------------------------------------------------- */
+  --font: ui-sans-serif, -apple-system, "SF Pro Text", "SF Pro Display",
+    "Helvetica Neue", "Segoe UI", Roboto, system-ui, sans-serif;
+  /* Display only: page titles and hero figures. New York on Apple platforms. */
+  --font-display: ui-serif, "New York", "Iowan Old Style", Palatino, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --t-caption: 11px;
+  --t-footnote: 12px;
+  --t-sub: 13px;
+  --t-body: 14px;
+  --t-lead: 16px;
+  --t-title3: 20px;
+  --t-title2: 24px;
+  --t-title1: 30px;
+  --t-display: 40px;
+  --t-hero: 52px;
+
+  /* -- elevation -------------------------------------------------------- */
+  /* Two layers each: a tight contact shadow so the edge is defined, and a wide soft one
+   * so the card looks lifted rather than outlined. Both are cool-grey, not black. */
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-2: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -10px rgba(16, 24, 40, 0.12);
+  --shadow-3: 0 2px 6px rgba(16, 24, 40, 0.06), 0 28px 64px -20px rgba(16, 24, 40, 0.26);
+  --shadow-ink: 0 2px 8px rgba(16, 24, 40, 0.16), 0 18px 40px -18px rgba(16, 24, 40, 0.4);
+
+  /* -- motion ----------------------------------------------------------- */
+  /* Apple's standard ease-out for entrances; nothing here bounces. */
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --fast: 140ms;
+  --normal: 240ms;
+  --slow: 400ms;
+
+  --sidebar-w: 236px;
+  --header-h: 60px;
+  --page-max: 1200px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fast: 0ms;
+    --normal: 0ms;
+    --slow: 0ms;
+  }
+}
+
+/* Paper has no elevation and no tint, and the data colours have to survive a greyscale
+ * printer, so print darkens them rather than relying on hue alone. */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-strong: #f2f3f5;
+    --sunken: #f6f7f9;
+    --line: #d6d9de;
+    --line-strong: #b8bcc4;
+    --text: #000000;
+    --text-secondary: #333940;
+    --text-tertiary: #555b64;
+    --text-quaternary: #6f757e;
+    --oil: #b34700;
+    --reference: #0b5f92;
+    --agree: #146c50;
+    --drift: #4c35a8;
+    --synthetic: #8a5b00;
+    --danger: #a01432;
+    --shadow-1: none;
+    --shadow-2: none;
+    --shadow-3: none;
+    --shadow-ink: none;
+  }
+}
