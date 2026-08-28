@@ -1,0 +1,1481 @@
+/* Reusable pieces: cards, stats, badges, buttons, tables, tabs, sheet, states. */
+
+/* -- card -------------------------------------------------------------- */
+
+/* White on the grey canvas, lifted by a soft shadow. The hairline is there for the case
+ * where the two tones are close -- a printed page, a low-contrast display -- and carries
+ * no weight of its own. */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-2);
+  padding: var(--s6);
+  min-width: 0;
+}
+
+.card--flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+.card--sunken {
+  background: var(--sunken);
+  box-shadow: none;
+}
+
+.card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  margin-bottom: var(--s5);
+}
+
+.card__title {
+  font-size: var(--t-lead);
+  font-weight: 600;
+  letter-spacing: -0.018em;
+}
+
+.card__hint {
+  margin-left: auto;
+  font-size: var(--t-footnote);
+  color: var(--text-tertiary);
+  text-align: right;
+}
+
+.card__note {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--line);
+  font-size: var(--t-footnote);
+  color: var(--text-tertiary);
+  line-height: 1.55;
+}
+
+/* -- hero -------------------------------------------------------------- */
+/* One dark card per screen at most, holding the single figure that screen exists to
+ * report. It is the only inversion in the interface, which is what makes it read as the
+ * headline without any extra size or colour. */
+
+.hero {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s6) var(--s8);
+  padding: var(--s7);
+  border-radius: var(--r-xl);
+  background: linear-gradient(150deg, #24262b 0%, #131417 62%);
+  color: var(--on-dark);
+  box-shadow: var(--shadow-ink);
+  overflow: hidden;
+}
+
+/* A very faint warm bloom in the corner. Suggests the accent without spending it. */
+.hero::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  right: -8%;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 138, 76, 0.18), transparent 68%);
+  pointer-events: none;
+}
+
+.hero__main {
+  position: relative;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.hero__label {
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-dark-tertiary);
+}
+
+.hero__figure {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  font-family: var(--font-display);
+  font-size: var(--t-hero);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.hero__unit {
+  font-family: var(--font);
+  font-size: var(--t-title3);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--on-dark-secondary);
+}
+
+.hero__sub {
+  margin-top: var(--s3);
+  font-size: var(--t-body);
+  color: var(--on-dark-secondary);
+  max-width: 52ch;
+}
+
+.hero__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s5);
+}
+
+/* The aside is a column, not a row. Side by side, a ring and a white pill read as two more
+ * focal points competing with the headline figure on the left; stacked, they read as one
+ * supporting block. */
+.hero__aside {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s3);
+  min-width: 224px;
+}
+
+/* A glass panel, so the qualifying figure has an edge instead of floating on the gradient. */
+.hero__stat {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.hero__stat .score__ring {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
+.hero__stat-text {
+  min-width: 0;
+}
+
+.hero__stat-value {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: var(--t-title3);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero__stat-unit {
+  font-size: var(--t-footnote);
+  font-weight: 500;
+  color: var(--on-dark-secondary);
+}
+
+.hero__stat-label {
+  margin-top: 1px;
+  font-size: var(--t-caption);
+  color: var(--on-dark-tertiary);
+}
+
+/* A pill on the dark card. Glass, not a border. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: var(--t-footnote);
+  font-weight: 500;
+  color: var(--on-dark);
+  white-space: nowrap;
+}
+
+.chip__icon {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--on-dark-secondary);
+}
+
+.chip__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: currentColor;
+}
+
+/* -- grid -------------------------------------------------------------- */
+
+.grid {
+  display: grid;
+  gap: var(--s4);
+}
+
+.grid--stats {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.grid--2 {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.grid--3 {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.grid--wide-left {
+  grid-template-columns: minmax(0, 1.62fr) minmax(300px, 1fr);
+}
+
+.grid--wide-right {
+  grid-template-columns: minmax(280px, 1fr) minmax(0, 1.62fr);
+}
+
+@media (max-width: 1080px) {
+  .grid--wide-left,
+  .grid--wide-right {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  /* 180 rather than 140: at phone width two columns wrapped every label onto three lines,
+   * which costs more height than one column and reads worse. */
+  .grid--stats {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+/* -- stat -------------------------------------------------------------- */
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.stat__label {
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+}
+
+.stat__value {
+  font-size: var(--t-title2);
+  font-weight: 600;
+  letter-spacing: -0.026em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+}
+
+.stat__value--sm {
+  font-size: var(--t-lead);
+}
+
+.stat__unit {
+  font-size: var(--t-sub);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  margin-left: 3px;
+  letter-spacing: 0;
+}
+
+.stat__sub {
+  margin-top: 2px;
+  font-size: var(--t-footnote);
+  color: var(--text-tertiary);
+  line-height: 1.45;
+}
+
+/* The tone carries meaning, so it follows the same assignment as the map: amber for oil,
+   violet for anything a simulation produced, blue for anything the dataset supplied,
+   brown-amber for anything synthetic. These are the `-text` values, dark enough to be read
+   at this size on white; the graphic values live on the map and in the legend swatches. */
+.stat--oil .stat__value {
+  color: var(--oil-text);
+}
+
+.stat--drift .stat__value {
+  color: var(--drift-text);
+}
+
+.stat--reference .stat__value {
+  color: var(--reference-text);
+}
+
+.stat--synthetic .stat__value {
+  color: var(--synthetic-text);
+}
+
+.stat--missing .stat__value {
+  color: var(--text-quaternary);
+  font-weight: 500;
+}
+
+/* A stat promoted to its own card, with a tinted glyph tile. Used where the figures are
+   the content of the screen rather than a detail inside a card. */
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding: var(--s5);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-2);
+  min-width: 0;
+}
+
+.icon-tile {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--surface-strong);
+  color: var(--text-secondary);
+}
+
+.icon-tile svg {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-tile--oil {
+  background: var(--oil-dim);
+  color: var(--oil-text);
+}
+
+.icon-tile--reference {
+  background: var(--reference-dim);
+  color: var(--reference-text);
+}
+
+.icon-tile--drift {
+  background: var(--drift-dim);
+  color: var(--drift-text);
+}
+
+.icon-tile--synthetic {
+  background: var(--synthetic-dim);
+  color: var(--synthetic-text);
+}
+
+.icon-tile--tint {
+  background: var(--tint-dim);
+  color: var(--tint);
+}
+
+/* -- definition rows --------------------------------------------------- */
+
+/* A hairline rule inside a card, for separating a list of findings from the rules that
+   produced them. Not a section break -- that is what a second card is for. */
+.divider {
+  height: 1px;
+  background: var(--line);
+  margin: var(--s2) 0;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s4);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-sub);
+}
+
+.row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.row:first-child {
+  padding-top: 0;
+}
+
+.row__key {
+  flex: 0 0 42%;
+  max-width: 46%;
+  color: var(--text-tertiary);
+}
+
+.row__val {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.row__val--muted {
+  color: var(--text-quaternary);
+}
+
+.row--stack {
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+.row--stack .row__key,
+.row--stack .row__val {
+  flex: none;
+  max-width: none;
+  text-align: left;
+}
+
+/* -- badges ------------------------------------------------------------ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+  background: var(--surface-strong);
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: -0.003em;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.badge--synthetic {
+  color: var(--synthetic-text);
+  background: var(--synthetic-dim);
+}
+
+.badge--supplied {
+  color: var(--reference-text);
+  background: var(--reference-dim);
+}
+
+.badge--model {
+  color: var(--oil-text);
+  background: var(--oil-dim);
+}
+
+.badge--drift {
+  color: var(--drift-text);
+  background: var(--drift-dim);
+}
+
+.badge--ok {
+  color: var(--agree-text);
+  background: var(--agree-dim);
+}
+
+.badge--warn {
+  color: var(--danger-text);
+  background: var(--danger-dim);
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+/* -- notice ------------------------------------------------------------ */
+
+/* A tinted card, not a banner with a rule around it. The three standing disclosures sit at
+   the top of every screen, so they have to be legible without being loud. */
+.notice {
+  display: flex;
+  gap: var(--s3);
+  padding: var(--s4) var(--s5);
+  border-radius: var(--r-lg);
+  background: var(--surface-strong);
+  font-size: var(--t-sub);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.notice__icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--text-tertiary);
+}
+
+.notice--synthetic {
+  background: var(--synthetic-dim);
+  color: color-mix(in srgb, var(--synthetic-text) 88%, black);
+}
+
+.notice--synthetic .notice__icon {
+  color: var(--synthetic-text);
+}
+
+.notice--danger {
+  background: var(--danger-dim);
+  color: color-mix(in srgb, var(--danger-text) 88%, black);
+}
+
+.notice--danger .notice__icon {
+  color: var(--danger-text);
+}
+
+.notice strong {
+  color: inherit;
+  font-weight: 600;
+}
+
+/* -- standing disclosures ---------------------------------------------- */
+/* One inset block, hairline-separated, at footnote size. See `ui.js::disclosureBar`.
+ *
+ * Inset rather than elevated: as a white card with a shadow it sat at the same visual weight
+ * as the findings underneath it, and a full-width plate holding one line of 12 px grey text
+ * looks like an empty toolbar. Sunken and tight, it reads as what it is -- a footnote that
+ * cannot be dismissed. */
+
+.disclosures {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--s4);
+  border-radius: var(--r-md);
+  background: var(--sunken);
+  border: 1px solid var(--line);
+}
+
+.disclosures__row {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-footnote);
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+
+.disclosures__row > p {
+  max-width: 108ch;
+}
+
+.disclosures__row:last-child {
+  border-bottom: 0;
+}
+
+.disclosures__icon {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  margin-top: 2px;
+  color: var(--text-quaternary);
+}
+
+.disclosures__label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* The colour stays on the label, so grouping the rows does not cost the synthetic-data
+ * warning its salience. */
+.disclosures__row--synthetic .disclosures__icon,
+.disclosures__row--synthetic .disclosures__label {
+  color: var(--synthetic-text);
+}
+
+/* -- buttons ----------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  min-height: 36px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: var(--t-sub);
+  font-weight: 600;
+  letter-spacing: -0.008em;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--shadow-1);
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    transform var(--fast) var(--ease), opacity var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  box-shadow: var(--shadow-2);
+  text-decoration: none;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* The primary action is ink, not amber. Amber is oil, and a button is not a measurement. */
+.btn--primary {
+  background: var(--ink);
+  border-color: transparent;
+  color: var(--on-dark);
+  box-shadow: var(--shadow-2);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #000000;
+}
+
+.btn--quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+  font-weight: 500;
+}
+
+.btn--quiet:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.btn--sm {
+  min-height: 30px;
+  padding: 5px 12px;
+  font-size: var(--t-footnote);
+}
+
+.btn__icon {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+/* Inside the hero the surfaces invert, so the primary action does too: white on ink
+ * instead of ink on white. Same hierarchy, opposite ground. */
+.hero .btn--primary {
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.hero .btn--primary:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.hero .btn:not(.btn--primary) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: transparent;
+  color: var(--on-dark);
+  box-shadow: none;
+}
+
+.hero .btn:not(.btn--primary):hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* -- segmented control (Apple's segmented picker) --------------------- */
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--r-pill);
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.segmented::-webkit-scrollbar {
+  display: none;
+}
+
+.segmented__item {
+  border: 0;
+  background: none;
+  padding: 5px 13px;
+  border-radius: var(--r-pill);
+  font-size: var(--t-footnote);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.segmented__item:hover {
+  color: var(--text);
+}
+
+.segmented__item[aria-pressed="true"],
+.segmented__item[aria-selected="true"] {
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow-1);
+}
+
+/* -- form controls ----------------------------------------------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+}
+
+.field__value {
+  font-size: var(--t-footnote);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.select,
+.input {
+  appearance: none;
+  padding: 8px 32px 8px 13px;
+  min-height: 36px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-1);
+  color: var(--text);
+  font-size: var(--t-sub);
+  font-weight: 500;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2386868b' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M4 6.5 8 10.5l4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 14px;
+  max-width: 100%;
+}
+
+.input {
+  padding-right: 13px;
+  border-radius: var(--r-md);
+  background-image: none;
+  cursor: text;
+  font-weight: 400;
+}
+
+.range {
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: none;
+  cursor: pointer;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.28), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  border: 0;
+}
+
+.range::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.28), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  cursor: pointer;
+  font-size: var(--t-sub);
+  color: var(--text-secondary);
+}
+
+.switch input {
+  appearance: none;
+  position: relative;
+  width: 40px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background: rgba(0, 0, 0, 0.16);
+  cursor: pointer;
+  transition: background var(--fast) var(--ease);
+  flex: none;
+  margin: 0;
+}
+
+.switch input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.3);
+  transition: transform var(--fast) var(--ease);
+}
+
+.switch input:checked {
+  background: var(--tint);
+}
+
+.switch input:checked::after {
+  transform: translateX(16px);
+}
+
+/* -- table ------------------------------------------------------------- */
+
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: var(--s3) var(--s3);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-elevated);
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+}
+
+.table td.wrap,
+.table th.wrap {
+  white-space: normal;
+}
+
+.table .right {
+  text-align: right;
+}
+
+.table tbody tr {
+  cursor: pointer;
+  transition: background var(--fast) var(--ease);
+}
+
+.table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+.table tbody tr[aria-selected="true"] {
+  background: var(--tint-dim);
+  box-shadow: inset 3px 0 0 var(--tint);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* -- meter ------------------------------------------------------------- */
+
+.meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-strong);
+  overflow: hidden;
+  min-width: 44px;
+}
+
+.meter__fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--oil);
+  transition: width var(--slow) var(--ease);
+}
+
+.meter--reference .meter__fill {
+  background: var(--reference);
+}
+
+.meter--muted .meter__fill {
+  background: var(--text-quaternary);
+}
+
+/* -- component score bars --------------------------------------------- */
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 56px;
+  align-items: center;
+  gap: var(--s3);
+  font-size: var(--t-footnote);
+}
+
+.bar__label {
+  color: var(--text-secondary);
+}
+
+.bar__track {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-strong);
+  overflow: hidden;
+}
+
+.bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--oil);
+  transition: width var(--slow) var(--ease);
+}
+
+.bar__value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-weight: 500;
+}
+
+@media (max-width: 560px) {
+  .bar {
+    grid-template-columns: 84px minmax(0, 1fr) 48px;
+  }
+}
+
+/* -- states ------------------------------------------------------------ */
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s12) var(--s6);
+  text-align: center;
+  border-radius: var(--r-lg);
+  background: var(--sunken);
+}
+
+.state__icon {
+  width: 30px;
+  height: 30px;
+  color: var(--text-quaternary);
+}
+
+.state__title {
+  font-size: var(--t-title3);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.state__body {
+  max-width: 56ch;
+  font-size: var(--t-sub);
+  color: var(--text-tertiary);
+}
+
+/* A shell command, shown so it can be copied. Selectable on purpose -- these are the
+   commands that reproduce the numbers, and a command you cannot select is decoration. */
+.command,
+.state__cmd {
+  display: block;
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-md);
+  background: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--t-footnote);
+  color: rgba(255, 255, 255, 0.92);
+  overflow-x: auto;
+  white-space: pre;
+  user-select: all;
+}
+
+.state__cmd {
+  margin-top: var(--s3);
+  text-align: left;
+}
+
+.state--danger {
+  background: var(--danger-dim);
+}
+
+.state--danger .state__icon {
+  color: var(--danger-text);
+}
+
+/* Skeletons: shimmer only while loading, and never for more than the content box. */
+.skeleton {
+  border-radius: var(--r-sm);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.05) 25%,
+    rgba(0, 0, 0, 0.09) 50%,
+    rgba(0, 0, 0, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  color: transparent !important;
+  user-select: none;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--tint);
+  animation: spin 700ms linear infinite;
+  flex: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -- progress log ------------------------------------------------------ */
+
+.joblog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  max-height: 168px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--t-footnote);
+  color: var(--text-tertiary);
+}
+
+.joblog__line {
+  display: flex;
+  gap: var(--s3);
+}
+
+.joblog__line:last-child {
+  color: var(--text);
+}
+
+.joblog__t {
+  flex: none;
+  color: var(--text-quaternary);
+}
+
+/* -- sheet / drawer ---------------------------------------------------- */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(29, 29, 31, 0.24);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: fade var(--fast) var(--ease) both;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.sheet {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(460px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-3);
+  animation: slide-in var(--normal) var(--ease) both;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+.sheet__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+  padding: var(--s6);
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet__title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sheet__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--s6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+
+.sheet__close {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 0;
+  background: var(--surface-strong);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.sheet__close:hover {
+  background: var(--line-strong);
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  /* On a phone the drawer becomes a bottom sheet, which is the platform idiom and
+   * keeps the close affordance under the thumb. */
+  .sheet {
+    top: auto;
+    left: 0;
+    width: 100%;
+    max-height: 88vh;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    animation-name: slide-up;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+  }
+}
+
+/* -- score decomposition bar ------------------------------------------- */
+/* One segment per scoring component, so the reader sees that 91.5 is a sum of six
+ * measured things rather than a single opaque number. */
+
+.scorebar {
+  display: flex;
+  width: 100%;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: var(--surface-strong);
+}
+
+.scorebar__seg {
+  display: block;
+  height: 100%;
+  min-width: 0;
+}
+
+.scorebar__seg--rest {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(0, 0, 0, 0.09) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+/* -- misc -------------------------------------------------------------- */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
+}
+
+.stack--tight {
+  gap: var(--s2);
+}
+
+.inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.inline--tight {
+  gap: var(--s1);
+}
+
+.between {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.wrap-normal {
+  white-space: normal;
+}
+
+.muted {
+  color: var(--text-tertiary);
+}
+
+.faint {
+  color: var(--text-quaternary);
+}
+
+.small {
+  font-size: var(--t-footnote);
+}
+
+.tiny {
+  font-size: var(--t-caption);
+}
+
+.strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.oil-text {
+  color: var(--oil-text);
+}
+
+.grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.bullets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  font-size: var(--t-sub);
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.bullets li {
+  display: flex;
+  gap: var(--s3);
+}
+
+.bullets li::before {
+  content: "";
+  flex: none;
+  width: 5px;
+  height: 5px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+.prose {
+  font-size: var(--t-sub);
+  color: var(--text-secondary);
+  line-height: 1.62;
+  max-width: 76ch;
+}
+
+.prose + .prose {
+  margin-top: var(--s3);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  font-size: var(--t-footnote);
+  color: var(--text-tertiary);
+}
+
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+  background: currentColor;
+}
+
+.legend__swatch--line {
+  height: 2px;
+  border-radius: 1px;
+  width: 14px;
+}
+
+.legend__swatch--dash {
+  height: 0;
+  width: 14px;
+  border-top: 2px dashed currentColor;
+  background: none;
+}
+
+/* A map key, in flow under the stage it belongs to. */
+.legend--under {
+  padding-top: var(--s1);
+}
+
+@media print {
+  .card,
+  .state,
+  .notice,
+  .metric {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+  .hero {
+    background: none;
+    color: var(--text);
+    box-shadow: none;
+    border: 1px solid var(--line-strong);
+  }
+  .hero::after {
+    display: none;
+  }
+  .hero__label,
+  .hero__sub,
+  .hero__unit {
+    color: var(--text-secondary);
+  }
+  .hero__stat {
+    background: var(--surface-strong);
+    border-color: var(--line);
+  }
+  .hero__stat-unit,
+  .hero__stat-label {
+    color: var(--text-secondary);
+  }
+  .chip {
+    background: var(--surface-strong);
+    color: var(--text);
+  }
+  .command,
+  .state__cmd {
+    background: var(--surface-strong);
+    color: var(--text);
+  }
+  .table th {
+    position: static;
+  }
+  .sheet,
+  .sheet-backdrop {
+    display: none;
+  }
+  .table-wrap {
+    overflow: visible;
+  }
+}

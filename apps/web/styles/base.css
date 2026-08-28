@@ -1,0 +1,553 @@
+/* Reset, typography and the app frame. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--t-body);
+  line-height: 1.5;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis-weight: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+dl,
+dd {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  letter-spacing: -0.021em;
+  line-height: 1.24;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--tint);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+img,
+svg,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+code,
+kbd,
+.mono,
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Every figure in a column gets tabular figures so columns of numbers line up. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* A small caps-and-tracking label. The reading order on every screen is label, figure,
+ * qualification, and this is the label. */
+.overline {
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+}
+
+/* -- focus ------------------------------------------------------------- */
+/* Visible focus on keyboard navigation only; a mouse click should not ring. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* -- screen-reader only ------------------------------------------------ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link: the first tab stop on every screen. */
+.skip-link {
+  position: absolute;
+  top: var(--s2);
+  left: var(--s2);
+  z-index: 200;
+  padding: var(--s2) var(--s4);
+  background: var(--bg-elevated);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-2);
+  font-size: var(--t-sub);
+  font-weight: 500;
+  transform: translateY(-200%);
+  transition: transform var(--fast) var(--ease);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* -- app frame --------------------------------------------------------- */
+
+/* The rail and the content share one canvas: no panel fills, no dividing borders. What
+ * separates them is that the content is on white cards and the rail is not. */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "brand header"
+    "nav    main";
+  min-height: 100vh;
+}
+
+.brand {
+  grid-area: brand;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  height: var(--header-h);
+  padding: var(--s6) var(--s5) 0 var(--s6);
+  box-sizing: content-box;
+}
+
+/* A rounded-square app icon, the way a Mac app mark sits in a sidebar. The mark inside is
+ * drawn on the tint, so the two saturated data colours in it are the only ones on the
+ * screen that are allowed to be decorative. */
+.brand__mark {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 6px;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #2b3a55 0%, #14181f 100%);
+  box-shadow: var(--shadow-1);
+}
+
+.brand__name {
+  font-size: var(--t-lead);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  line-height: 1.15;
+}
+
+.brand__ps {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-quaternary);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.topbar {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  height: var(--header-h);
+  padding: var(--s6) var(--s10) 0 var(--s2);
+  box-sizing: content-box;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* The current screen, as a soft chip rather than a heading -- the heading is the serif
+ * title below, and two headings in a row is one too many. */
+.topbar__title {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px var(--s3);
+  border-radius: var(--r-pill);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-1);
+  font-size: var(--t-sub);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40vw;
+}
+
+.topbar__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+  font-size: var(--t-footnote);
+  color: var(--text-tertiary);
+}
+
+.topbar__spacer {
+  flex: 1 1 auto;
+}
+
+.sidenav {
+  grid-area: nav;
+  padding: var(--s6) var(--s4) var(--s8) var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s6);
+  overflow-y: auto;
+}
+
+.sidenav__group-label {
+  padding: 0 var(--s3) var(--s2);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+}
+
+.sidenav__link {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: 9px var(--s3);
+  border-radius: var(--r-md);
+  color: var(--text-secondary);
+  font-size: var(--t-body);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+  cursor: pointer;
+  border: 0;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.sidenav__link:hover {
+  background: rgba(0, 0, 0, 0.035);
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* The active screen is a white pill lifted off the canvas. It is the same move as the
+ * content cards, so the rail reads as part of the same surface family. */
+.sidenav__link[aria-current="page"] {
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow-2);
+}
+
+.sidenav__icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--text-tertiary);
+}
+
+.sidenav__link[aria-current="page"] .sidenav__icon {
+  color: var(--tint);
+}
+
+.sidenav__step {
+  flex: none;
+  width: 14px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-quaternary);
+  font-variant-numeric: tabular-nums;
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+  padding: var(--s6) var(--s10) var(--s14);
+  overflow-x: hidden;
+}
+
+.page {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+  animation: rise var(--normal) var(--ease) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.page__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s4);
+  padding: var(--s2) 0 var(--s3);
+}
+
+.page__head-text {
+  flex: 1 1 340px;
+  min-width: 0;
+}
+
+.page__eyebrow {
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  margin-bottom: var(--s2);
+}
+
+/* The one serif on the screen. A display face at display size, tracked in, is what makes
+ * the page read as a document rather than a control panel. */
+.page__title {
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  font-weight: 500;
+  letter-spacing: -0.024em;
+  line-height: 1.08;
+}
+
+.page__lede {
+  margin-top: var(--s3);
+  max-width: 62ch;
+  font-size: var(--t-lead);
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  letter-spacing: -0.011em;
+}
+
+.page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+}
+
+/* -- responsive -------------------------------------------------------- */
+
+@media (max-width: 1180px) {
+  .main {
+    padding: var(--s6) var(--s6) var(--s12);
+  }
+  .topbar {
+    padding-right: var(--s6);
+  }
+}
+
+@media (max-width: 1080px) {
+  :root {
+    --sidebar-w: 212px;
+    --t-display: 34px;
+  }
+}
+
+/* Below 860 px the sidebar becomes a bottom tab bar: on a phone the nav has to be
+ * reachable by thumb, and a 200 px rail would leave nothing for the content. */
+@media (max-width: 860px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "brand"
+      "main";
+    padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .brand {
+    justify-content: flex-start;
+    gap: var(--s3);
+    padding: var(--s3) var(--s4);
+    height: auto;
+    box-sizing: border-box;
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+
+  .topbar {
+    grid-area: unset;
+    display: none;
+  }
+
+  .sidenav {
+    grid-area: unset;
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 50;
+    flex-direction: row;
+    gap: 0;
+    padding: var(--s1) var(--s1) calc(var(--s1) + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line);
+    background: color-mix(in srgb, #ffffff 84%, transparent);
+    backdrop-filter: saturate(180%) blur(24px);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .sidenav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidenav__group-label,
+  .sidenav__step {
+    display: none;
+  }
+
+  .sidenav__group {
+    display: flex;
+    flex: 1 1 auto;
+  }
+
+  .sidenav__link {
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 3px;
+    align-items: center;
+    padding: var(--s2) var(--s1);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-align: center;
+    min-width: 56px;
+  }
+
+  .sidenav__link:hover,
+  .sidenav__link[aria-current="page"] {
+    background: none;
+    box-shadow: none;
+  }
+
+  .sidenav__link[aria-current="page"] {
+    color: var(--tint);
+    font-weight: 600;
+  }
+
+  .sidenav__icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  .main {
+    padding: var(--s4) var(--s4) var(--s8);
+  }
+
+  .page {
+    gap: var(--s4);
+  }
+
+  .page__head {
+    padding-top: 0;
+  }
+
+  .page__lede {
+    font-size: var(--t-body);
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --t-display: 30px;
+  }
+}
+
+@media print {
+  .app {
+    display: block;
+    padding-bottom: 0;
+  }
+  .sidenav,
+  .topbar,
+  .skip-link,
+  .no-print {
+    display: none !important;
+  }
+  .brand {
+    padding: 0 0 var(--s4);
+    position: static;
+    background: none;
+  }
+  .brand__mark {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  .main {
+    padding: 0;
+    overflow: visible;
+  }
+  .page {
+    animation: none;
+    gap: var(--s4);
+    max-width: none;
+  }
+}

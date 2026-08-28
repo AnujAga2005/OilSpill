@@ -1,0 +1,258 @@
+{
+  "pipelineVersion": "spilltrace-0.1.0",
+  "generatedUtc": "2026-08-28T15:00:38Z",
+  "note": "A verified copy of apps/web. No bundler, no minifier and no content hashing: the interface is plain ES modules and runs from source. Cache behaviour comes from the server's Cache-Control headers, not from filenames.",
+  "totals": {
+    "files": 45,
+    "bytes": 3344177
+  },
+  "byExtension": {
+    ".json": {
+      "files": 7,
+      "bytes": 1693833
+    },
+    ".png": {
+      "files": 14,
+      "bytes": 1326680
+    },
+    ".js": {
+      "files": 19,
+      "bytes": 262756
+    },
+    ".css": {
+      "files": 4,
+      "bytes": 58910
+    },
+    ".html": {
+      "files": 1,
+      "bytes": 1998
+    }
+  },
+  "files": [
+    {
+      "path": "app/api.js",
+      "bytes": 10735,
+      "sha256": "1e08b5efeab0c3c8dc5cedc330e4b3679cd87e7eca935a1b2ac3d22dac328e51"
+    },
+    {
+      "path": "app/chart.js",
+      "bytes": 6417,
+      "sha256": "75fc0989625bcae21e3254d0affd10f7bacebc13b7a1deacb2ce0e7cbebb36b3"
+    },
+    {
+      "path": "app/charts.js",
+      "bytes": 10069,
+      "sha256": "f534f3c7df081f2fa9f1084a84f3810b0764d66040d99e9a75d7dec3b89ca714"
+    },
+    {
+      "path": "app/dom.js",
+      "bytes": 5977,
+      "sha256": "a73b5cea8910047b0dc3cd942104cd429c68e5a0b0f0976dd8210daf262e11f7"
+    },
+    {
+      "path": "app/exporters.js",
+      "bytes": 5733,
+      "sha256": "cf6fec6e9e49231527642a4575a7c556a3554cca41899588ab149671f91b8999"
+    },
+    {
+      "path": "app/format.js",
+      "bytes": 5780,
+      "sha256": "79020f0c8135a0b0b406343cf0dfc169ab5546c5bf42e7cc7cefc1ef45b3f130"
+    },
+    {
+      "path": "app/icons.js",
+      "bytes": 3679,
+      "sha256": "f41217c98a38433a7b5616d0ff5bf280d6105beaa3c700f67e9b430f1c438c3b"
+    },
+    {
+      "path": "app/layers.js",
+      "bytes": 13566,
+      "sha256": "0f4d4a33392bde9423194041f194b9f879b46c7fe9239b9260c6cc2776eb723c"
+    },
+    {
+      "path": "app/main.js",
+      "bytes": 15708,
+      "sha256": "d81cf31b2b84204da1bfc555fc416cd1d307d6ea654d5e2e1ee0c382bebb12c6"
+    },
+    {
+      "path": "app/mapview.js",
+      "bytes": 25794,
+      "sha256": "f52219a6701e2e6441001a9a3ad67b953efdd2aad6d62cb1d0b0b1d26c98bad2"
+    },
+    {
+      "path": "app/router.js",
+      "bytes": 2353,
+      "sha256": "864a9e9f66349249bc9341dcd1be4f29cdf267469439887782e70e27f8d3365e"
+    },
+    {
+      "path": "app/screens/command.js",
+      "bytes": 12791,
+      "sha256": "e03378992e4b8377dd441dede919b1eff82e9c9e0b893b3ef160f9d36a9eb8c4"
+    },
+    {
+      "path": "app/screens/drift.js",
+      "bytes": 24241,
+      "sha256": "534a62cf777802bee8e27ce2e60c38ea07084e9e85606fcbe851a0b912680dd2"
+    },
+    {
+      "path": "app/screens/methodology.js",
+      "bytes": 32679,
+      "sha256": "74c0715dbf740eea050d5be7f7c9d4a328e9a830983d8aa3562d4af4184cc399"
+    },
+    {
+      "path": "app/screens/satellite.js",
+      "bytes": 18762,
+      "sha256": "2be49818f3d16c1218ccd5ea279ca770d49b499e514f0d4acc1afd42915b007e"
+    },
+    {
+      "path": "app/screens/slick.js",
+      "bytes": 26026,
+      "sha256": "9ebe30aca6cecda4894ef3fa6da3685ea55aefa5881218002703f1b00d01638c"
+    },
+    {
+      "path": "app/screens/vessels.js",
+      "bytes": 22533,
+      "sha256": "d0e07f5692d8c20c9f8444e7002b11b69ad6e510bc2ede0c0a9e49877a0dd8fb"
+    },
+    {
+      "path": "app/state.js",
+      "bytes": 3894,
+      "sha256": "ad02aa298c545d1695e74c908ed120e53516ee38c872bcb8f08c6a3094736079"
+    },
+    {
+      "path": "app/ui.js",
+      "bytes": 16019,
+      "sha256": "97c556010a79e9bd87779ea82291b6f703019ddff4c6c9fdb9f1958c1fd22812"
+    },
+    {
+      "path": "demo/case-demo.json",
+      "bytes": 947757,
+      "sha256": "b9037ea5ac04cbdd9feb4e939f4c36cc671725fb2e779eaa838d50b4cfb1ad96"
+    },
+    {
+      "path": "demo/cases.json",
+      "bytes": 1630,
+      "sha256": "1aea86dbd0ac87896af07c5f04dc554f2fe5607c74fc2d4281e6535fd69ba321"
+    },
+    {
+      "path": "demo/eval/test_0117_iou100.png",
+      "bytes": 25531,
+      "sha256": "94062b3c0cd42e36ebb1714dc1741a44e27f4c1d69ecd97a33f24c2a9fa48526"
+    },
+    {
+      "path": "demo/eval/test_0276_iou094.png",
+      "bytes": 24186,
+      "sha256": "a4d8e1c5b61197de62b26d3d73c92df32b68197cab8cf74a6f73d3106f756bf1"
+    },
+    {
+      "path": "demo/eval/test_0295_iou064.png",
+      "bytes": 25606,
+      "sha256": "7a8afd3b3240281b8726d733215f59bb52d3f841f3544b41b2d067c5f56bf1f3"
+    },
+    {
+      "path": "demo/eval/test_0352_iou000.png",
+      "bytes": 23926,
+      "sha256": "7e50beb66f2d472a5b6c44534edd3cf65c44f90ee738130c8fac6bfb0fe9ee69"
+    },
+    {
+      "path": "demo/eval/test_0426_iou088.png",
+      "bytes": 23947,
+      "sha256": "6052f320226fdf3f10455cd958598ba9ee68c80948d01e4c3192386f0e3e5af6"
+    },
+    {
+      "path": "demo/eval/test_0446_iou076.png",
+      "bytes": 25260,
+      "sha256": "bde72c9321863fc5077037002cc8ad64002dbc4dd2647910e0ecf91541f3f24e"
+    },
+    {
+      "path": "demo/eval/test_0554_iou082.png",
+      "bytes": 24251,
+      "sha256": "c443a0ae024b32a7f286efba0bc752d548170a5a10853d36d30695c73dd2b17c"
+    },
+    {
+      "path": "demo/eval/test_0593_iou048.png",
+      "bytes": 25367,
+      "sha256": "993dc4593c452fdc14aedcf2a933a1a42af7c5e35fabf7ac1729270ec77ddfdc"
+    },
+    {
+      "path": "demo/health.json",
+      "bytes": 1122,
+      "sha256": "48ae2d8abb80232690c367eb1f0a24b1ca559167db8788fd32103bce5990000a"
+    },
+    {
+      "path": "demo/images-demo.json",
+      "bytes": 1451,
+      "sha256": "b05d2437a1401e84928fcec71bc796f2eee53482e6c2dbee5c15c6cd5a5a0a63"
+    },
+    {
+      "path": "demo/metrics.json",
+      "bytes": 107665,
+      "sha256": "a6a6f519286a0e6fd5bbeb00dc40704570352385f0eda505f468ec688a9adb40"
+    },
+    {
+      "path": "demo/previews/00053_comparison.png",
+      "bytes": 390934,
+      "sha256": "388671019416b9ab3d7cc4bef4dc1678711b45f65d35927a11460cd4a20ddc9a"
+    },
+    {
+      "path": "demo/previews/00053_mask.png",
+      "bytes": 13179,
+      "sha256": "2bc507b334b6337726cccb65e0bb0ed413c9e70240858a993e846446c77d6ded"
+    },
+    {
+      "path": "demo/previews/00053_prediction.png",
+      "bytes": 12340,
+      "sha256": "ccb8db1b16150716c619d9415e23a2f4785015a9ec0dc4e57760dfa60b571bb1"
+    },
+    {
+      "path": "demo/previews/00053_probability.png",
+      "bytes": 202177,
+      "sha256": "1e9950d1d2cae41ccf8539fdad95769344be297ec10e7a3ed4b2532f1f968f35"
+    },
+    {
+      "path": "demo/previews/00053_vh.png",
+      "bytes": 255141,
+      "sha256": "7f8c2684250e8a43ae9c37ea17559c9a07f37eef3b45dd7ca434c11891ac9b56"
+    },
+    {
+      "path": "demo/previews/00053_vv.png",
+      "bytes": 254835,
+      "sha256": "ecc8f911da75518ce3ee45c7fd30876c94949d2d8d212de5b4b1342d8209e9f7"
+    },
+    {
+      "path": "demo/report-demo.json",
+      "bytes": 458286,
+      "sha256": "e039a902edf03b7b7f30d15ebe9aafd8893d02b2847b528db183429d0c03d3ec"
+    },
+    {
+      "path": "demo/scenes.json",
+      "bytes": 175922,
+      "sha256": "f13c40b0f5153a65d5aa70b9aed84f0960598fae6259aa39d564821c26a537e6"
+    },
+    {
+      "path": "index.html",
+      "bytes": 1998,
+      "sha256": "2b7e812013ed6200390993abaa4b160bf83d54b579e6aebe649aac31ad39eb1d"
+    },
+    {
+      "path": "styles/base.css",
+      "bytes": 10847,
+      "sha256": "72d0efaa4c9fc26208aa5557cea2b5f99f1cd7b50dabb2196d4074efadbe1d5e"
+    },
+    {
+      "path": "styles/components.css",
+      "bytes": 28771,
+      "sha256": "5b35422bceee7baa5831bec508c8c170b0fd820968d25afefef0606ad69016a2"
+    },
+    {
+      "path": "styles/screens.css",
+      "bytes": 12461,
+      "sha256": "dd84688652fe680cdeb9ba3e80ed151be0edd0f2bf401a9252260f97a9d69815"
+    },
+    {
+      "path": "styles/tokens.css",
+      "bytes": 6831,
+      "sha256": "bd62ffb17d97ecf0efaeb759fa1e37a068cdc88b05f9541abc7c6a17836690f9"
+    }
+  ]
+}

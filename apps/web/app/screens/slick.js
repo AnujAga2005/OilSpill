@@ -1,0 +1,770 @@
+/** Screen 3: slick analysis.
+ *
+ * Two jobs. First, publish the geometry the pipeline measured, with the method attached -
+ * an area in square kilometres means nothing without knowing whether it came from counting
+ * pixels on a sphere or from a polygon nobody validated. Second, let an analyst disagree
+ * with the boundary and see what that does to the number.
+ *
+ * The model outline is never modified. The editable ring is a simplified copy that lives in
+ * local annotations, and the recomputed area is labelled as the analyst's, not the model's.
+ */
+
+import { h } from "../dom.js";
+import { ICONS } from "../icons.js";
+import * as F from "../format.js";
+import * as U from "../ui.js";
+import * as X from "../exporters.js";
+import { createMap, mapLegend } from "../mapview.js";
+import { baseRasters, slickRings, slickLayers, C, Z } from "../layers.js";
+
+export const LEDE =
+  "Area, perimeter, length, orientation and the method behind each, plus an editable " +
+  "boundary so an analyst's own delineation can be measured the same way.";
+
+/** Handle radius in screen pixels, and the grab tolerance around one. */
+const HANDLE = 4.2;
+const GRAB = 11;
+/** Above this many vertices a ring is too dense to edit by hand. */
+const EDIT_VERTEX_TARGET = 48;
+
+export function render(ctx) {
+  const { caseDoc, caseStatus } = ctx;
+
+  if (caseStatus !== "ready" || !caseDoc) {
+    return U.stateSwitch(caseStatus, caseDoc, () => null, {
+      loadingTitle: "Loading geometry",
+      missing: {
+        title: "No geometry has been measured yet",
+        body: "The geometry stage runs as part of a detection.",
+        command: ".venv/bin/python scripts/run_api.py --build-demo",
+      },
+      failed: { title: "The case could not be loaded", body: "The API did not return a case." },
+    });
+  }
+
+  const slick = caseDoc.slick || {};
+  const regions = caseDoc.geometry?.slicks || [];
+  const rings = slickRings(caseDoc);
+
+  if (!rings.length) {
+    return U.emptyState({
+      title: "No slick was delineated",
+      body:
+        `The detector ran and the geometry stage found no connected region above the ` +
+        `${F.int(caseDoc.geometry?.config?.min_area_px)} pixel minimum. That is a valid ` +
+        "result: this scene has no mapped slick.",
+    });
+  }
+
+  // Which region the tables and the detail card are talking about.
+  const selectedId = ctx.route.get("slick") || regions[0]?.id || rings[0]?.id;
+  const selected = regions.find((r) => r.id === selectedId) || regions[0] || null;
+
+  return h(
+    "div",
+    { class: "stack" },
+
+    U.card(
+      "Measured extent",
+      {
+        id: "extent",
+        hint: `${F.int(slick.slickCount)} region${slick.slickCount === 1 ? "" : "s"}`,
+        note: slick.areaMethod,
+        actions: h(
+          "div",
+          { class: "inline" },
+          U.button("GeoJSON", {
+            kind: "quiet",
+            small: true,
+            iconPath: ICONS.download,
+            onClick: () => {
+              X.downloadJson(
+                X.exportName(caseDoc, "slicks", "geojson"),
+                caseDoc.geometry?.geojson || { type: "FeatureCollection", features: [] },
+              );
+              ctx.announce("Slick outlines downloaded as GeoJSON.");
+            },
+          }),
+          U.button("CSV", {
+            kind: "quiet",
+            small: true,
+            iconPath: ICONS.download,
+            onClick: () => {
+              X.downloadCsv(X.exportName(caseDoc, "slicks", "csv"), X.slicksCsv(caseDoc));
+              ctx.announce("Slick table downloaded as CSV.");
+            },
+          }),
+        ),
+      },
+      h(
+        "div",
+        { class: "grid grid--stats" },
+        U.stat({
+          label: "Total area",
+          value: F.km2(slick.totalAreaKm2),
+          unit: "km²",
+          tone: "oil",
+          sub: `across ${F.int(slick.slickCount)} disconnected region${slick.slickCount === 1 ? "" : "s"}`,
+        }),
+        U.stat({
+          label: "Largest region",
+          value: F.km2(slick.areaKm2),
+          unit: "km²",
+          sub: `${F.pct(slick.areaKm2 / slick.totalAreaKm2)} of the total`,
+        }),
+        U.stat({
+          label: "Extent",
+          value: `${F.km(slick.lengthKm, 1)} × ${F.km(slick.widthKm, 1)}`,
+          unit: "km",
+          sub: `elongation ${F.num(slick.elongation, 2)}, bearing ${F.bearing(slick.orientationDegFromNorth)}`,
+        }),
+        U.stat({
+          label: "Perimeter",
+          value: F.km(slick.perimeterKm, 1),
+          unit: "km",
+          sub: `compactness ${F.num(slick.compactness, 3)} — 1.0 is a circle`,
+        }),
+      ),
+    ),
+
+    boundaryCard(ctx, caseDoc, rings, selectedId),
+
+    h(
+      "div",
+      { class: "grid grid--wide-left" },
+      regionsCard(ctx, caseDoc, regions, selectedId),
+      h(
+        "div",
+        { class: "stack" },
+        regionDetailCard(selected),
+        methodCard(caseDoc),
+      ),
+    ),
+
+    qualityCard(caseDoc, slick),
+  );
+}
+
+// -- the editable boundary ---------------------------------------------------
+
+/**
+ * The map, plus a boundary editor.
+ *
+ * The editor is deliberately narrow in scope: move, insert and delete vertices on one
+ * simplified ring. It does not offer freehand drawing, because a hand-drawn outline that
+ * was never registered against the pixels would produce an area figure with no provenance
+ * at all.
+ */
+function boundaryCard(ctx, caseDoc, rings, selectedId) {
+  const holder = h("div", { style: { height: "clamp(300px, 52vh, 560px)" } });
+  const stored = ctx.store.annotation(ctx.caseId);
+  const target = rings.find((r) => r.id === selectedId) || rings[0];
+  const modelRing = (target?.rings || [])[0] || [];
+
+  // Edit state. `null` draft means "not editing"; the stored boundary is re-hydrated so a
+  // saved edit survives a reload.
+  const edit = {
+    on: false,
+    draft: null,
+    dragIndex: -1,
+    hoverIndex: -1,
+    modelAreaKm2: target?.areaKm2 ?? null,
+    savedRing: stored.boundary?.slickId === (target?.id || null) ? stored.boundary.ring : null,
+  };
+
+  const readoutHost = h("div", { class: "inline between" });
+  const controlHost = h("div", { class: "inline" });
+  let map = null;
+
+  const draftAreaKm2 = () => (edit.draft ? ringAreaKm2(edit.draft) : null);
+
+  /** Everything drawn: the model ring always, the draft on top, handles when editing. */
+  const paintMap = () => {
+    if (!map) return;
+    const vectors = [
+      ...slickLayers(caseDoc, {
+        fill: !edit.on,
+        width: edit.on ? 1 : 1.5,
+        pickable: !edit.on,
+      }),
+    ];
+    if (edit.on) for (const v of vectors) v.opacity = 0.45;
+
+    const ring = edit.draft || edit.savedRing;
+    if (ring && ring.length > 2) {
+      vectors.push({
+        type: "polygon",
+        id: "analyst-boundary",
+        kind: "analyst",
+        rings: [ring],
+        stroke: C.agree,
+        fill: "rgba(110, 231, 183, 0.14)",
+        width: 2,
+        z: Z.selected,
+        label: `Analyst boundary · ${F.km2(ringAreaKm2(ring))} km²`,
+        pickable: !edit.on,
+      });
+    }
+    if (edit.on && edit.draft) {
+      edit.draft.forEach((point, index) => {
+        vectors.push({
+          type: "point",
+          id: `handle:${index}`,
+          kind: "handle",
+          at: point,
+          r: index === edit.hoverIndex || index === edit.dragIndex ? HANDLE + 1.8 : HANDLE,
+          fill: index === edit.dragIndex ? C.oil : C.agree,
+          stroke: C.agree,
+          z: Z.marker,
+        });
+      });
+    }
+    map.setVectors(vectors).redraw();
+  };
+
+  const paintChrome = () => {
+    controlHost.replaceChildren(...editControls(ctx, edit, target, { paintMap, paintChrome }));
+    readoutHost.replaceChildren(areaReadout(edit, draftAreaKm2()));
+  };
+
+  requestAnimationFrame(() => {
+    if (!holder.isConnected) return;
+    map = createMap(holder, {
+      onSelect: (hit) => {
+        if (hit?.id?.startsWith("slick:")) {
+          ctx.setParams({ slick: hit.id.slice("slick:".length) });
+        }
+      },
+    });
+    map.setRasters(baseRasters(caseDoc, ctx.caseId, { kind: "vv", opacity: 0.95 }));
+    paintMap();
+    map.fitContent(0.1);
+
+    // The gesture claim: while editing, a pointerdown near a handle drags it instead of
+    // panning the view.
+    map.setGesture({
+      hover: (point) => {
+        if (!edit.on || !edit.draft) return false;
+        const index = nearestHandle(map, edit.draft, point);
+        if (index !== edit.hoverIndex) {
+          edit.hoverIndex = index;
+          paintMap();
+        }
+        map.canvas.style.cursor = index >= 0 ? "grab" : "crosshair";
+        return true;
+      },
+      down: (point, event) => {
+        if (!edit.on || !edit.draft) return false;
+        const index = nearestHandle(map, edit.draft, point);
+        if (index >= 0) {
+          // Alt-click or right-click removes a vertex; a ring needs at least a triangle.
+          if ((event.altKey || event.button === 2) && edit.draft.length > 3) {
+            edit.draft.splice(index, 1);
+            edit.hoverIndex = -1;
+            paintMap();
+            paintChrome();
+            return true;
+          }
+          edit.dragIndex = index;
+          map.canvas.style.cursor = "grabbing";
+          paintMap();
+          return true;
+        }
+        // Empty space on the ring inserts a vertex into the nearest edge.
+        const edge = nearestEdge(map, edit.draft, point);
+        if (edge >= 0) {
+          edit.draft.splice(edge + 1, 0, [point.lon, point.lat]);
+          edit.dragIndex = edge + 1;
+          paintMap();
+          paintChrome();
+          return true;
+        }
+        return false;
+      },
+      move: (point) => {
+        if (edit.dragIndex < 0 || !edit.draft) return;
+        edit.draft[edit.dragIndex] = [point.lon, point.lat];
+        paintMap();
+        readoutHost.replaceChildren(areaReadout(edit, draftAreaKm2()));
+      },
+      up: () => {
+        if (edit.dragIndex < 0) return;
+        edit.dragIndex = -1;
+        map.canvas.style.cursor = "grab";
+        paintMap();
+        paintChrome();
+      },
+    });
+
+    // A right-click inside the map would otherwise open the browser menu mid-delete.
+    const blockMenu = (event) => {
+      if (edit.on) event.preventDefault();
+    };
+    map.canvas.addEventListener("contextmenu", blockMenu);
+
+    ctx.onCleanup(() => {
+      map.canvas.removeEventListener("contextmenu", blockMenu);
+      map.destroy();
+    });
+  });
+
+  paintChrome();
+
+  return U.card(
+    "Boundary",
+    {
+      id: "boundary",
+      hint: target ? `${target.id} · ${F.km2(target.areaKm2)} km²` : null,
+      note:
+        "The model outline stays exactly as the pipeline traced it. An analyst edit is a " +
+        "separate ring, measured with the same spherical formula and stored in this " +
+        "browser only.",
+      actions: controlHost,
+    },
+    h(
+      "div",
+      { class: "stack stack--tight" },
+      holder,
+      readoutHost,
+      mapLegend([
+        { label: "Model outline", colour: "var(--oil)" },
+        { label: "Analyst boundary", colour: "var(--agree)" },
+      ]),
+      h(
+        "p",
+        { class: "small muted" },
+        "Drag to pan, scroll to zoom, double-click to zoom in. While editing: drag a handle " +
+          "to move it, click the outline to insert one, alt-click or right-click a handle to " +
+          "remove it.",
+      ),
+    ),
+  );
+}
+
+function editControls(ctx, edit, target, { paintMap, paintChrome }) {
+  const controls = [];
+
+  if (!edit.on) {
+    controls.push(
+      U.button(edit.savedRing ? "Resume editing" : "Edit boundary", {
+        kind: "",
+        small: true,
+        iconPath: ICONS.target,
+        disabled: !target,
+        onClick: () => {
+          const source = edit.savedRing || (target?.rings || [])[0] || [];
+          edit.draft = simplifyRing(source, EDIT_VERTEX_TARGET);
+          edit.on = true;
+          paintMap();
+          paintChrome();
+          ctx.announce(`Boundary editor open with ${edit.draft.length} vertices.`);
+        },
+      }),
+    );
+    if (edit.savedRing) {
+      controls.push(
+        U.button("Discard saved edit", {
+          kind: "quiet",
+          small: true,
+          iconPath: ICONS.close,
+          onClick: () => {
+            edit.savedRing = null;
+            edit.draft = null;
+            ctx.store.annotate(ctx.caseId, { boundary: null });
+            ctx.announce("Analyst boundary discarded.");
+          },
+        }),
+      );
+    }
+    return controls;
+  }
+
+  controls.push(
+    U.button("Save boundary", {
+      kind: "primary",
+      small: true,
+      iconPath: ICONS.check,
+      onClick: () => {
+        const ring = edit.draft;
+        // `annotate` notifies the store, which re-renders this screen from the saved ring.
+        ctx.store.annotate(ctx.caseId, {
+          boundary: {
+            slickId: target?.id || null,
+            ring,
+            areaKm2: Number(ringAreaKm2(ring).toFixed(6)),
+            modelAreaKm2: edit.modelAreaKm2,
+            vertices: ring.length,
+            method:
+              "spherical shoelace on a sphere of radius 6371008.8 m, the same radius the " +
+              "pipeline integrates pixel areas on",
+            note: "Analyst delineation. Not a model output.",
+          },
+        });
+        ctx.announce(`Analyst boundary saved, ${F.km2(ringAreaKm2(ring))} square kilometres.`);
+      },
+    }),
+    U.button("Reset to model", {
+      kind: "quiet",
+      small: true,
+      iconPath: ICONS.reset,
+      onClick: () => {
+        edit.draft = simplifyRing((target?.rings || [])[0] || [], EDIT_VERTEX_TARGET);
+        paintMap();
+        paintChrome();
+      },
+    }),
+    U.button("Close editor", {
+      kind: "quiet",
+      small: true,
+      iconPath: ICONS.close,
+      onClick: () => {
+        edit.on = false;
+        edit.draft = null;
+        edit.hoverIndex = -1;
+        paintMap();
+        paintChrome();
+      },
+    }),
+  );
+  return controls;
+}
+
+function areaReadout(edit, areaKm2) {
+  const ring = edit.draft || edit.savedRing;
+  if (!ring) {
+    return h(
+      "p",
+      { class: "small muted" },
+      "No analyst boundary. The figures above are the model's.",
+    );
+  }
+  const area = areaKm2 ?? ringAreaKm2(ring);
+  const model = edit.modelAreaKm2;
+  const delta = Number.isFinite(model) && model > 0 ? (area - model) / model : null;
+
+  return h(
+    "div",
+    { class: "inline between" },
+    h(
+      "div",
+      { class: "inline" },
+      U.badge(`Analyst area ${F.km2(area)} km²`, "ok"),
+      Number.isFinite(model)
+        ? h(
+            "span",
+            { class: "small muted" },
+            `model ${F.km2(model)} km²${
+              delta === null ? "" : ` · ${delta >= 0 ? "+" : ""}${F.pct(delta)} difference`
+            }`,
+          )
+        : null,
+    ),
+    h(
+      "span",
+      { class: "small muted mono" },
+      `${ring.length} vertices${edit.on ? " · editing" : " · saved"}`,
+    ),
+  );
+}
+
+// -- tables ------------------------------------------------------------------
+
+function regionsCard(ctx, caseDoc, regions, selectedId) {
+  if (!regions.length) {
+    return U.card(
+      "Regions",
+      { id: "regions" },
+      U.emptyState({ title: "No per-region breakdown", body: "This case stored no region table." }),
+    );
+  }
+
+  const summary = caseDoc.geometry?.summary || {};
+  return U.card(
+    "Regions",
+    {
+      id: "regions",
+      hint: `${F.int(summary.componentsPublished)} of ${F.int(summary.componentsFound)} components published`,
+      note:
+        `${F.int(summary.componentsBelowMinArea)} component(s) fell below the ` +
+        `${F.int(caseDoc.geometry?.config?.min_area_px)} pixel minimum and were dropped; ` +
+        `${F.int(summary.componentsWithInvalidOutline)} traced outline(s) self-intersect and ` +
+        "are published for display only.",
+    },
+    h(
+      "div",
+      { class: "table-wrap" },
+      h(
+        "table",
+        { class: "table" },
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", null, "Region"),
+            h("th", { class: "right" }, "Area km²"),
+            h("th", { class: "right" }, "Perimeter km"),
+            h("th", { class: "right" }, "Confidence"),
+            h("th", null, "Flags"),
+          ),
+        ),
+        h(
+          "tbody",
+          null,
+          regions.map((region) =>
+            h(
+              "tr",
+              {
+                // `.table tbody tr[aria-selected="true"]` is the selected style; there is no
+                // `is-selected` class in the stylesheet.
+                tabindex: "0",
+                role: "button",
+                "aria-selected": String(region.id === selectedId),
+                onClick: () => ctx.setParams({ slick: region.id }),
+                onKeydown: (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    ctx.setParams({ slick: region.id });
+                  }
+                },
+              },
+              h("td", { class: "mono" }, region.id),
+              h("td", { class: "right" }, F.km2(region.areaKm2)),
+              h("td", { class: "right" }, F.km(region.perimeterM / 1000, 1)),
+              h("td", { class: "right" }, F.pct(region.confidence)),
+              h(
+                "td",
+                null,
+                h(
+                  "div",
+                  { class: "inline" },
+                  region.touchesSceneEdge ? U.badge("edge", "warn") : null,
+                  region.geometryValid === false ? U.badge("outline", "warn") : null,
+                  region.elongation >= (caseDoc.geometry?.config?.elongation_flag || 4)
+                    ? U.badge("linear", "synthetic")
+                    : null,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+function regionDetailCard(region) {
+  if (!region) {
+    return U.card("Region detail", { id: "region" }, U.emptyState({ title: "Nothing selected" }));
+  }
+  return U.card(
+    "Region detail",
+    { id: "region", hint: region.id },
+    U.rows(
+      U.row("Area", `${F.km2(region.areaKm2)} km²`, { mono: true }),
+      U.row("Pixels", F.int(region.pixels), { mono: true }),
+      U.row("Perimeter", `${F.km(region.perimeterM / 1000, 2)} km`, { mono: true }),
+      U.row("Length × width", `${F.km(region.lengthM / 1000, 2)} × ${F.km(region.widthM / 1000, 2)} km`, { mono: true }),
+      U.row("Elongation", F.num(region.elongation, 2), { mono: true }),
+      U.row("Orientation", F.bearing(region.orientationDegFromNorth), { mono: true }),
+      U.row("Compactness", F.num(region.compactness, 3), { mono: true }),
+      U.row("Centroid", F.latLon(region.centroid), { mono: true }),
+      U.row("Mean probability", F.pct(region.meanProbability), { mono: true }),
+      U.row("Median probability", F.pct(region.medianProbability), { mono: true }),
+      U.row("10th percentile", F.pct(region.p10Probability), { mono: true }),
+      U.row("Above 0.8", F.pct(region.fractionAbove0_8), { mono: true }),
+      U.row("Outline geometry", region.ringGeometry, { mono: true }),
+    ),
+  );
+}
+
+function methodCard(caseDoc) {
+  const raster = caseDoc.geometry?.raster || {};
+  const config = caseDoc.geometry?.config || {};
+  const filtered = caseDoc.geometry?.filteredMask || {};
+  const raw = caseDoc.geometry?.rawMask || {};
+
+  return U.card(
+    "How the area was measured",
+    { id: "method", note: caseDoc.geometry?.areaMethod },
+    U.rows(
+      U.row("Raster", `${raster.width} × ${raster.height} px, EPSG:${raster.epsg}`, { mono: true }),
+      U.row(
+        "Pixel area",
+        `${F.num(raster.pixelAreaM2AtTop, 3)} m² at the top, ${F.num(raster.pixelAreaM2AtBottom, 3)} m² at the bottom`,
+        { stack: true },
+      ),
+      U.row("Raw mask", `${F.int(raw.pixels)} px · ${F.km2(raw.areaKm2)} km²`, { mono: true }),
+      U.row("After morphology", `${F.int(filtered.pixels)} px · ${F.km2(filtered.areaKm2)} km²`, { mono: true }),
+      U.row("Opening / closing radius", `${config.open_radius} / ${config.close_radius} px`, { mono: true }),
+      U.row("Minimum region", `${F.int(config.min_area_px)} px`, { mono: true }),
+      U.row("Outline simplification", `${F.num(config.simplify_tolerance_px, 1)} px`, { mono: true }),
+      U.row("Polygon cap", F.int(config.max_polygons), { mono: true }),
+    ),
+    h("p", { class: "small muted", style: { "margin-top": "var(--s3)" } }, filtered.note || ""),
+  );
+}
+
+function qualityCard(caseDoc, slick) {
+  const flags = slick.qualityFlags || [];
+  return U.card(
+    "Caveats on this geometry",
+    { id: "quality", note: caseDoc.geometry?.geojson?.note },
+    h(
+      "div",
+      { class: "stack stack--tight" },
+      flags.length
+        ? h(
+            "ul",
+            { class: "bullets" },
+            flags.map((flag) => h("li", null, h("span", null, flag))),
+          )
+        : h(
+            "p",
+            { class: "small muted" },
+            "The geometry stage raised no quality flags for the largest region.",
+          ),
+      slick.geometryValid === false
+        ? U.notice(
+            "Area, perimeter, length, width, elongation and compactness are all computed " +
+              "from the pixel mask, not from the traced outline, so a self-intersecting " +
+              "ring does not affect any figure on this screen. It affects only the drawing.",
+            { strongPrefix: "Outline is display-only." },
+          )
+        : null,
+      slick.touchesSceneEdge
+        ? U.notice(
+            "The slick reaches the edge of the acquisition, so the measured area is a lower " +
+              "bound: whatever continues outside the frame was never imaged.",
+            { kind: "synthetic", strongPrefix: "Truncated by the scene." },
+          )
+        : null,
+    ),
+  );
+}
+
+// -- geometry helpers --------------------------------------------------------
+
+/**
+ * Area of a lon/lat ring in square kilometres, by spherical excess.
+ *
+ * Same radius the pipeline uses, so an analyst boundary and a model boundary are directly
+ * comparable rather than differing by the choice of earth model.
+ */
+export function ringAreaKm2(ring) {
+  if (!Array.isArray(ring) || ring.length < 3) return 0;
+  const R = 6371.0088; // km
+  const rad = Math.PI / 180;
+  let total = 0;
+  for (let i = 0; i < ring.length; i += 1) {
+    const [lon1, lat1] = ring[i];
+    const [lon2, lat2] = ring[(i + 1) % ring.length];
+    total += (lon2 - lon1) * rad * (Math.sin(lat1 * rad) + Math.sin(lat2 * rad));
+  }
+  return Math.abs((total * R * R) / 2);
+}
+
+/**
+ * Douglas-Peucker down to roughly `target` vertices.
+ *
+ * A traced 2048 px mask outline runs to thousands of points, which is unusable as a set of
+ * drag handles. The tolerance is searched rather than guessed so the result lands near the
+ * target for any ring size.
+ */
+export function simplifyRing(ring, target = EDIT_VERTEX_TARGET) {
+  if (!Array.isArray(ring) || ring.length <= target) return (ring || []).map((p) => [p[0], p[1]]);
+
+  // Longitude degrees are shorter than latitude degrees, so distances are measured in a
+  // locally isotropic frame before simplifying.
+  const lat0 = ring.reduce((sum, p) => sum + p[1], 0) / ring.length;
+  const k = Math.max(0.05, Math.cos((lat0 * Math.PI) / 180));
+  const flat = ring.map(([lon, lat]) => [lon * k, lat]);
+
+  let low = 0;
+  let high = 0.5;
+  let best = flat;
+  for (let step = 0; step < 24; step += 1) {
+    const mid = (low + high) / 2;
+    const kept = douglasPeucker(flat, mid);
+    if (kept.length > target) low = mid;
+    else {
+      best = kept;
+      high = mid;
+    }
+    if (Math.abs(kept.length - target) <= 2) {
+      best = kept;
+      break;
+    }
+  }
+  return best.map(([x, lat]) => [x / k, lat]);
+}
+
+function douglasPeucker(points, tolerance) {
+  if (points.length < 3) return points;
+  let index = -1;
+  let maxDistance = 0;
+  const first = points[0];
+  const last = points[points.length - 1];
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const distance = perpendicular(points[i], first, last);
+    if (distance > maxDistance) {
+      maxDistance = distance;
+      index = i;
+    }
+  }
+  if (maxDistance <= tolerance || index < 0) return [first, last];
+  return [
+    ...douglasPeucker(points.slice(0, index + 1), tolerance).slice(0, -1),
+    ...douglasPeucker(points.slice(index), tolerance),
+  ];
+}
+
+function perpendicular(point, a, b) {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared === 0) return Math.hypot(point[0] - a[0], point[1] - a[1]);
+  const t = Math.max(0, Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / lengthSquared));
+  return Math.hypot(point[0] - (a[0] + t * dx), point[1] - (a[1] + t * dy));
+}
+
+/** Index of the handle under the pointer, or -1. Measured in screen pixels. */
+function nearestHandle(map, ring, point) {
+  let best = -1;
+  let bestDistance = GRAB;
+  ring.forEach((vertex, index) => {
+    const [x, y] = map.project(vertex[0], vertex[1]);
+    const distance = Math.hypot(x - point.x, y - point.y);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = index;
+    }
+  });
+  return best;
+}
+
+/** Index of the ring edge under the pointer, or -1. */
+function nearestEdge(map, ring, point) {
+  let best = -1;
+  let bestDistance = GRAB;
+  for (let i = 0; i < ring.length; i += 1) {
+    const a = map.project(ring[i][0], ring[i][1]);
+    const b = map.project(ring[(i + 1) % ring.length][0], ring[(i + 1) % ring.length][1]);
+    const distance = segmentDistance(point.x, point.y, a[0], a[1], b[0], b[1]);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = i;
+    }
+  }
+  return best;
+}
+
+function segmentDistance(px, py, x0, y0, x1, y1) {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared === 0) return Math.hypot(px - x0, py - y0);
+  const t = Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / lengthSquared));
+  return Math.hypot(px - (x0 + t * dx), py - (y0 + t * dy));
+}

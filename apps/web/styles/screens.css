@@ -1,0 +1,629 @@
+/* Screen-specific layout: the map, the imagery viewer and the two-pane screens.
+ *
+ * The three imagery surfaces -- map, viewer, thumbnail frame -- are near-black, inside an
+ * otherwise light interface. A greyscale SAR tile has no colour to separate it from the
+ * page, so it needs a dark surround to read at all, the same way a photo editor keeps a
+ * dark stage inside a light window. Everything that floats on those surfaces is therefore
+ * styled for the dark side: white glass, white text, no black hairlines.
+ */
+
+/* -- map --------------------------------------------------------------- */
+
+.map {
+  position: relative;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: #05070a;
+  /* No border. Against a white card the tone difference is the edge, and a black hairline
+   * on a black panel is only visible as a smudge. */
+  box-shadow: var(--shadow-2);
+  touch-action: none;
+}
+
+.map__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.map__canvas:active {
+  cursor: grabbing;
+}
+
+.map--tall .map__canvas {
+  aspect-ratio: 4 / 3;
+}
+
+.map--square .map__canvas {
+  aspect-ratio: 1 / 1;
+}
+
+.map__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.map__controls {
+  position: absolute;
+  top: var(--s3);
+  right: var(--s3);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  /* The divider between the two buttons, showing through the 1 px gap. */
+  background: rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-2);
+}
+
+.map__control {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  transition: background var(--fast) var(--ease);
+}
+
+/* Solid white, not a translucent wash: a black hover wash over a black map is invisible. */
+.map__control:hover {
+  background: #ffffff;
+}
+
+/* The one label drawn straight onto the imagery, so it is white with a shadow rather than
+ * dark text on a plate -- a plate here would cover the pixels it is measuring. */
+.map__scale {
+  position: absolute;
+  right: var(--s3);
+  bottom: var(--s3);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: var(--t-caption);
+  font-weight: 500;
+  color: var(--on-dark);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+
+.map__scale-bar {
+  height: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-top: 0;
+  background: none;
+}
+
+.map__readout {
+  position: absolute;
+  left: var(--s3);
+  top: var(--s3);
+  padding: 4px 9px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-1);
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.map__tip {
+  position: absolute;
+  z-index: 5;
+  padding: var(--s2) var(--s3);
+  max-width: 240px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: var(--shadow-3);
+  font-size: var(--t-footnote);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  white-space: nowrap;
+}
+
+/* -- imagery viewer ---------------------------------------------------- */
+
+.viewer {
+  position: relative;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: #05070a;
+  box-shadow: var(--shadow-2);
+  aspect-ratio: 1 / 1;
+  isolation: isolate;
+}
+
+.viewer__layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+  transition: opacity var(--normal) var(--ease);
+}
+
+.viewer__layer--pixel {
+  image-rendering: pixelated;
+}
+
+/* The split handle for before/after: the right-hand layer is clipped live. */
+.viewer__split {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.viewer__split-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+.viewer__split-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #14161a;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  box-shadow: var(--shadow-2);
+}
+
+.viewer__tag {
+  position: absolute;
+  z-index: 4;
+  bottom: var(--s3);
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: var(--t-caption);
+  font-weight: 500;
+  color: #fff;
+  pointer-events: none;
+}
+
+.viewer__tag--left {
+  left: var(--s3);
+}
+
+.viewer__tag--right {
+  right: var(--s3);
+}
+
+.viewer__crosshair {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s4);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.tile__frame {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: #05070a;
+  box-shadow: var(--shadow-1);
+}
+
+.tile__frame img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tile__caption {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  font-size: var(--t-footnote);
+}
+
+.tile__name {
+  font-weight: 500;
+}
+
+.tile__meta {
+  color: var(--text-tertiary);
+  font-size: var(--t-caption);
+}
+
+/* -- timeline ---------------------------------------------------------- */
+
+.timeline {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+
+.timeline__play {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-1);
+  color: var(--text);
+  cursor: pointer;
+  transition: box-shadow var(--fast) var(--ease);
+}
+
+.timeline__play:hover {
+  box-shadow: var(--shadow-2);
+}
+
+.timeline__track {
+  flex: 1 1 200px;
+  min-width: 140px;
+}
+
+.timeline__clock {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--t-footnote);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* -- score ring -------------------------------------------------------- */
+
+.score {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+}
+
+.score__ring {
+  flex: none;
+  width: 68px;
+  height: 68px;
+}
+
+.score__ring-track {
+  stroke: var(--surface-strong);
+}
+
+/* The darker amber: a 5 px stroke of the graphic value is too pale to read on white. */
+.score__ring-fill {
+  stroke: var(--oil-text);
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--slow) var(--ease);
+}
+
+.score__num {
+  font-size: 20px;
+  font-weight: 600;
+  fill: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.score__den {
+  font-size: 9px;
+  fill: var(--text-quaternary);
+}
+
+/* Inside the dark hero card the contrast inverts, so the ring goes back to the graphic
+ * amber and the figures go white. */
+.hero .score__ring-track {
+  stroke: rgba(255, 255, 255, 0.14);
+}
+
+.hero .score__ring-fill {
+  stroke: var(--oil);
+}
+
+.hero .score__num {
+  fill: var(--on-dark);
+  font-size: 22px;
+}
+
+.hero .score__den {
+  fill: var(--on-dark-tertiary);
+}
+
+/* -- pipeline diagram -------------------------------------------------- */
+
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pipeline__step {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: var(--s4);
+  padding-bottom: var(--s5);
+  position: relative;
+}
+
+.pipeline__step:last-child {
+  padding-bottom: 0;
+}
+
+.pipeline__step::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 26px;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+.pipeline__step:last-child::before {
+  display: none;
+}
+
+.pipeline__dot {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  font-size: var(--t-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pipeline__body {
+  min-width: 0;
+  padding-top: 3px;
+}
+
+.pipeline__name {
+  font-size: var(--t-sub);
+  font-weight: 600;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+.pipeline__time {
+  font-size: var(--t-caption);
+  color: var(--text-quaternary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pipeline__detail {
+  margin-top: 2px;
+  font-size: var(--t-footnote);
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* -- candidate list (mobile form of the ranked table) ------------------ */
+
+.candidates-cards {
+  display: none;
+  flex-direction: column;
+  gap: var(--s3);
+}
+
+.candidate-card {
+  display: flex;
+  gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: box-shadow var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.candidate-card:hover {
+  box-shadow: var(--shadow-2);
+}
+
+.candidate-card[aria-selected="true"] {
+  border-color: var(--tint-line);
+  background: var(--tint-dim);
+}
+
+.candidate-card__rank {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface-strong);
+  font-size: var(--t-footnote);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.candidate-card__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.candidate-card__name {
+  font-size: var(--t-sub);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.candidate-card__meta {
+  font-size: var(--t-caption);
+  color: var(--text-tertiary);
+}
+
+.candidate-card__score {
+  flex: none;
+  text-align: right;
+  font-size: var(--t-lead);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+@media (max-width: 780px) {
+  .candidates-cards {
+    display: flex;
+  }
+  .candidates-table {
+    display: none;
+  }
+}
+
+/* -- sweep chart ------------------------------------------------------- */
+
+.chart {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart__axis {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart__grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.chart__label {
+  fill: var(--text-quaternary);
+  font-size: 9px;
+  font-family: var(--font);
+}
+
+.chart__line {
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* A halo in the card colour, so a dot on top of the line still reads as a point. */
+.chart__dot {
+  stroke: var(--bg-elevated);
+  stroke-width: 1.5;
+}
+
+/* -- per-scene distribution strip ------------------------------------- */
+
+.strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 64px;
+}
+
+.strip__bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--oil);
+  transition: background var(--fast) var(--ease);
+}
+
+.strip__bar:hover {
+  background: var(--oil-text);
+}
+
+/* -- footer ------------------------------------------------------------ */
+
+.footer {
+  border-top: 1px solid var(--line);
+  padding-top: var(--s4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s5);
+  font-size: var(--t-caption);
+  color: var(--text-quaternary);
+}
+
+@media print {
+  /* The stages keep their dark fill -- the rasters are drawn for it -- but the shadow is
+   * replaced by a rule so the panel still has an edge on paper. */
+  .map,
+  .viewer,
+  .tile__frame {
+    border: 1px solid var(--line-strong);
+    box-shadow: none;
+    break-inside: avoid;
+  }
+  .map__controls,
+  .timeline,
+  .viewer__split {
+    display: none;
+  }
+  /* On paper the hero is light, so the ring inverts back to the darker amber. */
+  .hero .score__ring-track {
+    stroke: var(--surface-strong);
+  }
+  .hero .score__ring-fill {
+    stroke: var(--oil-text);
+  }
+  .candidates-cards {
+    display: none !important;
+  }
+  .candidates-table {
+    display: block !important;
+  }
+}

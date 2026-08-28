@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <title>SpillTrace</title>
+    <meta
+      name="description"
+      content="SpillTrace: oil-spill detection from Sentinel-1 SAR, drift reconstruction and
+      explainable vessel candidate ranking. Research prototype for SIH problem statement 26143."
+    />
+    <!-- No analytics, no fonts, no CDN, no API keys. Everything here is same-origin, so
+         the dashboard runs from a static directory with no network access at all. -->
+    <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/components.css" />
+    <link rel="stylesheet" href="styles/screens.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230b0d10'/%3E%3Cpath d='M4.6 15c1.3-3.1 4.3-5.2 7.7-5.2 3.9 0 6.6 2.3 6.6 4.6 0 1.7-1.4 3-3.3 3-1.7 0-2.9-1-2.9-2.2 0-1 .8-1.7 1.8-1.7' stroke='%23ff8a4c' stroke-width='1.7' fill='none' stroke-linecap='round'/%3E%3Cpath d='M2.6 7.4 21.4 4.2' stroke='%235ec8ff' stroke-width='1.2' stroke-linecap='round' stroke-dasharray='2.6 2.6'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <noscript>
+      <div style="padding: 24px; max-width: 60ch; line-height: 1.6">
+        <h1 style="font-size: 20px">SpillTrace needs JavaScript</h1>
+        <p>
+          The dashboard renders the case document in the browser. Without JavaScript the raw
+          artefacts are still readable directly: the API serves
+          <code>/api/cases/demo</code> as JSON, and the pipeline writes the same documents
+          under <code>data/processed/cases/</code>.
+        </p>
+      </div>
+    </noscript>
+    <script type="module" src="app/main.js"></script>
+  </body>
+</html>

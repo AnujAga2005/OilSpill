@@ -1,0 +1,33 @@
+{
+  "channels": [
+    "VV",
+    "VH"
+  ],
+  "unit": "decibels (sigma0, intensity_db)",
+  "source": "training split patches only, invalid pixels excluded",
+  "patchesUsed": 3804,
+  "mean": [
+    -21.552122,
+    -32.576877
+  ],
+  "std": [
+    4.32087,
+    3.593822
+  ],
+  "clipPercentiles": [
+    0.5,
+    99.5
+  ],
+  "clipLow": [
+    -35.5437,
+    -47.9954
+  ],
+  "clipHigh": [
+    -13.6577,
+    -24.621
+  ],
+  "pixelsPerChannel": [
+    62269336,
+    62269336
+  ]
+}
