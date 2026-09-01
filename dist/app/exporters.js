@@ -29,6 +29,8 @@ const CSV_HEADER = [
   "closest_approach_utc",
   "reports_in_window",
   "reports_near_envelope",
+  "relevant_traffic",
+  "relevance_reason",
   "status",
   "ais_mode",
 ];
@@ -66,6 +68,8 @@ export function candidatesCsv(caseDoc) {
         evidence.closestApproachUtc,
         evidence.reportsInWindow,
         evidence.reportsNearEnvelope,
+        entry.relevant ? "yes" : "no",
+        entry.relevanceReason,
         entry.status,
         aisLabel,
       ]

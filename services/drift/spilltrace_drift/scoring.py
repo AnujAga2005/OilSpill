@@ -62,6 +62,25 @@ from .ais import (
 INSIDE_RADII = 1.0
 IRRELEVANT_RADII = 3.0
 
+# The filtering rule, in one sentence, published with the counts so that a reader can see
+# what was thrown away and why rather than being handed a shortlist to trust.
+FILTER_RULE = (
+    f"A vessel is relevant only if the same AIS report satisfies both halves of the test: it "
+    f"falls inside the estimated release window, and it lies within {IRRELEVANT_RADII:g} "
+    f"drift-envelope radii of where the oil is estimated to have been at that report's own "
+    f"timestamp. Everything else is irrelevant traffic: present in the scene, but not near the "
+    f"oil when the oil was there."
+)
+
+# Excluded vessels are scored and kept rather than dropped. A shortlist that silently
+# discards nine tenths of the traffic cannot be checked by the person reading it, and the
+# cheapest way to hide a scoring bug is to delete the vessels it mis-ranked.
+RETENTION_NOTE = (
+    "Excluded vessels are still scored and retained, ranked below the relevant ones, so "
+    "that the filter itself can be audited. Filtering here means separating the traffic "
+    "that can support a release from the traffic that cannot, not deleting records."
+)
+
 # STOPPED_KN and SLOW_KN come from the AIS module so that a "stopped" navigational status
 # in the feed and a "stopped" behaviour score always mean the same speed.
 
@@ -458,6 +477,35 @@ def confidence_band(total: float, maximum: int) -> str:
     return "No meaningful overlap - retain for completeness only"
 
 
+def relevance(approach: Approach) -> tuple[bool, str]:
+    """Whether this vessel is relevant traffic, and the sentence that says why.
+
+    The two ways of being irrelevant are different facts about the world and are reported
+    as different sentences: a vessel that was never in the window was somewhere else in
+    time, and a vessel that was in the window but ten radii away was somewhere else in
+    space. Collapsing both into "excluded" would lose the only part of the answer an
+    operator can act on.
+    """
+    if approach.reports_relevant > 0:
+        return True, (
+            f"{approach.reports_relevant} of {approach.reports_total} reports fall inside the "
+            f"release window and within {IRRELEVANT_RADII:g} envelope radii of the estimated "
+            f"oil position"
+        )
+    if approach.reports_in_window == 0:
+        if approach.nearest_outside_km is not None:
+            return False, (
+                f"no AIS reports inside the estimated release window; the nearest pass was "
+                f"{approach.nearest_outside_km} km away but outside the window"
+            )
+        return False, "no AIS reports inside the estimated release window"
+    return False, (
+        f"{approach.reports_in_window} reports inside the release window, but the closest was "
+        f"{approach.distance_km} km away -- {approach.radii:.1f} envelope radii, beyond the "
+        f"{IRRELEVANT_RADII:g}-radius relevance limit"
+    )
+
+
 def score_vessel(
     vessel: dict[str, Any],
     env: EnvelopeTrack,
@@ -467,6 +515,7 @@ def score_vessel(
     weights = weights or C.ScoringWeights()
     reports = vessel.get("reports") or []
     approach = closest_approach(reports, env)
+    relevant, relevance_reason = relevance(approach)
 
     components = [
         score_distance(approach, weights),
@@ -486,6 +535,8 @@ def score_vessel(
         "pattern": vessel.get("pattern"),
         "synthetic": True,
         "status": C.LABEL_CANDIDATE,
+        "relevant": relevant,
+        "relevanceReason": relevance_reason,
         "score": round(total, 1),
         "scoreMax": weights.total,
         "band": confidence_band(total, weights.total),
@@ -511,6 +562,52 @@ def score_vessel(
     }
 
 
+def traffic_funnel(vessels: Sequence[dict[str, Any]], scored: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """The filtering stage, as counts that add up.
+
+    The problem statement asks for irrelevant traffic to be filtered out, which is only a
+    meaningful claim if the numbers on both sides of the filter are visible. Every count
+    here is derived from the same `Approach` the scores were computed from, so the funnel
+    cannot disagree with the ranking it describes.
+
+    The two exclusion counts are kept apart because they mean different things, and both
+    are published alongside the total so the identity
+    ``vesselsSeen == vesselsRelevant + excludedOutsideWindow + excludedTooFar`` can be
+    checked by eye.
+    """
+    reports_total = sum(len(v.get("reports") or []) for v in vessels)
+    reports_in_window = sum(e["evidence"]["reportsInWindow"] or 0 for e in scored)
+    reports_near = sum(e["evidence"]["reportsNearEnvelope"] or 0 for e in scored)
+
+    relevant = [e for e in scored if e["relevant"]]
+    outside_window = [e for e in scored if not e["relevant"] and not e["evidence"]["reportsInWindow"]]
+    too_far = [e for e in scored if not e["relevant"] and e["evidence"]["reportsInWindow"]]
+    in_window = len(scored) - len(outside_window)
+
+    summary = (
+        f"{reports_total} AIS reports · {len(scored)} vessels → "
+        f"{in_window} with reports in the release window → "
+        f"{len(relevant)} intersect the origin envelope (within {IRRELEVANT_RADII:g} envelope radii) → "
+        f"{len(outside_window) + len(too_far)} excluded as irrelevant traffic"
+    )
+    return {
+        "aisReports": reports_total,
+        "reportsInWindow": reports_in_window,
+        "reportsNearEnvelope": reports_near,
+        "vesselsSeen": len(scored),
+        "vesselsInWindow": in_window,
+        "vesselsRelevant": len(relevant),
+        "excludedOutsideWindow": len(outside_window),
+        "excludedTooFar": len(too_far),
+        "excludedTotal": len(outside_window) + len(too_far),
+        "insideRadii": INSIDE_RADII,
+        "irrelevantRadii": IRRELEVANT_RADII,
+        "rule": FILTER_RULE,
+        "retentionNote": RETENTION_NOTE,
+        "summary": summary,
+    }
+
+
 def rank_vessels(
     feed: dict[str, Any],
     backward: dict[str, Any],
@@ -518,14 +615,19 @@ def rank_vessels(
 ) -> dict[str, Any]:
     """Score every vessel in a synthetic feed and rank them.
 
-    Ties break on closest approach and then MMSI, so the ordering is stable across runs
-    rather than depending on dictionary iteration order.
+    Relevance sorts before score: a vessel that was never near the oil while the oil was
+    there cannot outrank one that was, however many marks it collects for being a tanker
+    with a complete feed. Within each group ties break on closest approach and then MMSI,
+    so the ordering is stable across runs rather than depending on dictionary iteration
+    order.
     """
     weights = weights or C.ScoringWeights()
     env = envelope_from_drift(backward)
-    scored = [score_vessel(v, env, weights) for v in feed.get("vessels") or []]
+    vessels = feed.get("vessels") or []
+    scored = [score_vessel(v, env, weights) for v in vessels]
     scored.sort(
         key=lambda s: (
+            not s["relevant"],
             -s["score"],
             s["evidence"]["closestApproachKm"] if s["evidence"]["closestApproachKm"] is not None else 1e9,
             str(s["mmsi"]),
@@ -533,6 +635,7 @@ def rank_vessels(
     )
     for position, entry in enumerate(scored, start=1):
         entry["rank"] = position
+    funnel = traffic_funnel(vessels, scored)
 
     return {
         "pipelineVersion": C.PIPELINE_VERSION,
@@ -571,7 +674,10 @@ def rank_vessels(
         },
         "releaseWindow": feed.get("releaseWindow"),
         "originZone": feed.get("originZone"),
+        "filtering": funnel,
         "candidateCount": len(scored),
+        "relevantCount": funnel["vesselsRelevant"],
+        "excludedCount": funnel["excludedTotal"],
         "candidates": scored,
     }
 
@@ -595,6 +701,8 @@ def candidates_csv(ranking: dict[str, Any]) -> str:
         "closest_approach_utc",
         "reports_in_window",
         "reports_near_envelope",
+        "relevant_traffic",
+        "relevance_reason",
         "status",
         "ais_mode",
     ]
@@ -619,6 +727,8 @@ def candidates_csv(ranking: dict[str, Any]) -> str:
             evidence.get("closestApproachUtc"),
             evidence.get("reportsInWindow"),
             evidence.get("reportsNearEnvelope"),
+            "yes" if entry.get("relevant") else "no",
+            entry.get("relevanceReason"),
             entry.get("status"),
             # The exported file leaves the app, so it carries the full mandated label
             # rather than an abbreviation a reader could mistake for a data source.

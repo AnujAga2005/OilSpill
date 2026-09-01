@@ -173,7 +173,9 @@ def summarise(payload: dict[str, Any], path: Path | None = None) -> dict[str, An
         "driftMode": provenance.get("driftMode"),
         "aisLabel": provenance.get("aisLabel"),
         "status": payload.get("status"),
+        "spillAgeLabel": (payload.get("spillAge") or {}).get("label"),
         "candidateCount": attribution.get("candidateCount"),
+        "relevantCount": attribution.get("relevantCount"),
         "topCandidate": (
             {
                 "name": top.get("name"),

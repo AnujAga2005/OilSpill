@@ -162,7 +162,16 @@ def test_every_report_is_a_physically_possible_ais_record(feed):
                 assert 0.0 <= report["cogDeg"] < 360.0
             if report.get("headingDeg") is not None:
                 assert 0.0 <= report["headingDeg"] < 360.0
-            assert report["navStatus"]
+            # Class A carries a navigational status; Class B does not carry the field at all.
+            # In a real MarineCadastre file that correlation is exact -- every blank Status
+            # row is Class B -- so asserting a status on every report would be asserting
+            # something real AIS never provides.
+            if vessel["transceiverClass"] == "B":
+                assert report["navStatus"] is None
+                assert report["statusCode"] is None
+            else:
+                assert report["navStatus"]
+                assert report["statusCode"] in (0, 5)
 
 
 def test_reports_are_ordered_and_regularly_spaced(feed):

@@ -37,9 +37,14 @@ strength of this project's position is that it can survive being checked.
 > our case that's a 24-hour window.
 >
 > That region and that window are a search box. We reconstruct the vessel traffic that went
-> through it, filter out the irrelevant traffic, and score what's left on proximity, time-window
+> through it and filter out the irrelevant traffic — ten vessels down to two, with the eight
+> exclusions kept on screen and reasoned so the filter itself can be checked — then score what's
+> left on proximity, time-window
 > overlap, trajectory, behavioural anomalies, vessel type and data completeness — 100 points
 > total, every component shown on screen with the evidence behind it.
+>
+> We also bound the spill's age at 24 hours and say plainly that one radar pass can't tighten that,
+> with the arithmetic on screen.
 >
 > And it never says a vessel is guilty. The strongest phrase in the product is 'priority candidate
 > for investigation'."
@@ -61,8 +66,8 @@ prepared.
    said first. This is the whole strategy.
 3. **Numbers, not adjectives.** Not "quite accurate" — "0.771 IoU at patch scale, 0.64 mean per
    scene."
-4. **Route to the owner.** "That's the drift model — Priya built it" reads as depth. Guessing on a
-   teammate's behalf reads as a team that doesn't know its own code.
+4. **Route to the owner.** "That's the drift model — my teammate built it, let them take it" reads
+   as depth. Guessing on a teammate's behalf reads as a team that doesn't know its own code.
 5. **Never guess at a fact.** Say what you know, name what you'd check. An NTRO panel will notice
    a bluffed regulatory or sensor detail instantly, and it costs you the credibility of everything
    you said before it.
@@ -218,26 +223,48 @@ highest-value thing you do all session.
 > that the envelope widens with time — the product shows the envelope growing rather than
 > pretending precision it doesn't have."
 
+**"Can you tell how old the spill is?"** — *the statement says "age if feasible", so expect this*
+> "We bound it: up to 24 hours at the time of the image, which is the horizon we actually
+> integrated. Then we test whether the hindcast can tell one end of that window from the other,
+> and for this scene it can't — over 24 hours the estimated position moves 8.6 kilometres while the
+> uncertainty around it is 11.3. The whole release window sits inside its own error bar.
+>
+> So we print the bound and the test, not a midpoint. Saying '12 hours' would have been a
+> fabricated number.
+>
+> And that's a property of *this* case rather than of the method: it's unresolvable because a
+> 148 km² slick spreads faster than it drifts. A tight, compact slick does resolve, and we have
+> tests asserting both sides of that so the claim stays tied to the physics. Three things would
+> narrow it — a second acquisition, licensed metocean forcing, or an earlier acquisition showing
+> the area clear. All three are data, not code."
+
 ### D. AIS and scoring
 
 **"Where does AIS come from and what's in it?"**
 > "AIS is the mandatory ship transponder broadcast — identity, position, speed and course, several
 > times a minute, over VHF. It's Flightradar for ships. The fields that matter to us are MMSI and
 > IMO number for identity, timestamp and lat/lon for the spatio-temporal match, SOG and COG for
-> behaviour and trajectory, and vessel type for plausibility. Ours is synthetic; the next step is
-> conforming to the MarineCadastre schema the problem statement names, so a real feed drops in."
+> behaviour and trajectory, and vessel type for plausibility. Ours is synthetic — but it's emitted
+> in the exact 17-column MarineCadastre/NAIS schema the problem statement names as the format
+> authority, header identical to a real daily extract, and the same module parses a real extract
+> back in. You can download ours from the app at `/api/cases/demo/ais.csv` and diff it. A licensed
+> feed is a file drop, not a rewrite."
 
 **"How do you filter irrelevant traffic?"**
-> "By distance from the hindcast envelope, scaled in envelope radii. Inside one radius scores full
-> marks on proximity; beyond three radii scores zero and the vessel is not a meaningful candidate.
+> "On both axes at once, and we publish the counts. A vessel is relevant only if the *same* AIS
+> report is inside the estimated release window **and** within three drift-envelope radii of where
+> the oil is estimated to have been at that report's own timestamp. For this case: 987 reports, 10
+> vessels → 9 with reports in the window → 2 relevant, 8 excluded.
 >
-> I'll be straight about a gap here: the scoring implements that cut-off, but the interface still
-> lists every vessel rather than reporting how many were excluded. The problem statement asks
-> explicitly for irrelevant traffic to be filtered out, so surfacing that funnel with counts is a
-> half-day task on our list."
-
-Volunteering a known gap that they were about to find is worth more than the feature would have
-been.
+> The two exclusion reasons are kept apart on purpose, because they mean different things. Seven
+> were in the window but 45 to 91 kilometres away — look at a different ship. One passed within 1.5
+> kilometres but outside the window: right place, wrong time, and what's excluding it is the width
+> of our own release window rather than distance.
+>
+> And the excluded vessels are dimmed, not deleted. A shortlist that silently drops eight of ten
+> can't be audited — the cheapest way to hide a scoring bug is to delete the vessels it ranked
+> wrong. Relevance is also the primary sort key, so an excluded vessel can't climb above a relevant
+> one on vessel type and data-quality marks alone."
 
 **"How does the scoring work? Is it a black box?"**
 > "The opposite — it's deliberately arithmetic you can audit. 100 points: proximity 30, time-window
@@ -316,15 +343,17 @@ rather than imagining it is the whole chain.
 > `npm install`. Clone it and it runs offline."
 
 **"Is it tested?"**
-> "432 automated tests, about 35 seconds, all passing. And the whole pipeline is seeded — run the
+> "532 automated tests, about 40 seconds, all passing. And the whole pipeline is seeded — run the
 > same case twice and every figure is byte-identical; only the timestamps change. That matters for
 > an evidentiary product: a result you can't reproduce is a result you can't defend."
 
-**"Will it scale? This takes 13 seconds."**
-> "13 seconds for a full nine-stage run on one 2048-pixel scene, on a laptop CPU, single-threaded,
-> with no GPU. Sentinel-1 revisits every six days, so throughput isn't the binding constraint —
-> but the API is already built as a job queue rather than blocking requests, so it parallelises
-> across scenes without redesign. Inference on a GPU would be a small fraction of that 13 seconds."
+**"Will it scale? This takes twenty seconds."**
+> "Twenty seconds for a full nine-stage run on one 2048-pixel scene, on a laptop CPU,
+> single-threaded, with no GPU — and three quarters of that is decoding the GeoTIFF and running
+> inference, not the physics. Sentinel-1 revisits every six days, so throughput isn't the binding
+> constraint — but the API is already built as a job queue rather than blocking requests, so it
+> parallelises across scenes without redesign. Inference on a GPU would be a small fraction of
+> those twenty seconds."
 
 **"Why not React? You said you know MERN."**
 > "Because it would have earned nothing. The value here is the model, the drift physics and the
@@ -477,7 +506,7 @@ a vessel guilty — points the same way. That consistency is the pitch. Lean on 
 ## 5.8 Final checklist before you walk in
 
 - [ ] The three numbers, cold: **1,200 pairs / 270 acquisitions** · **0.771 vs 0.582 IoU** ·
-      **432 tests, offline, 13 seconds**
+      **532 tests · whole pipeline offline in 19 s**
 - [ ] The fourth number ready for probing: **0.64 mean per-scene IoU**
 - [ ] The PS sentence permitting synthetic AIS, quotable
 - [ ] The seven minimum concepts from document 2 §2.9
@@ -485,5 +514,9 @@ a vessel guilty — points the same way. That consistency is the pitch. Lean on 
 - [ ] Server warm, `dist/` spare running, notifications off, mains power
 - [ ] Everyone knows their role from document 4 §4.7
 - [ ] Nobody will say "guilty", "99% accurate", or "real time"
+- [ ] The **[document 6](06-PS-COMPLIANCE.md)** compliance table printed, one copy per judge
+
+Next: **[document 6 — the PS-compliance slide](06-PS-COMPLIANCE.md)**, which is the one artefact
+to hand across the table rather than talk through.
 
 Good luck. The product is real, the numbers are real, and the honesty is your strongest feature.

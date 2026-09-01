@@ -127,10 +127,12 @@ Every POST body is optional and takes the same keys, all with defaults:
 `detector` (`auto`), `particles` (50–20000), `horizonHours`, `threshold`, `previews`, `seed`.
 An empty body `{}` is valid and uses the configured defaults.
 
-A `drift` run on `00053` with default parameters takes about 13 seconds and moves through nine
-stages — `decode, detect, geometry, forcing, backward, forward, ais, scoring, previews`. It is
-seeded, so running it twice gives byte-identical figures; only the timing block and the
-generated timestamp change.
+A `drift` run on `00053` with the parameters above takes **about 20 seconds** and moves through
+nine stages — `decode, detect, geometry, forcing, backward, forward, ais, scoring, previews`.
+Most of that is fixed cost you pay whatever you ask for: 9.5 s decoding the 2048 × 2048 GeoTIFF
+and 5.8 s of inference. The two drift stages are 1 s each at 1200 particles, so particle count is
+a cheap dial. The run is seeded, so running it twice gives byte-identical figures; only the
+timing block and the generated timestamp change.
 
 Full route list:
 
@@ -143,6 +145,7 @@ Full route list:
 | GET | `/api/cases/<id>` | the full case document |
 | GET | `/api/cases/<id>/images` | the rendered PNG layers for that case |
 | GET | `/api/cases/<id>/report` | printable report payload |
+| GET | `/api/cases/<id>/ais.csv` | the case's synthetic AIS feed in the 17-column MarineCadastre schema |
 | GET | `/api/eval/<name>.png` | evaluation figures |
 | POST | `/api/cases/<id>/detect` | run segmentation |
 | POST | `/api/cases/<id>/slick` | recompute geometry |
@@ -226,7 +229,7 @@ asserts that on every run.
 .venv/bin/python -m pytest
 ```
 
-432 tests, about 35 seconds. Add `-v` for names, or point it at one file:
+532 tests, about 40 seconds. Add `-v` for names, or point it at one file:
 
 ```bash
 .venv/bin/python -m pytest tests/test_api.py -v

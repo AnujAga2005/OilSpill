@@ -33,6 +33,7 @@ import numpy as np
 
 from spilltrace_common import config as C
 from spilltrace_common.geotiff import Affine
+from spilltrace_drift import age as age_mod
 from spilltrace_drift import ais as ais_mod
 from spilltrace_drift import engine as drift_engine
 from spilltrace_drift import forcing as forcing_mod
@@ -676,6 +677,13 @@ def assemble(
             "satellite": C.LABEL_SATELLITE,
             "aisMode": feed["mode"],
             "aisLabel": feed["label"],
+            # The schema the feed conforms to, separate from whether it is real. These are
+            # two independent facts and the Vessels screen shows both: the data is
+            # synthetic, and it is synthetic *in MarineCadastre's format*, which is what
+            # makes the swap to a real extract a path argument rather than a rewrite.
+            "aisSchema": (feed.get("schema") or {}).get("format"),
+            "aisSource": (feed.get("schema") or {}).get("label"),
+            "aisSchemaReference": (feed.get("schema") or {}).get("reference"),
             "driftMode": decision.get("mode"),
             "driftLabel": decision.get("label"),
             "detectionSource": detection["source"],
@@ -721,6 +729,7 @@ def assemble(
             "forwardEndpoint": forward.get("originEstimate"),
         },
         "drift": {"backward": backward, "forward": forward},
+        "spillAge": age_mod.estimate(backward),
         "ais": feed,
         "vessels": ranking["candidates"],
         "attribution": ranking,

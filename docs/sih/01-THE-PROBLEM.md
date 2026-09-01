@@ -204,7 +204,9 @@ intelligence audience.
       evaluators actually want. Ten minutes that could redirect a week of work. Nobody has
       watched it yet.
 - [ ] **Verify the Zenodo dataset identity** against our `Oil/` filenames.
-- [ ] **Download the MarineCadastre sample CSV** and record its exact column header.
+- [x] **Download the MarineCadastre sample CSV** and record its exact column header. Done —
+      `data/raw/AIS_2022_06_01.csv`, and the 17-column header now matches what the app emits at
+      `/api/cases/demo/ais.csv` byte-for-byte.
 - [ ] Print the (a)/(b)/(c) clauses and pin them where the team can see them.
 
 Next: **[document 2 — what you need to know](02-WHAT-YOU-NEED-TO-KNOW.md)**, the domain

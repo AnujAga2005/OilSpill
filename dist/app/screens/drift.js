@@ -129,6 +129,8 @@ export function render(ctx) {
 
     mapCard(ctx, caseDoc, direction, run),
 
+    direction === "backward" ? spillAgeCard(caseDoc.spillAge) : null,
+
     h(
       "div",
       { class: "grid grid--wide-left" },
@@ -407,6 +409,75 @@ function signed(hours) {
 }
 
 // -- cards -------------------------------------------------------------------
+
+/**
+ * The spill's age, and — the part that matters — whether the hindcast can pin it down.
+ *
+ * The temptation on this card is to print the midpoint of the window and call it the age.
+ * The pipeline refuses to, because the run itself says it cannot tell one end of the
+ * window from the other: over the whole horizon the estimated position moves less than the
+ * P90 radius of the uncertainty around it. So the card shows the bound, shows the
+ * arithmetic behind the refusal, and lists what would actually narrow it.
+ */
+function spillAgeCard(age) {
+  if (!age) return null;
+  const resolution = age.resolution || {};
+  const separation = resolution.bestSeparation || {};
+  return U.card(
+    "Estimated spill age",
+    { id: "age", hint: age.label, note: age.basis },
+    h(
+      "div",
+      { class: "stack stack--tight" },
+      h(
+        "div",
+        { class: "grid grid--stats" },
+        U.stat({
+          label: "Upper bound",
+          value: F.hours(age.maxHours),
+          tone: "drift",
+          sub: `oldest release the hindcast follows — ${F.utc(age.earliestReleaseUtc)}`,
+        }),
+        U.stat({
+          label: "Lower bound",
+          value: F.hours(age.minHours),
+          sub: "nothing in one scene rules out a release minutes before the pass",
+        }),
+        U.stat({
+          label: "Age resolvable?",
+          value: resolution.resolvable ? "yes" : "no",
+          tone: resolution.resolvable ? "reference" : undefined,
+          sub: resolution.resolvable
+            ? `from ${F.hours(resolution.fromHours)} back`
+            : "the whole window fits inside its own error bar",
+        }),
+        U.stat({
+          label: "Best separation",
+          value: F.num(separation.ratio, 2),
+          unit: "× radius",
+          sub:
+            `${F.km(separation.displacementKm, 1)} km of movement against a P90 radius of ` +
+            `${F.km(separation.radiusKm, 1)} km, at ${F.hours(separation.hours)} back`,
+        }),
+      ),
+      U.notice(resolution.note || "", { kind: "" }),
+      h("p", { class: "small muted" }, resolution.test || ""),
+      (age.narrowedBy || []).length
+        ? h(
+            "div",
+            { class: "stack stack--tight" },
+            h("p", { class: "small" }, "What would narrow it:"),
+            h(
+              "ul",
+              { class: "bullets" },
+              (age.narrowedBy || []).map((item) => h("li", null, h("span", null, item))),
+            ),
+          )
+        : null,
+      h("p", { class: "small muted" }, age.caveat || ""),
+    ),
+  );
+}
 
 function spreadCard(run, direction) {
   const timeline = run.timeline || [];
