@@ -440,6 +440,146 @@ def test_distance_is_scored_in_envelope_radii_not_kilometres(context):
 
 
 # ---------------------------------------------------------------------------
+# Traffic filtering: the counts on both sides of the filter must agree
+# ---------------------------------------------------------------------------
+
+
+def test_the_funnel_counts_add_up_to_the_traffic_seen(ranking):
+    """The point of publishing a funnel is that it can be checked by eye.
+
+    If these three groups did not partition the vessels, the interface would be showing
+    an operator a shortlist and an exclusion count that describe different populations.
+    """
+    funnel = ranking["filtering"]
+    assert funnel["vesselsSeen"] == len(ranking["candidates"])
+    assert funnel["vesselsSeen"] == (
+        funnel["vesselsRelevant"] + funnel["excludedOutsideWindow"] + funnel["excludedTooFar"]
+    )
+    assert funnel["excludedTotal"] == funnel["excludedOutsideWindow"] + funnel["excludedTooFar"]
+    assert funnel["vesselsInWindow"] == funnel["vesselsSeen"] - funnel["excludedOutsideWindow"]
+    assert funnel["vesselsRelevant"] <= funnel["vesselsInWindow"]
+    assert ranking["relevantCount"] == funnel["vesselsRelevant"]
+    assert ranking["excludedCount"] == funnel["excludedTotal"]
+
+
+def test_the_funnel_report_counts_match_the_feed_it_describes(ranking, context):
+    """Report totals are re-derived from the feed, not from the scored entries."""
+    _, feed = context
+    funnel = ranking["filtering"]
+    assert funnel["aisReports"] == sum(len(v["reports"]) for v in feed["vessels"])
+    assert funnel["reportsNearEnvelope"] <= funnel["reportsInWindow"] <= funnel["aisReports"]
+    assert funnel["irrelevantRadii"] == S.IRRELEVANT_RADII
+    assert funnel["insideRadii"] == S.INSIDE_RADII
+
+
+def test_the_funnel_summary_states_every_stage_of_the_filter(ranking):
+    """A slide screenshot of this one line has to be defensible on its own."""
+    funnel = ranking["filtering"]
+    summary = funnel["summary"]
+    for number in (
+        funnel["aisReports"],
+        funnel["vesselsSeen"],
+        funnel["vesselsInWindow"],
+        funnel["vesselsRelevant"],
+        funnel["excludedTotal"],
+    ):
+        assert str(number) in summary
+    assert "irrelevant traffic" in summary
+    assert "filter" in funnel["retentionNote"].lower()
+    assert "envelope radii" in funnel["rule"]
+
+
+def test_filtering_out_means_setting_aside_and_never_deleting(ranking):
+    """Every vessel in the feed survives to the output, tagged with its verdict.
+
+    A filter that dropped rows would make the scoring unauditable: the cheapest way to
+    hide a ranking bug is to delete the vessels it mis-ranked.
+    """
+    for candidate in ranking["candidates"]:
+        assert isinstance(candidate["relevant"], bool)
+        assert candidate["relevanceReason"]
+        assert candidate["status"] == C.LABEL_CANDIDATE
+    assert any(c["relevant"] for c in ranking["candidates"])
+    assert any(not c["relevant"] for c in ranking["candidates"])
+
+
+def test_relevance_sorts_ahead_of_score(context):
+    """A vessel that was never near the oil must not outrank one that was.
+
+    Scored with the type and completeness weights carrying the whole total, background
+    traffic can out-collect a relevant vessel on marks alone. The sort key exists so that
+    it still cannot reach the top of the list.
+    """
+    backward, feed = context
+    weights = C.ScoringWeights(
+        distance=1, time_window=1, trajectory=1, behaviour=1, vessel_type=48, data_completeness=48
+    )
+    ranked = S.rank_vessels(feed, backward, weights=weights)
+
+    flags = [c["relevant"] for c in ranked["candidates"]]
+    assert flags == sorted(flags, reverse=True), "an excluded vessel ranked above a relevant one"
+    # And within each group the ordering is still by score.
+    for group in (True, False):
+        scores = [c["score"] for c in ranked["candidates"] if c["relevant"] is group]
+        assert scores == sorted(scores, reverse=True)
+
+
+def test_the_two_ways_of_being_irrelevant_are_reported_differently(ranking):
+    """Somewhere else in time and somewhere else in space are different findings, and
+    only one of them is a reason to go looking for another data source."""
+    outside = [
+        c for c in ranking["candidates"]
+        if not c["relevant"] and not c["evidence"]["reportsInWindow"]
+    ]
+    too_far = [
+        c for c in ranking["candidates"]
+        if not c["relevant"] and c["evidence"]["reportsInWindow"]
+    ]
+    assert outside and too_far, "the fixture must plant both kinds of irrelevant traffic"
+
+    for candidate in outside:
+        assert "release window" in candidate["relevanceReason"]
+        assert "no AIS reports" in candidate["relevanceReason"]
+    for candidate in too_far:
+        reason = candidate["relevanceReason"]
+        assert "envelope radii" in reason
+        assert "km away" in reason
+    for candidate in ranking["candidates"]:
+        if candidate["relevant"]:
+            assert "fall inside the release window" in candidate["relevanceReason"]
+
+
+def test_relevance_is_decided_by_reports_that_are_near_and_in_window():
+    """`relevance` reads one field for the verdict, so the field must be the right one:
+    reports in the window alone is the free-points bug this module was built to avoid."""
+    base = dict(
+        distance_km=4.0, radii=2.0, radius_km=2.0, at_utc="2017-06-14T00:00:00Z",
+        inside_window=True, reports_in_window=5, reports_relevant=0, reports_total=40,
+        window_minutes=60.0, nearest_outside_km=None, course_deg=10.0, sog_kn=9.0,
+    )
+    near = S.Approach(**{**base, "reports_relevant": 3})
+    in_window_only = S.Approach(**base)
+    absent = S.Approach(**{**base, "reports_in_window": 0, "inside_window": False})
+    absent_but_close = S.Approach(**{**absent.__dict__, "nearest_outside_km": 1.2})
+
+    assert S.relevance(near)[0] is True
+    assert S.relevance(in_window_only)[0] is False
+    assert S.relevance(absent)[0] is False
+    assert "1.2 km away but outside the window" in S.relevance(absent_but_close)[1]
+
+
+def test_the_csv_carries_the_filter_verdict_for_every_row(ranking):
+    """The download is the only copy of the shortlist without the interface's tags on it,
+    so the verdict has to travel inside the file."""
+    rows = list(csv.DictReader(io.StringIO(S.candidates_csv(ranking))))
+    assert [row["relevant_traffic"] for row in rows] == [
+        "yes" if c["relevant"] else "no" for c in ranking["candidates"]
+    ]
+    for row, candidate in zip(rows, ranking["candidates"]):
+        assert row["relevance_reason"] == candidate["relevanceReason"]
+
+
+# ---------------------------------------------------------------------------
 # Data completeness scores the feed, never the vessel
 # ---------------------------------------------------------------------------
 

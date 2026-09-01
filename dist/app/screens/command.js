@@ -39,6 +39,7 @@ export function render(ctx) {
 
   const slick = caseDoc.slick || {};
   const window_ = caseDoc.attribution?.releaseWindow || caseDoc.ais?.releaseWindow;
+  const age = caseDoc.spillAge;
   const candidates = caseDoc.attribution?.candidates || caseDoc.vessels || [];
   const top = candidates[0];
   const scene = caseDoc.scene || {};
@@ -108,6 +109,20 @@ export function render(ctx) {
         tone: "drift",
         iconPath: ICONS.clock,
         sub: window_ ? `${F.utc(window_.startUtc)} to ${F.utc(window_.endUtc)}` : undefined,
+        missing: "drift not run",
+      }),
+      U.metric({
+        label: "Estimated spill age",
+        value: age ? `≤ ${F.hours(age.maxHours)}` : null,
+        tone: "reference",
+        iconPath: ICONS.clock,
+        // The upper bound is the honest headline: one acquisition bounds the age by the
+        // hindcast horizon and cannot narrow it further. The sub-line says which it is.
+        sub: age
+          ? age.resolution?.resolvable
+            ? `resolvable from ${F.hours(age.resolution.fromHours)} back`
+            : "not resolvable from one acquisition — bounded by the hindcast horizon"
+          : undefined,
         missing: "drift not run",
       }),
       U.metric({

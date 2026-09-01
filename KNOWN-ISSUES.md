@@ -46,7 +46,7 @@ clean either.
   splitter.
 - `tests/test_dataset.py::TestAuditGroupKeysReachTheSplitter` covers the wiring end to end —
   audit report on disk in, single split per acquisition out. `cache.py` previously had no test
-  coverage at all, which is why 432 passing tests did not catch this.
+  coverage at all, which is why a passing suite did not catch this.
 
 ### What is not fixed
 
@@ -88,21 +88,49 @@ Volunteering this is a stronger position than being caught by it. See
 
 ---
 
-## 2. Traffic is scored but never filtered
+## 2. Traffic is scored but never filtered — **fixed**
 
 Requirement (c) of the problem statement says *"the irrelevant traffic is to be filtered out"*.
-`services/drift/spilltrace_drift/scoring.py` defines `IRRELEVANT_RADII = 3.0`, which zeroes the
-proximity component for a distant vessel, but `rank_vessels()` sets
-`candidateCount = len(scored)` — every vessel stays in the list and no exclusion count is
-reported. The funnel exists in spirit, not in output. Low effort to fix: filter, and publish
-`considered` / `excluded` counts.
+`IRRELEVANT_RADII = 3.0` zeroed the proximity component for a distant vessel, but nothing in the
+output said how many vessels had been set aside or why. The funnel existed in spirit, not in
+output.
 
-## 3. Spill age is computed but not labelled
+`scoring.py` now publishes `attribution.filtering` — report and vessel counts on both sides of
+the filter, the two exclusion reasons kept apart, the rule in prose, and a one-line summary. Each
+candidate carries `relevant` and `relevanceReason`, both of which travel in the CSV export.
+Relevance is now the primary sort key, so an excluded vessel cannot outrank a relevant one on
+type and data-quality marks alone. The Vessels screen renders the funnel as a card and dims
+excluded rows rather than hiding them.
 
-Requirement (a) says *"and age if feasible"*. The backward drift already produces a 24-hour
-release window (`attribution.releaseWindow`), which is the age estimate — no field or UI label
-names it as one. Low effort: surface it as "estimated slick age" with the window as its
-uncertainty.
+**Excluded vessels are retained, not deleted.** A shortlist that silently drops eight of ten
+vessels cannot be audited, and the cheapest way to hide a scoring bug is to delete the vessels it
+mis-ranked. `candidateCount` therefore still counts every vessel; `relevantCount` and
+`excludedCount` are new fields beside it.
+
+Covered by `tests/test_scoring.py` — the additive identity
+`vesselsSeen == vesselsRelevant + excludedOutsideWindow + excludedTooFar`, the sort order under
+weights that would otherwise invert it, and the two exclusion reasons reading differently.
+
+## 3. Spill age is computed but not labelled — **fixed**
+
+Requirement (a) says *"and age if feasible"*. The backward drift produced a 24-hour release
+window but nothing named it as an age.
+
+`services/drift/spilltrace_drift/age.py` now publishes `spillAge` on every case: the interval,
+its basis, and — the part that matters — whether the hindcast can narrow it. It cannot, for this
+scene, and the payload says so with the arithmetic: over 24 h the estimated position moves
+**8.556 km against an 11.263 km P90 radius, a ratio of 0.76**, so the whole release window sits
+inside its own error bar. The lower bound is 0 h because nothing in a single acquisition rules
+out a release minutes before the pass.
+
+**The midpoint is deliberately not reported.** Printing "12 h" would be a fabricated metric. The
+card shows the bound, the test used, the best separation achieved, and three data sources that
+would genuinely narrow it — a second acquisition, licensed metocean forcing, or an earlier
+acquisition showing the area clear.
+
+Resolvability is a per-case property, not a property of the method: a tightly seeded run *is*
+resolvable, and `tests/test_age.py` asserts both sides of that pair so the claim stays tied to
+the physics rather than to this one scene.
 
 ## 4. Look-alike rejection is untested
 

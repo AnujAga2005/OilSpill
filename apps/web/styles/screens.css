@@ -518,6 +518,23 @@
   color: var(--text);
 }
 
+/* Traffic the filter set aside. Dimmed rather than hidden: the rows stay in the table so
+   the filter can be checked, but they must not read as part of the shortlist. */
+.candidates-table tr.is-excluded td {
+  color: var(--text-tertiary);
+}
+
+.candidate-card.is-excluded {
+  background: var(--surface-strong);
+  box-shadow: none;
+}
+
+.candidate-card.is-excluded .candidate-card__name,
+.candidate-card.is-excluded .candidate-card__score {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
 @media (max-width: 780px) {
   .candidates-cards {
     display: flex;

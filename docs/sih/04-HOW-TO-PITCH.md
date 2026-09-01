@@ -13,7 +13,8 @@ is written so it can be cut down or stretched without losing the spine.
 **Get the slides out of the way in about 90 seconds, then demo.**
 
 Almost every team in the room will have a deck, an architecture diagram and a promise. Very few
-will have a thing that runs. Yours runs, offline, on a laptop, in 13 seconds, with no internet.
+will have a thing that runs. Yours runs, offline, on a laptop, in about 20 seconds, with no
+internet.
 That is your entire competitive advantage and every minute spent on slides is a minute spent not
 using it.
 
@@ -67,11 +68,11 @@ Keep it this short. The demo is the presentation.
 | 1 | **Title** | SpillTrace · PS 26143 · NTRO · Disaster Management · team name. Nothing else. |
 | 2 | **The gap** | One number about spill frequency or damage, and NTRO's "remain un-attributable" quote. 15 seconds. |
 | 3 | **The chain** | The nine-stage diagram from document 1 §1.4. **This is your most important slide.** Point at it once, then never return. |
-| 4 | **PS compliance** | Left column: verbatim (a)/(b)/(c). Right column: the screen that does it and the number it produces. Judges score against a rubric — hand it to them filled in. |
+| 4 | **PS compliance** | Left column: verbatim (a)/(b)/(c). Right column: the screen that does it and the number it produces. **Built for you: [document 6](06-PS-COMPLIANCE.md).** Show five of its thirteen rows; hand the full table over as a printout. Judges score against a rubric — hand it to them filled in. |
 | 5 | **The proof** | 1,200 real pairs · 270 acquisitions · grouped by acquisition (see the leakage note in doc 3 §3.5 — quote it, don't claim "no leakage") · **0.771 IoU vs 0.582 classical baseline**. |
 | 6 | **What's real, what's synthetic** | The table from document 3 §3.4, verbatim. Put it *before* the demo, not after. |
 | 7 | **Architecture** | Nine stages, three Python dependencies, zero frontend dependencies, runs offline. One line: *Node handles people and process, Python handles physics and pixels.* |
-| 8 | **Roadmap** | Four Tier-0/Tier-1 items with honest effort estimates. |
+| 8 | **Roadmap** | Tier 0 is done — say so in one line and move on. Then the Tier-1 items from doc 3 §3.10 with honest effort estimates, real forcing data first. |
 
 **Slide 6 goes before the demo deliberately.** Disclosing the synthetic parts *before* showing
 anything means that for the rest of the session you are the team that volunteered its limitations
@@ -79,12 +80,17 @@ rather than the team that got caught. That inversion is worth more than any extr
 
 ---
 
-## 4.4 The demo — five minutes, beat by beat
+## 4.4 The demo — six minutes, beat by beat
 
 Rehearse this until it needs no thought. Server already running, browser already open on the
 Command centre, `Live API` badge already green, **and the case picker set to `demo`** — the
 `00053` case has no stored probability map, so its confidence field shows an em dash. Never start
 a server in front of judges.
+
+**If you are cut short**, drop the boundary-editing sub-beat on Slick and shorten Imagery to one
+slider drag. Do **not** drop the spill-age card or the filtering funnel: those are the two beats
+that answer the clauses the statement was most prescriptive about, and they are what other teams
+will not have. Document 6 §6.2 explains why.
 
 ### 0:00 — Command centre
 
@@ -148,13 +154,38 @@ Then toggle to forward.
 
 > "Same engine forwards, for the cleanup crew and the coastline at risk."
 
+Now scroll to **Estimated spill age** — this is the beat to slow down on.
+
+> "The statement asks for the spill's age *if feasible*. We bound it at **up to 24 hours**, and
+> then we tested whether the hindcast can tell one end of that window from the other. It can't:
+> the estimated position moves **8.6 kilometres** while the uncertainty around it is **11.3** — the
+> whole window sits inside its own error bar. So we report the bound and the test, not a midpoint.
+> Printing '12 hours' would have been a made-up number, and a second acquisition would fix it —
+> that's a procurement decision, not a modelling one."
+
 *Why this beat:* this is the intellectual core and the thing no other team will have. The
-"it gives a region, not a point" line pre-empts the sharpest question in the room.
+"it gives a region, not a point" line pre-empts the sharpest question in the room, and the age
+card is the clearest signal in the whole demo that you know what you are allowed to claim.
 
-### 3:45 — Vessels
+### 4:15 — Vessels
 
-> "Ten candidates, ranked by spatio-temporal correlation with that origin window. Here's the top
-> one at **91.5 out of 100** — and here is exactly why."
+Start with the funnel card, **before** the ranked list.
+
+> "The statement doesn't say score the traffic — it says *the irrelevant traffic is to be filtered
+> out*. So: **987 AIS reports, 10 vessels. Nine had reports inside the release window. Two of
+> those were actually near the oil when the oil was there. Eight are irrelevant traffic** — and we
+> keep the two reasons apart, because they mean different things. Seven were in the window but 45
+> to 91 kilometres away: those mean look at a different ship. **One passed within 1.5 kilometres —
+> but outside the window.** Right place, wrong time. That one doesn't mean look elsewhere, it means
+> the window's own width is what's excluding it, and tightening the window needs better forcing
+> data."
+
+Then point out that the excluded rows are still on screen, dimmed:
+
+> "We don't delete them. A shortlist that silently drops eight of ten can't be audited — and the
+> cheapest way to hide a scoring bug is to delete the vessels it got wrong."
+
+> "Of what's left, here's the top candidate at **91.5 out of 100** — and here is exactly why."
 
 Click into the breakdown.
 
@@ -170,16 +201,20 @@ Then, deliberately, slowly:
 > not a software bug. We produce the strongest defensible statement and leave the finding to the
 > investigator."
 
-Also point at the label:
+Also point at the label — and if you have the laptop online, this is the moment to open
+`/api/cases/demo/ais.csv` in a second tab:
 
 > "AIS mode: synthetic demonstration data. The problem statement explicitly permits synthetic
 > AIS where real historic data isn't available, and it's labelled on every screen that touches
-> it."
+> it. What isn't synthetic is the format — that's the 17-column MarineCadastre schema the
+> statement names as the format authority, header identical to a real daily extract. You can
+> download it from the app and diff it yourself. Swapping in a licensed feed is a file drop."
 
-*Why this beat:* you deliver the deliverable, you show the explainability, and you convert your
-biggest apparent weakness into a demonstration of judgement — all in sixty seconds.
+*Why this beat:* you show the filter the statement asked for by name, you deliver the deliverable,
+you show the explainability, and you convert your biggest apparent weakness into a demonstration
+of judgement — in about eighty seconds.
 
-### 4:45 — Method, and stop here
+### 5:40 — Method, and stop here
 
 > "And this screen is everything we can't tell you. Patch-scale IoU is 0.771, but patches are
 > sampled near known oil, so that number flatters us. On full 2048-pixel scenes the honest
@@ -211,7 +246,7 @@ sentence and the three numbers.**
 |---|---|
 | **1,200 real Sentinel-1 image/mask pairs, 270 acquisitions, grouped by acquisition** | real data, and a splitting rule you can defend — with the leakage caveat volunteered, not hidden |
 | **0.771 IoU vs 0.582 for the classical dark-spot baseline** | the ML earns its place, measured not asserted |
-| **432 automated tests, runs offline in 13 seconds** | it is engineering, not a notebook |
+| **532 automated tests; the whole pipeline runs offline on one scene in 19 seconds** | it is engineering, not a notebook |
 
 Have **0.64 mean per-scene IoU** ready as the fourth number the moment anyone probes. Offering
 it unprompted is even better.
@@ -256,7 +291,7 @@ missing feature.
 | **Domain answerer** | AIS fields, behavioural anomalies, look-alikes, MARPOL, the "never guilty" position |
 
 The Narrator should not also answer hard technical questions — routing a question to a named
-teammate ("that's the drift model, Priya built it") reads as a team with depth, not as
+teammate ("that's the drift model — let my teammate take that") reads as a team with depth, not as
 hesitation.
 
 ---
@@ -282,12 +317,12 @@ hesitation.
 - [ ] Demo run start to finish **20 times**, out loud, with the laptop, in role.
 - [ ] Once with the Wi-Fi physically off — prove to yourselves nothing needs internet.
 - [ ] Once on a projector or external display at an unfamiliar resolution.
-- [ ] Once in **4 minutes** and once in **90 seconds**, for when a round runs short.
+- [ ] Once in **5 minutes** and once in **90 seconds**, for when a round runs short.
 - [ ] Every team member can state the three numbers cold.
 - [ ] Every team member can explain their own two screens without the Narrator.
 - [ ] Someone plays hostile judge with document 5's question list. Twice.
 - [ ] The `pytest` run recorded as a screenshot or short clip, in case you are asked for proof
-      and don't want to burn 35 seconds of your slot.
+      and don't want to burn 40 seconds of your slot.
 
 ---
 
@@ -302,7 +337,11 @@ hesitation.
 - [ ] `RUNBOOK.md` open in a spare tab so any team member can restart anything.
 - [ ] A printed copy of the nine-stage diagram and the real-vs-synthetic table, for judges who
       prefer paper.
+- [ ] A printed copy of the **[document 6](06-PS-COMPLIANCE.md)** compliance table — one per judge.
+      It is the one page that answers "does it do what we asked?" without you saying a word.
 - [ ] Terminal font size raised, in case you need to show code or a test run.
 - [ ] A screenshot folder as a last resort if the machine dies completely.
 
 Next: **[document 5 — explaining it to the judges](05-EXPLAINING-TO-JUDGES.md)**.
+Related: **[document 6 — the PS-compliance slide](06-PS-COMPLIANCE.md)**, which is slide 4 above,
+already written.

@@ -22,13 +22,17 @@ decode → detect → geometry → forcing → backward drift → forward drift 
 
 1. **Detect** oil in a Sentinel-1 SAR scene with a U-Net (2 channels: VV + VH).
 2. **Characterise** it — area, perimeter, centroid, patch count — integrated on a sphere, not on
-   a flat grid.
+   a flat grid. Its **age** is bounded too, along with a stated test of whether one acquisition can
+   narrow that bound (for the demo scene it cannot, and the app shows the arithmetic).
 3. **Hindcast** it: seed particles on the slick and integrate the ocean *backwards* under currents
    plus 3% windage to get a release region and a 24-hour time window.
 4. **Forecast** it forwards, for response planning.
-5. **Rank** vessels present in that window by proximity, trajectory, timing, behavioural anomalies,
-   type and data completeness — 100 points, every component and its evidence shown.
-6. **Show** all of it in a dashboard: six screens, no build step.
+5. **Filter** the traffic — a published funnel of counts separates vessels that could have been at
+   the oil when the oil was there from those that could not. Excluded vessels are dimmed and kept,
+   never deleted, so the filter itself can be audited.
+6. **Rank** what survives by proximity, trajectory, timing, behavioural anomalies, type and data
+   completeness — 100 points, every component and its evidence shown.
+7. **Show** all of it in a dashboard: six screens, no build step.
 
 Every ranked vessel is labelled **"priority candidate for investigation"**. Nothing in this
 project calls a vessel guilty.
@@ -49,7 +53,14 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 Then open **http://localhost:8765** and pick the `demo` case.
 
-Tests:
+The synthetic AIS feed is emitted in the **17-column MarineCadastre/NAIS schema** the problem
+statement names as the format authority, so it can be diffed against a real daily extract:
+
+```bash
+curl -s http://localhost:8765/api/cases/demo/ais.csv | head -3
+```
+
+Tests — **532, about 40 seconds:**
 
 ```bash
 .venv/bin/python -m pytest
@@ -104,13 +115,13 @@ on an external drive.
 |---|---|
 | `apps/web/` | the dashboard — vanilla ES modules, zero dependencies, no build |
 | `services/ml/` | SAR decoding, the U-Net, training, geometry |
-| `services/drift/` | forcing, particle advection, synthetic AIS, vessel scoring |
+| `services/drift/` | forcing, particle advection, synthetic AIS in the MarineCadastre schema, the spill-age bound, vessel scoring and traffic filtering |
 | `services/api/` | the HTTP API (stdlib only), which also serves the dashboard |
 | `services/common/` | config, GeoTIFF/DIMAP/NetCDF readers, regions |
 | `scripts/` | the pipeline entry points |
 | `data/processed/` | audit, splits, metrics, stored cases, preview PNGs |
 | `models/` | the trained checkpoint |
-| `docs/sih/` | five team documents: the problem, the domain, status, pitch, Q&A |
+| `docs/sih/` | six team documents: the problem, the domain, status, pitch, Q&A, PS compliance |
 | `dist/` | the offline static bundle |
 
 Three third-party Python imports in the whole tree — `numpy`, `cv2`, `pytest`. The frontend has

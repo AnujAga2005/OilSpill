@@ -40,6 +40,7 @@ from spilltrace_api import case as case_mod  # noqa: E402
 from spilltrace_api import jobs as jobs_mod  # noqa: E402
 from spilltrace_api import store as store_mod  # noqa: E402
 from spilltrace_common import config as C  # noqa: E402
+from spilltrace_drift import marinecadastre  # noqa: E402
 
 WEB_ROOT = ROOT / "apps" / "web"
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
@@ -68,6 +69,7 @@ ROUTES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("scenes", re.compile(r"^/api/scenes$")),
     ("cases", re.compile(r"^/api/cases$")),
     ("case_images", re.compile(r"^/api/cases/([^/]+)/images$")),
+    ("case_ais_csv", re.compile(r"^/api/cases/([^/]+)/ais\.csv$")),
     ("detect", re.compile(r"^/api/cases/([^/]+)/detect$")),
     ("slick", re.compile(r"^/api/cases/([^/]+)/slick$")),
     ("drift", re.compile(r"^/api/cases/([^/]+)/drift$")),
@@ -268,6 +270,7 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "cases": lambda: self._cases(),
             "case": lambda: self._case(param, query),
             "case_images": lambda: self._images(param, query),
+            "case_ais_csv": lambda: self._ais_csv(param),
             "slick": lambda: self._section(param, "slick"),
             "trajectories": lambda: self._section(param, "trajectories"),
             "vessels": lambda: self._vessels(param),
@@ -506,10 +509,16 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
         if payload is None:
             return
         attribution = payload.get("attribution") or {}
+        provenance = payload.get("provenance") or {}
         self._json(200, {
             "caseId": payload.get("id"),
-            "aisMode": (payload.get("provenance") or {}).get("aisLabel") or C.LABEL_AIS,
+            "aisMode": provenance.get("aisLabel") or C.LABEL_AIS,
+            "aisSource": provenance.get("aisSource"),
+            "aisSchema": provenance.get("aisSchema"),
             "candidateCount": attribution.get("candidateCount"),
+            "relevantCount": attribution.get("relevantCount"),
+            "excludedCount": attribution.get("excludedCount"),
+            "filtering": attribution.get("filtering"),
             "candidates": payload.get("vessels") or [],
             "weights": attribution.get("weights"),
             "method": attribution.get("method"),
@@ -520,6 +529,31 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "driftLabel": attribution.get("driftLabel"),
             "status": C.LABEL_STATUS,
         })
+
+    def _ais_csv(self, case_id: str | None) -> None:
+        """The case's AIS feed as a MarineCadastre-format CSV.
+
+        This route exists to make the schema claim checkable rather than assertable: download
+        it, diff its header against a real daily extract, and the two are identical. It also
+        gives the pipeline a round trip -- what `marinecadastre.read_csv` imports is exactly
+        what this exports.
+        """
+        payload = self._case_or_404(case_id)
+        if payload is None:
+            return
+        vessels = ((payload.get("ais") or {}).get("vessels")) or []
+        if not vessels:
+            self._fail(404, f"case {case_id!r} has no AIS feed; POST /api/cases/{case_id}/drift first")
+            return
+        lines = [marinecadastre.HEADER_LINE]
+        lines.extend(",".join(row) for row in marinecadastre.iter_rows(vessels))
+        body = ("\n".join(lines) + "\n").encode("utf-8")
+        self._send(
+            200,
+            body,
+            "text/csv; charset=utf-8",
+            {"Content-Disposition": f'attachment; filename="ais_{case_id}_marinecadastre.csv"'},
+        )
 
     def _report(self, case_id: str | None, query: dict[str, str]) -> None:
         payload = self._case_or_404(case_id)
@@ -548,8 +582,10 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "slick": payload.get("slick"),
             "forcing": payload.get("forcing"),
             "releaseWindow": (payload.get("ais") or {}).get("releaseWindow"),
+            "spillAge": payload.get("spillAge"),
             "originEstimate": (payload.get("trajectories") or {}).get("originEstimate"),
             "candidates": payload.get("vessels") or [],
+            "trafficFiltering": (payload.get("attribution") or {}).get("filtering"),
             "attributionMethod": (payload.get("attribution") or {}).get("method"),
             "attributionCaveat": (payload.get("attribution") or {}).get("caveat"),
             "weights": (payload.get("attribution") or {}).get("weights"),

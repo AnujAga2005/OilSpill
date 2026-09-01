@@ -1,15 +1,15 @@
 {
   "pipelineVersion": "spilltrace-0.1.0",
-  "generatedUtc": "2026-08-28T15:00:38Z",
+  "generatedUtc": "2026-09-01T13:13:00Z",
   "note": "A verified copy of apps/web. No bundler, no minifier and no content hashing: the interface is plain ES modules and runs from source. Cache behaviour comes from the server's Cache-Control headers, not from filenames.",
   "totals": {
     "files": 45,
-    "bytes": 3344177
+    "bytes": 3378334
   },
   "byExtension": {
     ".json": {
       "files": 7,
-      "bytes": 1693833
+      "bytes": 1719469
     },
     ".png": {
       "files": 14,
@@ -17,11 +17,11 @@
     },
     ".js": {
       "files": 19,
-      "bytes": 262756
+      "bytes": 270784
     },
     ".css": {
       "files": 4,
-      "bytes": 58910
+      "bytes": 59403
     },
     ".html": {
       "files": 1,
@@ -51,8 +51,8 @@
     },
     {
       "path": "app/exporters.js",
-      "bytes": 5733,
-      "sha256": "cf6fec6e9e49231527642a4575a7c556a3554cca41899588ab149671f91b8999"
+      "bytes": 5847,
+      "sha256": "9997e4bbf474c7081bb20ef0d17c378a00c97b44083099fc6525c6706ab5cfa6"
     },
     {
       "path": "app/format.js",
@@ -86,13 +86,13 @@
     },
     {
       "path": "app/screens/command.js",
-      "bytes": 12791,
-      "sha256": "e03378992e4b8377dd441dede919b1eff82e9c9e0b893b3ef160f9d36a9eb8c4"
+      "bytes": 13459,
+      "sha256": "e27a1a3a6f0377d6149004c9d6791555a7d945b4a5da4c83a9c1a9882d4384a1"
     },
     {
       "path": "app/screens/drift.js",
-      "bytes": 24241,
-      "sha256": "534a62cf777802bee8e27ce2e60c38ea07084e9e85606fcbe851a0b912680dd2"
+      "bytes": 26874,
+      "sha256": "2a323b05c74e8b17358f9d38d727a578abac298983ddc327def3266aef19e625"
     },
     {
       "path": "app/screens/methodology.js",
@@ -111,8 +111,8 @@
     },
     {
       "path": "app/screens/vessels.js",
-      "bytes": 22533,
-      "sha256": "d0e07f5692d8c20c9f8444e7002b11b69ad6e510bc2ede0c0a9e49877a0dd8fb"
+      "bytes": 27146,
+      "sha256": "bec5f6162ad710e2b78a781875d7893a5b47bb0790946e956b47e599a45d6278"
     },
     {
       "path": "app/state.js",
@@ -126,13 +126,13 @@
     },
     {
       "path": "demo/case-demo.json",
-      "bytes": 947757,
-      "sha256": "b9037ea5ac04cbdd9feb4e939f4c36cc671725fb2e779eaa838d50b4cfb1ad96"
+      "bytes": 969019,
+      "sha256": "b2908a1b38fbb1c3bffcd945bec604429759bbcf6542860bc7e824a5d1bd5e9d"
     },
     {
       "path": "demo/cases.json",
-      "bytes": 1630,
-      "sha256": "1aea86dbd0ac87896af07c5f04dc554f2fe5607c74fc2d4281e6535fd69ba321"
+      "bytes": 1796,
+      "sha256": "3a84f0896edffa77c0414a4c969fc1d96cbea11f1fbf1a27806697aed58e8980"
     },
     {
       "path": "demo/eval/test_0117_iou100.png",
@@ -177,7 +177,7 @@
     {
       "path": "demo/health.json",
       "bytes": 1122,
-      "sha256": "48ae2d8abb80232690c367eb1f0a24b1ca559167db8788fd32103bce5990000a"
+      "sha256": "c466c7444e9b7ec1536d990cfb78741f432cf1074ec97e74f357793bf7db8414"
     },
     {
       "path": "demo/images-demo.json",
@@ -221,8 +221,8 @@
     },
     {
       "path": "demo/report-demo.json",
-      "bytes": 458286,
-      "sha256": "e039a902edf03b7b7f30d15ebe9aafd8893d02b2847b528db183429d0c03d3ec"
+      "bytes": 462494,
+      "sha256": "463918f8dd2032fa84efe64c7d0bf78ccc32b87557ae1f9f6212fcd5d3a2927d"
     },
     {
       "path": "demo/scenes.json",
@@ -246,8 +246,8 @@
     },
     {
       "path": "styles/screens.css",
-      "bytes": 12461,
-      "sha256": "dd84688652fe680cdeb9ba3e80ed151be0edd0f2bf401a9252260f97a9d69815"
+      "bytes": 12954,
+      "sha256": "94093cce6620ed9739ded4008426874f72199d62601e7f2001b75911f4fd6e7c"
     },
     {
       "path": "styles/tokens.css",

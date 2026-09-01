@@ -310,8 +310,11 @@ Think **Flightradar24, for ships**.
 | **Length / Width / Draft** | dimensions | plausible discharge volume |
 | **TransceiverClass** | Class A (large ships, frequent reports) or Class B (small craft, sparse) | how much to trust sparse tracks |
 
-Our synthetic feed currently emits `mmsi, name, type, sogKn, cogDeg, headingDeg, lon, lat,
-timeUtc` and more. Matching the MarineCadastre header exactly is a Tier-0 task in document 3.
+Our synthetic feed carries its own richer internal fields (`mmsi, name, type, sogKn, cogDeg,
+headingDeg, lon, lat, timeUtc` and more), but it **exports** in exactly the 17-column header
+above — download it from `/api/cases/demo/ais.csv` and diff it against a real daily extract. The
+same module also parses a real extract back in, so switching to a licensed feed is a file drop.
+See document 3, §3.10 item 1.
 
 ### Behavioural anomalies — the PS asks for these by name
 

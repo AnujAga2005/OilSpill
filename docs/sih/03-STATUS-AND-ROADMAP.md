@@ -13,10 +13,14 @@ image/mask pairs, measures the slick on a sphere, runs a Lagrangian particle sim
 to a probability envelope and forwards to a forecast, generates a clearly-labelled synthetic AIS
 fleet for that envelope, and ranks vessels on a transparent 100-point scale with every component
 and its evidence exposed. It runs offline on one laptop with three Python dependencies and no
-frontend dependencies at all. 432 automated tests pass.
+frontend dependencies at all. 532 automated tests pass.
 
-**Requirements (a), (b) and (c) of the problem statement are substantively satisfied.** Three
-gaps remain, listed in §3.7. Two of them are less than a day of work each.
+**Requirements (a), (b) and (c) of the problem statement are substantively satisfied**, clause by
+clause, in §3.7. One clause is not: the PS mentions EO (optical) imagery alongside SAR and we do
+SAR only. Two things are true but stand in for something better — the AIS and the ocean forcing
+are synthetic, both labelled as such on every screen that uses them, and both permitted by the
+statement. And one number needs a re-run before it can be quoted as final: see
+[`KNOWN-ISSUES.md`](../../KNOWN-ISSUES.md) §1.
 
 ---
 
@@ -36,9 +40,12 @@ These are the literal stage names the pipeline reports as it runs:
 | 8 | `scoring` | score and rank every vessel on the 100-point scale |
 | 9 | `previews` | render the PNG layers the dashboard displays |
 
-A full run on scene `00053` takes **about 12.8 seconds** end to end and is **deterministic** —
-run it twice and every figure is byte-identical, because every random process is seeded. Only
-the timing block and the generation timestamp change.
+A full run on scene `00053` takes **about 19 seconds** end to end — 9.7 s of that is decoding the
+2048 × 2048 GeoTIFF and 5.7 s is inference; the six stages after `geometry` cost about 1 s
+between them. The run is **deterministic** — run it twice and every figure is byte-identical,
+because every random process is seeded. Only the timing block and the generation timestamp
+change. Those figures are read off the `timing` block of `data/processed/cases/demo.json`, so
+they are the timing of the very run that produced the demo numbers in §3.8.
 
 ---
 
@@ -53,15 +60,17 @@ services/
   ml/spilltrace_ml/           U-Net, training loop, classical baseline,
                               geometry.py (morphology, contours, spherical area),
                               preview.py (hand-written PNG encoder)
-  drift/spilltrace_drift/     forcing.py, engine.py (particles), ais.py, scoring.py
+  drift/spilltrace_drift/     forcing.py, engine.py (particles), ais.py, scoring.py,
+                              age.py (the spill-age bound), marinecadastre.py (the AIS schema)
   api/spilltrace_api/         server.py, jobs.py, case.py, store.py
 apps/web/                  the dashboard — 6 screens, vanilla ES modules, zero dependencies
 scripts/                   run_audit, run_preprocess, run_train, run_scene_eval,
                            run_api, build_web
-tests/                     432 tests
+tests/                     532 tests
 dist/                      the offline static bundle
-docs/sih/                  these five documents
+docs/sih/                  these six documents
 RUNBOOK.md                 how to run everything
+KNOWN-ISSUES.md            open defects, honestly stated — read before quoting a number
 DATA_AUDIT.md              the generated dataset audit
 ```
 
@@ -97,7 +106,7 @@ The most important table in these documents. Learn it. Volunteer it before you a
 a working reader for it. Its time coverage does not overlap the acquisition dates of the imagery.
 Rather than silently interpolating across a multi-year gap and calling the result real, the
 pipeline falls back to a deterministic synthetic field and says so. **This is a data-coverage
-problem, not a missing feature** — see Tier 1 item 1, which fixes it with a download.
+problem, not a missing feature** — see §3.10 Tier 1 item 5, which fixes it with a download.
 
 **Why the AIS is synthetic:** the problem statement permits it in writing. See document 1 §1.3.
 
@@ -268,15 +277,15 @@ Checked against the code, clause by clause.
 |---|---|---|
 | (a) Detect the oil spill | ✅ | U-Net, 0.771 IoU vs 0.582 classical |
 | (a) Characterise / geometric properties | ✅ | area, perimeter, centroid, orientation, per-region breakdown, spherical |
-| (a) **…and age if feasible** | ⚠️ **partial** | a 24 h release window is computed, but nothing is labelled "spill age" |
+| (a) **…and age if feasible** | ✅ | `spillAge` on every case — up to 24 h at acquisition, with the separation test showing why one acquisition cannot tighten it |
 | (b) **Oceanographic** data → origin | ✅ | current field drives the particles (synthetic field) |
 | (b) **Meteorological** data | ✅ | wind at 3–7 m/s, 3% windage, `forcing.py:470` |
 | (b) Origin **point and time** | ✅ | probability envelope + release window |
 | (b) Predict future flow | ✅ | forward drift |
 | (c) Reconstruct traffic in the origin window | ✅ | tracks in space and time |
-| (c) **Irrelevant traffic filtered out** | ⚠️ **partial** | `IRRELEVANT_RADII = 3.0` zeroes the proximity score beyond 3 envelope radii, but every vessel still appears in the ranked list and no count of exclusions is reported |
+| (c) **Irrelevant traffic filtered out** | ✅ | `attribution.filtering` publishes the funnel — 10 vessels → 9 in window → 2 relevant, 8 excluded under two distinct reasons; excluded rows dimmed, not deleted, so the filter can be audited |
 | (c) Score on proximity / trajectory / behavioural anomalies | ✅ | six components, below |
-| Automated pipeline | ✅ | nine stages, job queue, 12.8 s |
+| Automated pipeline | ✅ | nine stages, job queue, 19 s |
 | **Hindcasting** ML model | ✅ | backward drift |
 | Backward **and** forward mapping | ✅ | both |
 | Ranks candidates by spatio-temporal correlation | ✅ | 100-point scale |
@@ -340,6 +349,9 @@ Two stored cases share the same scene and the same slick figures: `00053` and `d
 | Mean model confidence | **99.31%** — *on the `demo` case only, see below* |
 | Touches scene edge | **yes** — the slick continues outside the image, so the area is a lower bound |
 | Release window | **24.0 h** — 2017-03-10T02:15:12Z to 2017-03-11T02:15:12Z |
+| **Estimated spill age** | **up to 24 h at acquisition** (0–24 h), **not resolvable** — 8.556 km of drift against an 11.263 km P90 radius, a ratio of 0.76 |
+| AIS reports · vessels | **987 reports · 10 vessels** |
+| **Traffic filter** | 10 → **9** with reports in the window → **2** relevant · **8** excluded (1 never in the window, 7 in the window but too far) |
 | Candidates ranked | **10** |
 | Top candidate | **91.5 / 100** — `SYNTHETIC DEMO ALPHA`, band *"Strong geometric and temporal overlap – review first"* |
 
@@ -376,7 +388,7 @@ Plus the ranking caveat, in full:
 .venv/bin/python -m pytest
 ```
 
-**432 tests, about 35 seconds, all passing.**
+**532 tests, about 40 seconds, all passing.**
 
 Everything is seeded and reproducible:
 
@@ -393,41 +405,70 @@ reads as a team that was paying attention.
 
 ## 3.10 What is left — the roadmap
 
-Ordered by marks gained per hour spent.
+Ordered by marks gained per hour spent. **Tier 0 is done** — it is kept below as a record of what
+was delivered and how to point at it. Everything from Tier 1 onwards is still open, and item 5 is
+now the single largest credibility gain available.
 
-### Tier 0 — cheap, and each one quotes the PS back at them
+### Tier 0 — done, and each one quotes the PS back at them ✓
 
-**1. Conform to the MarineCadastre AIS schema.** *(~1 day.)* The PS names
-`marinecadastre.gov/accessais` as the format authority. Rename our fields to theirs, add the
-missing ones (`IMO`, `CallSign`, `Status`, `Length`, `Width`, `Draft`, `Cargo`,
-`TransceiverClass`), export CSV in exactly their header order, **and write an importer that
-reads a real MarineCadastre CSV.** Then the Vessels screen can say `AIS source: synthetic
-(MarineCadastre schema)` and switch to `AIS source: MarineCadastre <zone/year>` with no code
-change. This converts our biggest perceived weakness into a demonstrated integration. Files:
-`services/drift/spilltrace_drift/ais.py`.
+These four were the cheapest marks on the board and they are all shipped. They are listed here
+rather than deleted because each one is a thing to *point at* in the demo, and because the next
+section is easier to prioritise when you can see what the tier above it cost.
 
-**2. Add an explicit traffic-filtering funnel.** *(~half a day.)* The logic already exists in
-`IRRELEVANT_RADII` (`scoring.py:63`); we just never surface it. Show on the Vessels screen:
+**1. Conform to the MarineCadastre AIS schema.** ✓ The PS names `marinecadastre.gov/accessais`
+as the format authority, so `services/drift/spilltrace_drift/marinecadastre.py` now holds the
+17-column header, a `FieldSpec` per column with its documented domain, a parser for a real
+extract, and the writer the app exports through. Download it live at
+**`/api/cases/demo/ais.csv`**. The header is byte-for-byte identical to a real daily extract —
+verified against `data/raw/AIS_2022_06_01.csv` (924 MB, 1 June 2022), which is the check to
+run on stage if anyone doubts it:
+
+```bash
+.venv/bin/python -c "from spilltrace_drift import marinecadastre as MC; print(open('data/raw/AIS_2022_06_01.csv').readline().strip() == MC.HEADER_LINE)"
+```
+
+Because the importer exists, switching to a live feed is a file drop rather than a rewrite.
+Covered by `tests/test_marinecadastre.py` and 7 route tests in `tests/test_api.py`.
+
+**2. An explicit traffic-filtering funnel.** ✓ The rule existed in `IRRELEVANT_RADII`; what was
+missing was output. `scoring.py` now publishes `attribution.filtering` — counts on both sides of
+the filter, the two exclusion reasons kept apart, and the rule in prose. For the demo case:
 
 ```
-N AIS reports · M vessels in the temporal window
-  → K vessels intersect the origin envelope (≤ 3 envelope radii)
-  → M−K excluded as irrelevant traffic
-  → K scored and ranked
+987 AIS reports · 10 vessels
+  → 9 vessels with reports inside the release window
+  → 2 intersect the origin envelope (within 3 envelope radii)
+  → 8 excluded as irrelevant traffic (1 never in the window, 7 in the window but too far)
 ```
 
-The PS says *"the irrelevant traffic is to be filtered out."* Give them a number for it.
+Every candidate carries `relevant` and `relevanceReason`, both of which travel into the CSV
+export, and **relevance is the primary sort key** so an excluded vessel cannot outrank a relevant
+one on type and data-quality marks alone. Excluded vessels are **dimmed, not deleted** — a
+shortlist that silently drops eight of ten cannot be audited. Covered by 9 tests in
+`tests/test_scoring.py`, including the additive identity and the sort order under weights that
+would otherwise invert it.
 
-**3. Surface spill age.** *(~half a day for the label, ~2 days with a weathering signal.)* The
-release window already is an age estimate — label it: `Estimated spill age: 18–24 h, from
-backward-drift convergence`. For the full mark, add a weathering proxy: fresh thin sheen and
-thick weathered emulsion damp the sea differently and so differ in backscatter contrast, making
-a coarse thin/moderate/thick classification defensible off statistics we already compute. The PS
-says "if feasible" — a reasoned estimate with stated uncertainty scores.
+**3. Spill age, surfaced and bounded.** ✓ `services/drift/spilltrace_drift/age.py` publishes
+`spillAge` on every case: **up to 24 h at acquisition (0–24 h)**, its basis, and — the part that
+earns the mark — whether the hindcast can narrow it. For this scene it cannot, and the card says
+so with the arithmetic: over 24 h the estimated position moves **8.556 km against an 11.263 km
+P90 radius, a ratio of 0.76**, so the whole release window sits inside its own error bar. **The
+midpoint is deliberately not printed** — "12 h" would be a fabricated metric. Three data sources
+that would genuinely narrow it are listed instead.
 
-**4. Build the PS-compliance slide.** *(~2 hours.)* Left column: the verbatim (a)/(b)/(c) text.
-Right column: the screen that satisfies it and the number it produces. Judges score against the
-rubric they were handed; make it impossible to miss.
+Note that this is a *per-case* answer, not a limit of the method: a tightly seeded run does
+resolve, and `tests/test_age.py` (18 tests) asserts both sides of that pair so the claim stays
+tied to the physics — initial patch size against distance drifted — rather than to one scene.
+
+The weathering proxy from the original plan is **not** done and has moved to Tier 2: thin sheen
+and thick emulsion damp the sea differently, so a coarse thin/moderate/thick class is defensible
+off statistics we already compute, but it is a real classifier and not a half-day.
+
+**4. The PS-compliance slide.** ✓ Written as
+**[document 6](06-PS-COMPLIANCE.md)** — thirteen rows, left column the PS in its own words, right
+column the screen that answers it and the number that screen prints. Show five rows on the
+projector, hand the full table over as a printout. §6.3 of that document holds the six push-back
+questions with the numbers already looked up.
 
 ### Tier 1 — before the finals
 
@@ -457,6 +498,11 @@ Government workflows run on documents.
 
 ### Tier 2 — if time allows
 
+- **A weathering proxy to narrow the age** — dropped out of Tier 0 because it is a classifier, not
+  a label. Thin fresh sheen and thick weathered emulsion damp the sea differently and so differ in
+  backscatter contrast, which makes a coarse thin/moderate/thick class defensible off statistics
+  `geometry.py` already computes. It attacks the age from the imagery instead of the drift, which
+  is the one route that does not need a second acquisition.
 - **PyTorch retrain on a GPU** with a pretrained encoder and proper augmentation. Our
   mean-per-scene 0.641 has real headroom, and the hand-written NumPy backprop caps how deep we
   can practically go.
@@ -509,3 +555,5 @@ Full detail — every route, every rerun script, the offline bundle, troubleshoo
 [RUNBOOK.md](../../RUNBOOK.md).
 
 Next: **[document 4 — how to pitch it](04-HOW-TO-PITCH.md)**.
+Related: **[document 6 — the PS-compliance slide](06-PS-COMPLIANCE.md)**, which reads the numbers
+on this page back against the problem statement clause by clause.

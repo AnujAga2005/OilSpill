@@ -105,7 +105,11 @@ export function render(ctx) {
           label: "Candidates scored",
           value: F.int(attribution.candidateCount ?? candidates.length),
           tone: "synthetic",
-          sub: `of ${F.int(caseDoc.ais?.counts?.vessels)} synthetic vessels generated`,
+          sub:
+            attribution.filtering
+              ? `${F.int(attribution.filtering.vesselsRelevant)} relevant · ` +
+                `${F.int(attribution.filtering.excludedTotal)} excluded as irrelevant traffic`
+              : `of ${F.int(caseDoc.ais?.counts?.vessels)} synthetic vessels generated`,
         }),
         U.stat({
           label: "Release window",
@@ -127,6 +131,8 @@ export function render(ctx) {
       ),
       weightsStrip(attribution.weights),
     ),
+
+    filterCard(attribution),
 
     mapCard(ctx, caseDoc, candidates, selectedMmsi),
 
@@ -157,6 +163,8 @@ export function render(ctx) {
 
 function syntheticBanner(caseDoc) {
   const ais = caseDoc.ais || {};
+  const schema = ais.schema || {};
+  const source = caseDoc.provenance?.aisSource || schema.label;
   return U.card(
     "Before reading this ranking",
     { id: "disclosure" },
@@ -164,11 +172,25 @@ function syntheticBanner(caseDoc) {
       "div",
       { class: "stack stack--tight" },
       U.notice(ais.disclaimer || "", { kind: "synthetic", strongPrefix: ais.label || "Synthetic AIS." }),
+      // Two separate facts, deliberately shown as two rows: this feed is fabricated, and it
+      // is fabricated in the format the problem statement names. The second is what makes
+      // the first replaceable -- a real MarineCadastre extract loads through the same reader.
+      source
+        ? U.rows(
+            U.row("AIS source", source, { mono: true, title: schema.note || "" }),
+            schema.header
+              ? U.row("Schema", `${schema.header.length} columns · ${schema.format || "AIS"}`, {
+                  title: schema.header.join(", "),
+                })
+              : null,
+          )
+        : null,
       h(
         "ul",
         { class: "bullets" },
         h("li", null, h("span", null, ais.identifierNote || "")),
         h("li", null, h("span", null, ais.nameNote || "")),
+        ais.imoNote ? h("li", null, h("span", null, ais.imoNote)) : null,
         h(
           "li",
           null,
@@ -208,6 +230,70 @@ function weightsStrip(weights) {
       `The weights are fixed before any case is scored and total ${F.int(weights.total)}. ` +
         "They were chosen by hand, not fitted to data, because there is no labelled " +
         "attribution ground truth to fit them to.",
+    ),
+  );
+}
+
+/**
+ * The traffic filter, as a funnel whose numbers add up.
+ *
+ * The problem statement asks for irrelevant traffic to be filtered out. A shortlist alone
+ * cannot show that this happened, so the counts on both sides of the filter are published
+ * here: what came in, what survived each test, and what was set aside. The excluded
+ * vessels stay in the table below rather than disappearing, so the filter itself can be
+ * checked against the rule stated on this card.
+ */
+function filterCard(attribution) {
+  const funnel = attribution.filtering;
+  if (!funnel) return null;
+  const steps = [
+    {
+      label: "AIS reports ingested",
+      value: F.int(funnel.aisReports),
+      sub: `${F.int(funnel.vesselsSeen)} distinct vessels in the feed`,
+    },
+    {
+      label: "In the release window",
+      value: F.int(funnel.vesselsInWindow),
+      sub: `${F.int(funnel.reportsInWindow)} reports fall inside the estimated window`,
+    },
+    {
+      label: "Intersect the origin envelope",
+      value: F.int(funnel.vesselsRelevant),
+      sub: `within ${F.num(funnel.irrelevantRadii, 0)} envelope radii at their own timestamps`,
+    },
+    {
+      label: "Excluded as irrelevant",
+      value: F.int(funnel.excludedTotal),
+      sub:
+        `${F.int(funnel.excludedOutsideWindow)} never in the window · ` +
+        `${F.int(funnel.excludedTooFar)} in the window but too far`,
+    },
+  ];
+  return U.card(
+    "Traffic filtering",
+    {
+      id: "filtering",
+      hint: `${F.int(funnel.vesselsRelevant)} of ${F.int(funnel.vesselsSeen)} relevant`,
+      note: funnel.rule,
+    },
+    h(
+      "div",
+      { class: "stack stack--tight" },
+      h(
+        "div",
+        { class: "grid grid--stats" },
+        ...steps.map((step, index) =>
+          U.stat({
+            label: step.label,
+            value: step.value,
+            sub: step.sub,
+            tone: index === 2 ? "reference" : index === 3 ? undefined : "synthetic",
+          }),
+        ),
+      ),
+      h("p", { class: "small muted mono" }, funnel.summary),
+      h("p", { class: "small muted" }, funnel.retentionNote),
     ),
   );
 }
@@ -320,10 +406,12 @@ function rankingCard(ctx, candidates, selectedMmsi) {
 
   const rows = candidates.map((candidate) => {
     const isSelected = String(candidate.mmsi) === selectedMmsi;
+    const excluded = candidate.relevant === false;
     return h(
       "tr",
       {
         "aria-selected": String(isSelected),
+        class: [excluded ? "is-excluded" : null],
         tabindex: "0",
         onClick: () => select(candidate.mmsi),
         onKeydown: (event) => {
@@ -344,7 +432,17 @@ function rankingCard(ctx, candidates, selectedMmsi) {
       h("td", { class: "right mono" }, F.num(candidate.score, 1)),
       h("td", { class: "right mono" }, F.km(candidate.evidence?.closestApproachKm, 2)),
       h("td", { class: "right mono" }, F.utc(candidate.evidence?.closestApproachUtc)),
-      h("td", { class: "wrap small" }, candidate.band),
+      h(
+        "td",
+        { class: "wrap small" },
+        // The filter verdict sits next to the band because the two answer different
+        // questions: the band is how well the vessel scored, the tag is whether it was
+        // near the oil at all. A high band on excluded traffic would otherwise mislead.
+        excluded
+          ? U.badge("Excluded — irrelevant traffic", "", { title: candidate.relevanceReason || "" })
+          : null,
+        excluded ? h("div", { class: "small muted", style: { "margin-top": "var(--s1)" } }, candidate.band) : candidate.band,
+      ),
     );
   });
 
@@ -352,7 +450,7 @@ function rankingCard(ctx, candidates, selectedMmsi) {
     h(
       "button",
       {
-        class: "candidate-card",
+        class: ["candidate-card", candidate.relevant === false ? "is-excluded" : null],
         type: "button",
         "aria-selected": String(String(candidate.mmsi) === selectedMmsi),
         onClick: () => select(candidate.mmsi),
@@ -368,7 +466,11 @@ function rankingCard(ctx, candidates, selectedMmsi) {
           `${candidate.type} · ${F.km(candidate.evidence?.closestApproachKm, 2)} km · ` +
             `${F.utc(candidate.evidence?.closestApproachUtc)}`,
         ),
-        h("span", { class: "candidate-card__meta" }, candidate.band),
+        h(
+          "span",
+          { class: "candidate-card__meta" },
+          candidate.relevant === false ? "Excluded — irrelevant traffic" : candidate.band,
+        ),
       ),
       h("span", { class: "candidate-card__score" }, F.num(candidate.score, 1)),
     ),
@@ -380,8 +482,10 @@ function rankingCard(ctx, candidates, selectedMmsi) {
       id: "ranking",
       hint: `${candidates.length} scored`,
       note:
-        "Ranked by total score. Ties are broken by closest approach. Selecting a row updates " +
-        "the map, the score breakdown and the evidence panel.",
+        "Relevant traffic first, then total score; ties are broken by closest approach. " +
+        "Vessels the filter set aside are kept at the bottom, dimmed and tagged, so the " +
+        "filter can be audited. Selecting a row updates the map, the score breakdown and " +
+        "the evidence panel.",
     },
     h(
       "div",
@@ -488,6 +592,18 @@ function evidenceCard(candidate, attribution) {
         "the inputs to the score, not a summary of it.",
     },
     U.rows(
+      // The filter verdict comes first because it decides whether the rest of this panel
+      // describes a candidate or a passer-by.
+      candidate.relevant === undefined
+        ? null
+        : U.row(
+            "Relevant traffic",
+            candidate.relevant ? "yes" : "no — excluded as irrelevant traffic",
+            { stack: true },
+          ),
+      candidate.relevanceReason
+        ? U.row("On the basis that", candidate.relevanceReason, { stack: true })
+        : null,
       U.row("Closest approach", `${F.km(evidence.closestApproachKm, 3)} km`, { mono: true }),
       U.row(
         "As a fraction of the envelope",

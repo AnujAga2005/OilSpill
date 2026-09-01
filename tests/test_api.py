@@ -13,6 +13,7 @@ would produce the missing thing, or the dashboard has nothing to tell the operat
 
 from __future__ import annotations
 
+import csv
 import importlib.util
 import io
 import json
@@ -29,6 +30,7 @@ from spilltrace_api import jobs as jobs_mod
 from spilltrace_api import server as server_mod
 from spilltrace_api import store as store_mod
 from spilltrace_common import config as C
+from spilltrace_drift import marinecadastre as MC
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -160,6 +162,39 @@ def sample_case(case_id: str = "demo") -> dict[str, Any]:
     }
 
 
+def _case_with_ais(case_id: str = "demo") -> dict[str, Any]:
+    """`sample_case` plus the vessel objects the drift stage adds.
+
+    Only the fields the exporter reads are present; anything it does not read would make
+    the fixture agree with the exporter for the wrong reason.
+    """
+    case = sample_case(case_id)
+    case["ais"] = dict(case["ais"])
+    case["ais"]["vessels"] = [
+        {
+            "mmsi": "999000001",
+            "name": "SYNTH-1",
+            "imo": None,
+            "callSign": "QDEMO001",
+            "vesselTypeCode": 80,
+            "cargoCode": 80,
+            "lengthM": 250,
+            "widthM": 44,
+            "draftM": 14.0,
+            "transceiverClass": "A",
+            "reports": [
+                {"timeUtc": "2020-04-30T20:00:00Z", "lat": 25.60, "lon": 54.70,
+                 "sogKn": 11.2, "cogDeg": 104.0, "headingDeg": 103.0, "statusCode": 0,
+                 "navStatus": "under way using engine"},
+                {"timeUtc": "2020-04-30T20:10:00Z", "lat": 25.61, "lon": 54.72,
+                 "sogKn": 11.4, "cogDeg": None, "headingDeg": None, "statusCode": 0,
+                 "navStatus": "under way using engine"},
+            ],
+        }
+    ]
+    return case
+
+
 @pytest.fixture
 def store(tmp_path, monkeypatch):
     """Point the server's module-level store at a temporary directory.
@@ -200,6 +235,7 @@ class TestRouting:
             ("/api/cases/demo/trajectories", "trajectories", "demo"),
             ("/api/cases/demo/vessels", "vessels", "demo"),
             ("/api/cases/demo/report", "report", "demo"),
+            ("/api/cases/demo/ais.csv", "case_ais_csv", "demo"),
             ("/api/eval/test_0117_iou100.png", "eval_image", "test_0117_iou100.png"),
             ("/api/jobs", "jobs", None),
             ("/api/jobs/abc123", "job", "abc123"),
@@ -220,6 +256,11 @@ class TestRouting:
     def test_the_more_specific_route_wins(self):
         """`/api/cases/x/images` must not be read as case id `x/images`."""
         assert server_mod.route("/api/cases/x/images") == ("case_images", "x")
+
+    def test_the_ais_csv_suffix_is_not_read_as_a_case_id(self):
+        """`ais.csv` contains a dot, which `[^/]+` in the bare-case pattern happily eats."""
+        assert server_mod.route("/api/cases/x/ais.csv") == ("case_ais_csv", "x")
+        assert server_mod.route("/api/cases/x/ais.json") == ("unknown", None)
 
     @pytest.mark.parametrize(
         "path",
@@ -329,6 +370,44 @@ class TestCaseReads:
         assert response.headers["content-type"].startswith("text/csv")
         assert "attachment" in response.headers["content-disposition"]
         assert b"999000001" in response.body
+
+    def test_the_ais_export_has_the_marinecadastre_header_byte_for_byte(self, store):
+        """The point of the route is that the format claim can be checked by downloading
+        the file and diffing line one against a real daily extract."""
+        store.save("demo", _case_with_ais())
+        response = get("/api/cases/demo/ais.csv", api_only=True)
+        assert response.status == 200
+        assert response.headers["content-type"].startswith("text/csv")
+        assert "attachment" in response.headers["content-disposition"]
+        assert "marinecadastre" in response.headers["content-disposition"]
+        lines = response.body.decode("utf-8").splitlines()
+        assert lines[0] == (
+            "MMSI,BaseDateTime,LAT,LON,SOG,COG,Heading,VesselName,IMO,CallSign,"
+            "VesselType,Status,Length,Width,Draft,Cargo,TransceiverClass"
+        )
+        assert len(lines) == 3  # header plus one row per report
+        for line in lines[1:]:
+            assert len(line.split(",")) == len(MC.HEADER)
+
+    def test_the_ais_export_is_readable_by_the_importer(self, store):
+        """Written and read by the same pair of functions the real-file path uses, so a
+        drift in either direction shows up here rather than in a demo."""
+        store.save("demo", _case_with_ais())
+        body = get("/api/cases/demo/ais.csv", api_only=True).body
+        rows = list(csv.DictReader(io.StringIO(body.decode("utf-8"))))
+        MC.check_header(list(rows[0].keys()))
+        parsed = [MC.parse_row(row) for row in rows]
+        assert all(record is not None for record in parsed)
+        assert {record["mmsi"] for record in parsed} == {"999000001"}
+        assert {record["vesselGroup"] for record in parsed} == {"Tanker"}
+
+    def test_a_case_without_an_ais_feed_says_what_would_produce_one(self, store):
+        """`sample_case` has AIS reports but no vessel objects -- the state a case is in
+        before the drift stage has run."""
+        store.save("demo", sample_case())
+        response = get("/api/cases/demo/ais.csv", api_only=True)
+        assert response.status == 404
+        assert "drift" in response.json()["error"]
 
     def test_the_image_index_lists_what_exists_without_leaking_a_path(self, store):
         store.save("demo", sample_case())

@@ -38,11 +38,22 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
 import numpy as np
 
 from spilltrace_common import config as C
+
+from .marinecadastre import (
+    AIS_TYPE_CODES,
+    HEADER,
+    NAV_STATUS_TEXT,
+    SENTINELS,
+    source_label,
+    vessel_group,
+    write_csv,
+)
 
 DEG = math.pi / 180.0
 KN_PER_MS = 1.9438444924406046
@@ -60,6 +71,18 @@ MMSI_NOTE = (
 NAME_NOTE = (
     "Names are placeholders of the form 'SYNTHETIC DEMO <word>' and are not drawn from "
     "any vessel registry."
+)
+IMO_NOTE = (
+    "The IMO field is deliberately empty. Every 7-digit IMO number is either allocated to "
+    "a real ship or reserved by the IMO, so unlike MMSI -- where the 999 prefix is "
+    "unassigned -- there is no synthetic-safe range to draw from, and a fabricated number "
+    "would be some real vessel's. An empty IMO is also what 48.6% of rows in a real "
+    "MarineCadastre file carry, so the gap is realistic as well as safe."
+)
+CALLSIGN_NOTE = (
+    "Call signs are of the form QDEMOnnn. The ITU allocates no international call-sign "
+    "series beginning with Q -- the letter is reserved for Q-codes -- so no real station "
+    "can hold one of these."
 )
 DISCLAIMER = (
     "These vessel tracks are fabricated for demonstration. They are not evidence, they "
@@ -95,6 +118,10 @@ class VesselType:
     encodes only what kind of ship *could* discharge oil in quantity -- an oil tanker
     can, a passenger ferry is far less likely to -- and carries no implication about
     any individual vessel.
+
+    ``width_m``, ``draft_m`` and ``transceiver_class`` exist so a synthetic vessel can be
+    written out in the full MarineCadastre schema rather than a convenient subset of it.
+    They are class-typical figures, not measurements of anything.
     """
 
     name: str
@@ -102,6 +129,9 @@ class VesselType:
     rationale: str
     cruise_kn: float
     length_m: int
+    width_m: int
+    draft_m: float
+    transceiver_class: str = "A"
 
 
 VESSEL_TYPES: dict[str, VesselType] = {
@@ -111,6 +141,8 @@ VESSEL_TYPES: dict[str, VesselType] = {
         "carries persistent oil in bulk, so an operational discharge is physically possible",
         12.5,
         250,
+        44,
+        14.0,
     ),
     "chemical_tanker": VesselType(
         "Chemical/product tanker",
@@ -118,6 +150,8 @@ VESSEL_TYPES: dict[str, VesselType] = {
         "carries liquid cargo in bulk; tank washings are a known discharge source",
         13.0,
         180,
+        32,
+        11.0,
     ),
     "bulk_carrier": VesselType(
         "Bulk carrier",
@@ -125,6 +159,8 @@ VESSEL_TYPES: dict[str, VesselType] = {
         "no liquid cargo, but bunker fuel and engine-room slops remain possible sources",
         12.0,
         230,
+        32,
+        12.5,
     ),
     "container_ship": VesselType(
         "Container ship",
@@ -132,6 +168,8 @@ VESSEL_TYPES: dict[str, VesselType] = {
         "bunker fuel and bilge water are the only plausible sources",
         18.0,
         300,
+        40,
+        13.0,
     ),
     "general_cargo": VesselType(
         "General cargo",
@@ -139,6 +177,8 @@ VESSEL_TYPES: dict[str, VesselType] = {
         "bunker fuel and bilge water are the only plausible sources",
         11.5,
         120,
+        18,
+        6.5,
     ),
     "fishing": VesselType(
         "Fishing vessel",
@@ -146,6 +186,13 @@ VESSEL_TYPES: dict[str, VesselType] = {
         "small fuel volumes; a large slick is unlikely to originate here",
         7.0,
         40,
+        9,
+        3.5,
+        # Fishing vessels of this size are the population that carries Class B, which
+        # transmits no navigational status at all. Modelling that is the point: it gives the
+        # data-completeness component a real gap to measure, and it exercises the importer's
+        # Class B path against our own output.
+        "B",
     ),
     "offshore_supply": VesselType(
         "Offshore supply vessel",
@@ -153,6 +200,8 @@ VESSEL_TYPES: dict[str, VesselType] = {
         "services production facilities and handles oil-contaminated deck drainage",
         11.0,
         70,
+        16,
+        5.5,
     ),
     "passenger": VesselType(
         "Passenger ferry",
@@ -160,6 +209,8 @@ VESSEL_TYPES: dict[str, VesselType] = {
         "tightly regulated waste handling and no bulk oil cargo",
         20.0,
         150,
+        25,
+        6.0,
     ),
 }
 
@@ -426,6 +477,11 @@ def realise_track(plan: VesselPlan, cfg: AisConfig, rng: np.random.Generator) ->
         )
 
     reports: list[dict[str, Any]] = []
+    # Class B transceivers do not carry the navigational-status field. In a real
+    # MarineCadastre file that shows up as an exact correlation -- every blank Status row is
+    # Class B, every Class A row has one -- so a synthetic feed that filled the field in for
+    # everybody would be distinguishable from real data by that one column alone.
+    reports_status = VESSEL_TYPES[plan.type_key].transceiver_class != "B"
     for i, point in enumerate(raw):
         nxt = raw[min(i + 1, len(raw) - 1)]
         prv = raw[max(i - 1, 0)]
@@ -434,6 +490,10 @@ def realise_track(plan: VesselPlan, cfg: AisConfig, rng: np.random.Generator) ->
         else:
             course = bearing_deg(prv["lon"], prv["lat"], nxt["lon"], nxt["lat"])
         yaw = float(rng.normal(0.0, 3.0))
+        # 5 is "moored" and 0 is "under way using engine" in ITU-R M.1371, the codes the
+        # Status column actually holds. The text is derived from the code rather than the
+        # other way round, so our file and a real one round-trip through the same table.
+        status_code = None if not reports_status else (5 if point["stopped"] else 0)
         record = {
             "timeUtc": point["timeUtc"],
             "lon": round(point["lon"], 6),
@@ -441,7 +501,8 @@ def realise_track(plan: VesselPlan, cfg: AisConfig, rng: np.random.Generator) ->
             "sogKn": point["sogKn"],
             "cogDeg": round(course, 1),
             "headingDeg": round((course + yaw) % 360.0, 1),
-            "navStatus": "moored/stopped" if point["stopped"] else "under way using engine",
+            "statusCode": status_code,
+            "navStatus": NAV_STATUS_TEXT.get(status_code) if status_code is not None else None,
             "synthetic": True,
         }
         # Deliberate feed defects, so the data-completeness component has something to
@@ -566,6 +627,11 @@ def _name(index: int) -> str:
     word = CALLSIGN_WORDS[index % len(CALLSIGN_WORDS)]
     suffix = "" if index < len(CALLSIGN_WORDS) else f" {index // len(CALLSIGN_WORDS) + 1}"
     return f"SYNTHETIC DEMO {word}{suffix}"
+
+
+def _call_sign(index: int) -> str:
+    """A call sign in a series the ITU has never allocated. See :data:`CALLSIGN_NOTE`."""
+    return f"QDEMO{index % 1000:03d}"
 
 
 def _drift_axis(env: EnvelopeTrack) -> float:
@@ -901,6 +967,7 @@ def generate_ais(
         if is_water is not None:
             on_land = sum(1 for row in reports if not is_water(row["lon"], row["lat"]))
         speeds = [row["sogKn"] for row in reports if row.get("sogKn") is not None]
+        type_code = AIS_TYPE_CODES[plan.type_key]
         vessels.append(
             {
                 "mmsi": _mmsi(index),
@@ -909,7 +976,18 @@ def generate_ais(
                 "typeKey": plan.type_key,
                 "typeRelevance": vtype.relevance,
                 "typeRationale": vtype.rationale,
+                # The MarineCadastre static fields. `imo` is None on purpose -- see IMO_NOTE.
+                # `cargoCode` mirrors `vesselTypeCode` because that is what a real file does
+                # in the overwhelming majority of rows.
+                "imo": None,
+                "callSign": _call_sign(index),
+                "vesselTypeCode": type_code,
+                "vesselGroup": vessel_group(type_code),
+                "cargoCode": type_code,
                 "lengthM": vtype.length_m,
+                "widthM": vtype.width_m,
+                "draftM": vtype.draft_m,
+                "transceiverClass": vtype.transceiver_class,
                 "pattern": plan.pattern,
                 "generatorStory": plan.story,
                 "synthetic": True,
@@ -933,6 +1011,23 @@ def generate_ais(
         "disclaimer": DISCLAIMER,
         "identifierNote": MMSI_NOTE,
         "nameNote": NAME_NOTE,
+        "imoNote": IMO_NOTE,
+        "callSignNote": CALLSIGN_NOTE,
+        # The schema this feed conforms to, stated in the feed itself rather than asserted in
+        # a screen. `label` is what the Vessels screen shows above the shortlist; the only
+        # thing that changes when a real MarineCadastre file is loaded instead is this string.
+        "schema": {
+            "format": "MarineCadastre AIS",
+            "label": source_label(None),
+            "reference": "https://marinecadastre.gov/accessais/",
+            "header": list(HEADER),
+            "sentinels": SENTINELS,
+            "note": (
+                "Field names, order, units and coded values follow NOAA's AIS data "
+                "dictionary and VesselTypeCodes2018. A real daily extract can be read by "
+                "spilltrace_drift.marinecadastre.read_csv with no other change."
+            ),
+        },
         "pipelineVersion": C.PIPELINE_VERSION,
         "generatedUtc": C.utc_now_iso(),
         "caseKey": case_key,
@@ -1022,3 +1117,17 @@ def to_geojson(feed: dict[str, Any]) -> dict[str, Any]:
             }
         )
     return {"type": "FeatureCollection", "features": features}
+
+
+def export_marinecadastre_csv(feed: dict[str, Any], path: Path | str) -> dict[str, Any]:
+    """Write a feed out as a MarineCadastre-format CSV.
+
+    The point of this function is falsifiability. "Conforms to the MarineCadastre schema" is
+    a claim anyone can make in a slide; a file whose header is byte-identical to a real
+    daily extract, and which :func:`spilltrace_drift.marinecadastre.read_csv` reads back
+    without special-casing, is a claim that can be checked in ten seconds.
+    """
+    result = write_csv(path, feed.get("vessels") or [])
+    result["synthetic"] = True
+    result["disclaimer"] = DISCLAIMER
+    return result
