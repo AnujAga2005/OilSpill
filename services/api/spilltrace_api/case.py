@@ -43,6 +43,9 @@ from spilltrace_ml import geometry as geometry_mod
 from spilltrace_ml import preview as preview_mod
 from spilltrace_ml.model import UNet
 
+# Backwards-compatible export for older helper scripts that imported CaseStore from case.
+from .store import CaseStore  # noqa: E402,F401
+
 Progress = Callable[[str], None]
 
 # Tiles the inference pass over the scene. 128 matches the training patch size, and the

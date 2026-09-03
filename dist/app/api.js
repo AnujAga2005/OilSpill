@@ -186,6 +186,16 @@ export const report = (id) =>
  * The URL for one preview raster.
  * Offline this resolves into the bundle, where the build step copied the PNGs.
  */
+/** Direct URL for the server-generated incident PDF. */
+export const reportPdfUrl = (caseId) =>
+  mode === "offline"
+    ? null
+    : `/api/cases/${encodeURIComponent(caseId)}/report?format=pdf`;
+
+/** Queue an incident-report email. `recipients` may be an array or comma-separated string. */
+export const dispatchEmail = (caseId, options) =>
+  post(`/api/cases/${encodeURIComponent(caseId)}/dispatch`, options);
+
 export function imageUrl(caseId, kind, files) {
   if (mode === "offline") {
     const name = files?.[kind];
