@@ -17,6 +17,30 @@ from typing import Any
 # services/common/spilltrace_common/config.py -> repo root is 3 levels up
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
+def _load_local_env() -> None:
+    """Load a simple repository .env without requiring python-dotenv.
+
+    Existing process environment variables always win. Values are intentionally parsed
+    conservatively; this is configuration, not a shell script.
+    """
+    env_path = REPO_ROOT / ".env"
+    if not env_path.is_file():
+        return
+    try:
+        for raw in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+    except OSError:
+        pass
+
+_load_local_env()
+
 # Raw inputs supplied by the user. Overridable for tests and alternate scenes.
 IMAGE_DIR = Path(os.environ.get("SPILLTRACE_IMAGE_DIR", REPO_ROOT / "Oil"))
 MASK_DIR = Path(os.environ.get("SPILLTRACE_MASK_DIR", REPO_ROOT / "Mask_oil"))

@@ -36,6 +36,11 @@ for _package in ("common", "ml", "drift", "api"):
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
+# These imports must happen after the service package paths are installed.  Otherwise
+# importing this module directly (rather than through the helper script) fails before
+# the server has a chance to configure its local package layout.
+from .dispatch import DispatchError, dispatch_case_email  # noqa: E402
+from .reports import generate_incident_report  # noqa: E402
 from spilltrace_api import case as case_mod  # noqa: E402
 from spilltrace_api import jobs as jobs_mod  # noqa: E402
 from spilltrace_api import store as store_mod  # noqa: E402
@@ -76,6 +81,7 @@ ROUTES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("trajectories", re.compile(r"^/api/cases/([^/]+)/trajectories$")),
     ("vessels", re.compile(r"^/api/cases/([^/]+)/vessels$")),
     ("report", re.compile(r"^/api/cases/([^/]+)/report$")),
+    ("dispatch", re.compile(r"^/api/cases/([^/]+)/dispatch$")),
     ("case", re.compile(r"^/api/cases/([^/]+)$")),
     ("job_result", re.compile(r"^/api/jobs/([^/]+)/result$")),
     ("job_cancel", re.compile(r"^/api/jobs/([^/]+)/cancel$")),
@@ -302,6 +308,8 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
                 self._submit(param, body, kind="detect")
             elif name == "drift":
                 self._submit(param, body, kind="drift")
+            elif name == "dispatch":
+                self._dispatch(param, body)
             elif name == "job_cancel":
                 ok = RUNNER.cancel(param or "")
                 self._json(200 if ok else 409, {"cancelled": ok, "jobId": param})
@@ -555,9 +563,79 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             {"Content-Disposition": f'attachment; filename="ais_{case_id}_marinecadastre.csv"'},
         )
 
+    def _dispatch(self, case_id: str | None, body: dict[str, Any]) -> None:
+        """Queue an incident-report email for a stored case.
+
+        The PDF and email are generated in the background because report generation and
+        SMTP can both perform blocking I/O. The API returns a normal Job record so the
+        existing frontend job/polling machinery can be reused.
+        """
+        if not case_id or not SAFE_ID.match(case_id):
+            self._fail(400, f"invalid case id {case_id!r}")
+            return
+        if not STORE.exists(case_id):
+            self._fail(404, f"case {case_id!r} has not been computed")
+            return
+
+        recipients = body.get("recipients", body.get("to"))
+        if recipients in (None, "", []):
+            recipients = None
+        subject = body.get("subject")
+        message = body.get("message")
+        case_number = body.get("caseNumber")
+
+        # Validate recipient syntax before creating a job so obvious client errors are
+        # returned immediately rather than becoming a failed background job.
+        try:
+            from .dispatch import _recipients
+            _recipients(recipients)
+        except DispatchError as exc:
+            self._fail(400, str(exc))
+            return
+
+        def work(say: Any) -> dict[str, Any]:
+            payload = STORE.load(case_id)
+            if payload is None:
+                raise DispatchError(f"case {case_id!r} disappeared before dispatch")
+            say("generating incident PDF")
+            result = dispatch_case_email(
+                payload,
+                recipients,
+                case_number=case_number,
+                subject=subject,
+                message=message,
+            )
+            say("incident email prepared" if result.get("dryRun") else "incident email sent")
+            return result
+
+        job = RUNNER.submit("dispatch", case_id, work)
+        self._json(202, {
+            "jobId": job.id,
+            "kind": "dispatch",
+            "caseId": case_id,
+            "state": job.state,
+            "pollUrl": f"/api/jobs/{job.id}",
+            "resultUrl": f"/api/jobs/{job.id}/result",
+            "reportUrl": f"/api/cases/{case_id}/report?format=pdf",
+        })
+
     def _report(self, case_id: str | None, query: dict[str, str]) -> None:
         payload = self._case_or_404(case_id)
         if payload is None:
+            return
+        if query.get("format") == "pdf":
+            path = generate_incident_report(payload)
+            try:
+                body = path.read_bytes()
+            except OSError as exc:
+                self._fail(500, f"could not read generated incident report: {exc}")
+                return
+            self._send(
+                200,
+                body,
+                "application/pdf",
+                {"Content-Disposition": f'attachment; filename="{path.name}"'},
+            )
             return
         if query.get("format") == "csv":
             from spilltrace_drift import scoring as scoring_mod
@@ -592,6 +670,8 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "detectionMetrics": _detection_metrics(),
             "limits": payload.get("limits"),
             "timing": payload.get("timing"),
+            "pdfUrl": f"/api/cases/{case_id}/report?format=pdf",
+            "dispatchUrl": f"/api/cases/{case_id}/dispatch",
         })
 
     def _job(self, job_id: str | None) -> None:
@@ -608,6 +688,12 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             return
         if job.state != "done":
             self._json(202 if job.state in ("queued", "running") else 409, job.to_dict())
+            return
+        if job.kind == "dispatch":
+            self._json(200, {"jobId": job.id, "kind": job.kind, "result": job.result})
+            return
+        if job.kind == "dispatch":
+            self._json(200, {"jobId": job.id, "kind": job.kind, "result": job.result})
             return
         raw = STORE.load_raw(job.scene)
         if raw is None:

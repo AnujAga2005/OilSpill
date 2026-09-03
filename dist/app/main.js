@@ -289,6 +289,23 @@ function pageHeader(screen, state, ctx) {
           announce("Case document downloaded.");
         },
       }),
+      state.caseDoc && api.apiMode() === "live"
+        ? U.button("PDF Report", {
+            kind: "quiet",
+            small: true,
+            iconPath: ICONS.download,
+            href: api.reportPdfUrl(state.caseId),
+            title: "Generate and download the incident report PDF",
+          })
+        : null,
+      state.caseDoc && api.apiMode() === "live"
+        ? U.button("Email Report", {
+            kind: "quiet",
+            small: true,
+            onClick: () => dispatchIncidentEmail(state.caseId, announce),
+            title: "Generate the incident PDF and dispatch it by email",
+          })
+        : null,
       U.button("Print", {
         kind: "quiet",
         small: true,
@@ -328,6 +345,30 @@ function caseSelector(state) {
       ),
     ),
   );
+}
+
+async function dispatchIncidentEmail(caseId, announceFn) {
+  const recipients = window.prompt("Recipient email address(es), separated by commas:");
+  if (!recipients || !recipients.trim()) return;
+  try {
+    const response = await api.dispatchEmail(caseId, { recipients: recipients.trim() });
+    announceFn(`Incident email queued as job ${response.jobId}.`);
+    // Reuse the existing job endpoint rather than keeping SMTP work in the browser.
+    let state = response;
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const job = await fetch(response.pollUrl).then((r) => r.json());
+      state = job;
+      if (job.state === "done" || job.state === "failed" || job.state === "cancelled") break;
+    }
+    if (state.state === "done") {
+      announceFn(state.result?.dryRun ? "Incident email dry-run completed; .eml created." : "Incident email sent.");
+    } else if (state.state === "failed") {
+      announceFn(`Incident email failed: ${state.error || "unknown error"}`);
+    }
+  } catch (error) {
+    announceFn(`Incident email could not be queued: ${error?.message || error}`);
+  }
 }
 
 function topbarMeta(state) {
