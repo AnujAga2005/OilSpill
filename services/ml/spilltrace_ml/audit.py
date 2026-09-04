@@ -49,20 +49,6 @@ class FileProblem:
         }
 
 
-def _display_path(path: Path | str) -> str:
-    """A path fit to publish: relative to the repository whenever it sits inside it.
-
-    The audit report is committed, so an absolute path here would pin it to one machine's
-    home directory and read as nonsense after a clone. A dataset kept outside the
-    repository is left absolute, because there is nothing shorter to say about it.
-    """
-    resolved = Path(path).resolve()
-    try:
-        return resolved.relative_to(C.REPO_ROOT).as_posix()
-    except ValueError:
-        return str(resolved)
-
-
 @dataclass
 class SceneRecord:
     """Everything the audit learned about one image/mask pair."""
@@ -431,8 +417,8 @@ def _scan_pair(
 
     record = SceneRecord(
         name=stem,
-        image_path=_display_path(image_path),
-        mask_path=_display_path(mask_path),
+        image_path=C.display_path(image_path),
+        mask_path=C.display_path(mask_path),
         width=meta.width,
         height=meta.height,
         bands=meta.samples,
@@ -729,8 +715,8 @@ def _assemble(**kw: Any) -> dict[str, Any]:
         .strftime("%Y-%m-%dT%H:%M:%S") + "Z",
         "pipelineVersion": C.PIPELINE_VERSION,
         "elapsedSeconds": round(kw["elapsed"], 2),
-        "imageDir": _display_path(kw["image_dir"]),
-        "maskDir": _display_path(kw["mask_dir"]),
+        "imageDir": C.display_path(kw["image_dir"]),
+        "maskDir": C.display_path(kw["mask_dir"]),
         "counts": {
             "images": len(kw["images"]),
             "masks": len(kw["masks"]),

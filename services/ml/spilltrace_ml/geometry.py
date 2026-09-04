@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Iterable, Sequence
+from typing import Any, Callable, Iterable, Sequence
 
 import cv2
 import numpy as np
@@ -304,8 +304,17 @@ def analyse(
     cfg: GeometryConfig | None = None,
     epsg: int | None = 4326,
     source: str = "unspecified",
+    annotate: Callable[[dict[str, Any], np.ndarray], dict[str, Any] | None] | None = None,
 ) -> dict[str, Any]:
-    """Measure every slick in ``mask`` and return geometry plus GeoJSON."""
+    """Measure every slick in ``mask`` and return geometry plus GeoJSON.
+
+    ``annotate`` is called once per *published* component with its record and its
+    boolean pixel mask, and whatever it returns is merged into that record before
+    the GeoJSON properties are built. It exists so a caller can attach something
+    that needs the component's pixels -- the look-alike screening does -- without
+    this module having to know what a look-alike is, and without the caller having
+    to re-derive components and risk deriving them differently.
+    """
     cfg = cfg or GeometryConfig()
     raw = np.asarray(mask, dtype=bool)
     if raw.ndim != 2:
@@ -395,6 +404,7 @@ def analyse(
             else "no probability map supplied, so no confidence is reported",
             "qualityFlags": _quality_flags(stats, area_km2, touches_edge, note, cfg),
             "_rings": rings,
+            "_label": int(index),
         }
         kept.append(record)
 
@@ -403,6 +413,14 @@ def analyse(
     published = kept[: cfg.max_polygons]
     for position, record in enumerate(published, start=1):
         record["id"] = f"slick-{position:02d}"
+
+    if annotate is not None:
+        for record in published:
+            extra = annotate(record, labels == record["_label"])
+            if extra:
+                record.update(extra)
+    for record in kept:
+        record.pop("_label", None)
 
     features = []
     for record in published:

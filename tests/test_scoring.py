@@ -107,7 +107,14 @@ def test_no_output_text_ever_uses_the_language_of_guilt(ranking):
 
 def test_the_ranking_states_its_own_provenance_and_limits(ranking):
     assert ranking["aisLabel"] == C.LABEL_AIS
-    assert ranking["driftLabel"] in (C.LABEL_DRIFT_SYNTHETIC, C.LABEL_DRIFT_CMEMS)
+    # Any of the four: currents and wind are separate products and either can be real on
+    # its own, so there is no single "real" and no single "synthetic" label to assert.
+    assert ranking["driftLabel"] in (
+        C.LABEL_DRIFT_SYNTHETIC,
+        C.LABEL_DRIFT_CMEMS,
+        C.LABEL_DRIFT_HYBRID,
+        C.LABEL_DRIFT_REAL,
+    )
     assert ranking["caveat"] == S.CAVEAT
     for phrase in ("triage", "not evidence", "human verification"):
         assert phrase in ranking["caveat"].lower()

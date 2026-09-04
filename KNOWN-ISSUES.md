@@ -132,12 +132,71 @@ Resolvability is a per-case property, not a property of the method: a tightly se
 resolvable, and `tests/test_age.py` asserts both sides of that pair so the claim stays tied to
 the physics rather than to this one scene.
 
-## 4. Look-alike rejection is untested
+## 4. Look-alike rejection was untested — **now measured**
 
-The dataset contains no labelled algal blooms, low-wind glassy zones, or biogenic slicks, so the
-model's ability to *reject* dark patches that are not oil has never been measured. This is stated
-in `data/processed/metrics.json` under `limitations` and on the methodology screen. It is a
-dataset gap, not a code gap.
+The dataset contains no labelled algal blooms, low-wind glassy zones or biogenic slicks, so the
+model's ability to *reject* dark patches that are not oil had never been measured. Every other
+number in this project answers "how well is the slick outlined", having already assumed the dark
+patch is oil. That was the largest unquantified claim in the build.
+
+It is now quantified twice, on two different datasets, and the honest summary is that **a dark
+patch is not evidence of oil and the U-Net alone treats it as though it were.**
+
+**A dedicated screen was added**, not a retrained detector: `services/ml/spilltrace_ml/lookalike.py`
+proposes dark regions, measures seven features of each (darkness against the local background,
+its 10th-percentile tail, a texture ratio, edge sharpness, compactness, solidity, elongation) and
+scores them with a logistic model. Every feature is a ratio of same-unit quantities, so it
+survives a change of radiometric scale. Fitted on 11 623 dark regions from the 270 supplied
+parent products — 930 over labelled oil, 10 693 not — with regions between 5 % and 50 % mask
+overlap dropped rather than guessed at.
+
+**Held out, same domain** (5-fold cross-validation grouped by parent Sentinel-1 product, so no
+scene is scored by a model that saw its sibling): **AUC 0.9573**, keeping **90.2 %** of the
+labelled-oil regions while rejecting **89.4 %** of the dark water that is not oil.
+
+**Cross-domain, never trained on** — all **2 290** published look-alike patches of the DARTIS 2019
+archive (`doi:10.1594/PANGAEA.980773`, Yang & Singha 2025, CC-BY-4.0), a different sea and a
+different sensor product:
+
+| | Screen | U-Net alone, `clipRange` | U-Net alone, `momentMatch` |
+| --- | --- | --- | --- |
+| Patches raising an alarm | **1 677 of 2 290 (73.2 %)** | 305 of 340 (89.7 %) | **340 of 340 (100 %)** |
+| Dark regions rejected | **58 812 of 84 758 (69.4 %)** | — | — |
+
+Read the two columns together, because that contrast is the finding. The U-Net alone alarms on
+essentially every look-alike patch it is shown; the screen removes about seven of every ten dark
+regions before the case is built. Neither number is good enough to call the problem solved, and
+neither is a published benchmark figure — see the caveats below.
+
+**Where the numbers are honest about themselves.** `data/processed/lookalike_metrics.json` carries
+seven limitations, and three of them bound the headline:
+
+- The same-domain "look-alike" label is *absence of oil in the reference mask*, not a positive
+  identification of a phenomenon. A dark region the mask does not cover may be low wind, a wake,
+  an unlabelled slick, or a labelling error.
+- The look-alike archive is 8-bit JPEG at about 20 m/pixel and single-channel. It cannot be turned
+  back into calibrated decibels, so the second polarisation is synthesised from the first and is
+  perfectly correlated with it. **Two mappings are reported precisely because one number would
+  overstate what the data supports** — `clipRange` assumes the JPEG stretch spanned the training
+  clip bounds, `momentMatch` assumes the patch is radiometrically typical. The detector's
+  false-alarm rate is indicative, not a benchmark.
+- A region the screen calls *uncertain* stays in the case. That is deliberate for a response tool
+  — suppressing an unsure detection trades a measured false positive for an unmeasured missed
+  spill — so the rejection rate is the rate of outright rejections and is **not** one minus the
+  acceptance rate. 11 794 of the 84 758 regions are in that middle band.
+- 126 of the 2 290 patches produced no dark region at all, so the *proposer*, not the screen,
+  rejected them. They count in the patch rate and are absent from the region rate, which is why
+  both are reported.
+
+**Reproduce it** with `.venv/bin/python scripts/run_lookalike_eval.py` (RUNBOOK.md §5). The
+cross-domain half needs the archive on disk first:
+`.venv/bin/python scripts/fetch_dartis2019.py --subset nc,nw`. The full eval took **2 h 57 m**;
+the same-domain half alone is minutes.
+
+**What is still a dataset gap.** The screen never names *which* look-alike it thinks it is looking
+at, because nothing in either dataset labels the phenomenon. Closing that needs Part II of the
+source dataset (685 look-alike images with masks, `10.5281/zenodo.8253899`), which would let the
+detector itself learn the distinction instead of being screened after the fact.
 
 ## 5. AIS and ocean forcing are synthetic
 
@@ -146,3 +205,13 @@ By design and clearly labelled everywhere (`AIS mode: Synthetic demonstration da
 where real historic data is unavailable. The supplied CMEMS file does not overlap the demo scene
 in time, so deterministic seeded forcing is used instead. Not a defect — but never describe either
 as real.
+
+The forcing half of that is **two products, not one**, and either can become real without the
+other. Currents come from CMEMS and wind from ERA5; the shipped state is synthetic on both, but a
+drop-in ERA5 file (RUNBOOK.md §6a) makes the wind a measurement while the currents stay synthetic,
+and the label changes to `Drift forcing: Synthetic currents with ERA5 wind` on its own. Four labels
+cover the four combinations. This matters more than the tidiness suggests: oil moves at ~3% of the
+wind, which against this scene's 0.0939 m/s current anchor makes the wind term the same size as the
+current. With no wind file at all on the CMEMS path there is no wind term, and the Forcing card
+then states that the drift spread is a **lower bound** on where the oil could have gone rather than
+implying it is the answer.

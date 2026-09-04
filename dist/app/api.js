@@ -251,12 +251,34 @@ export async function runJob(kind, scene, options, onProgress, signal) {
   const submitted = kind === "drift"
     ? await submitDrift(scene, options)
     : await submitDetect(scene, options);
-  const jobId = submitted.jobId;
+  return awaitJob(submitted, onProgress, signal);
+}
+
+/**
+ * Poll a job the caller has already submitted, until it reaches a terminal state.
+ *
+ * Split out of `runJob` so that every job the interface starts -- detection, drift and
+ * incident dispatch -- waits the same way: the same backoff, the same cancellation, and
+ * a failed job raising an `ApiError` carrying the server's own message rather than the
+ * caller inventing one. The alternative, a fixed number of fixed-delay `fetch` calls,
+ * has no way to distinguish "still running" from "gave up watching".
+ *
+ * @param {object} submitted - the accepted-job body: needs `jobId`
+ * @param {(job: object) => void} [onProgress]
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<object>} the finished job record
+ * @throws {ApiError} when the job fails, or when it outlives `POLL_CEILING_MS`
+ * @throws {DOMException} `AbortError` when cancelled from either end
+ */
+export async function awaitJob(submitted, onProgress, signal) {
+  const jobId = submitted?.jobId;
+  if (!jobId) throw new ApiError("the server accepted no job", { payload: submitted, status: 500 });
   onProgress?.({ ...submitted, state: submitted.state || "queued", log: [] });
 
   // Poll fast at first - a cached case finishes in well under a second - then ease off
   // so a full minute of inference is not 120 requests.
   let wait = 220;
+  const deadline = Date.now() + POLL_CEILING_MS;
   for (;;) {
     if (signal?.aborted) {
       await cancelJob(jobId).catch(() => {});
@@ -273,8 +295,21 @@ export async function runJob(kind, scene, options, onProgress, signal) {
     if (job.state === "cancelled") {
       throw new DOMException("cancelled", "AbortError");
     }
+    if (Date.now() > deadline) {
+      // The job may well still be running server-side; say so rather than claiming
+      // it failed. `jobId` lets the reader check `/api/jobs/<id>` by hand.
+      throw new ApiError(
+        `job ${jobId} is still ${job.state} after ${Math.round(POLL_CEILING_MS / 1000)}s; ` +
+          "it may still finish - check /api/jobs/" + jobId,
+        { payload: job, status: 504 },
+      );
+    }
   }
 }
+
+/** How long the browser watches one job before it stops waiting. A full-scene
+ *  detection is ~19 s and a 1200-particle drift ~20 s, so five minutes is slack. */
+const POLL_CEILING_MS = 300_000;
 
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {

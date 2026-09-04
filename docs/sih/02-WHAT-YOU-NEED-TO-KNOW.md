@@ -64,9 +64,16 @@ Many things other than oil flatten the sea or otherwise look dark:
 | **Upwelling and internal waves** | change surface roughness patterns |
 | **Wind shadows near land** | sheltered water stays smooth |
 
-This is *the* unsolved problem in the field and it is where a judge will push hardest. Our
-current model has never been shown a labelled look-alike (the dataset contains none), so it is
-untested against them. Say that plainly — see document 5.
+This is *the* unsolved problem in the field and it is where a judge will push hardest. Our U-Net
+has never been shown a labelled look-alike, because the supplied dataset contains none — so **the
+U-Net alone cannot reject one, and we have measured exactly how badly.** Shown 340 published
+look-alike patches it never trained on, it raised an alarm on 89.7 % or 100 % of them depending on
+how the 8-bit imagery is mapped back to decibels.
+
+That is why a separate **screen** sits in front of it: seven shape-and-contrast features per dark
+region, fitted on the supplied scenes, which rejects 69.4 % of the dark regions in that same
+foreign archive and scores AUC 0.9573 held out in-domain. It is a real improvement and it is not
+a solution. Say both halves plainly — see document 5, and KNOWN-ISSUES.md §4 for every caveat.
 
 ---
 
@@ -275,12 +282,25 @@ you search the wrong water and shortlist the wrong ships.
 |---|---|---|
 | **CMEMS** (Copernicus Marine Service) | global/regional ocean currents, reanalysis and forecast | free, EU; the `.nc` file in this repo is CMEMS |
 | **INCOIS** (Hyderabad, Ministry of Earth Sciences) | Indian Ocean currents and forecasts | **India's own agency; they run operational oil-spill trajectory modelling.** Citing INCOIS is an Indian-relevance win with an NTRO audience |
-| **ERA5** (ECMWF) | reanalysis winds | the standard free wind product |
+| **ERA5** (ECMWF) | reanalysis winds | the standard free wind product; we read it, but no file ships here because it needs a free Copernicus account — see RUNBOOK.md §6a |
 
 These come as **NetCDF** (`.nc`) files — a self-describing gridded binary format for
-multi-dimensional scientific arrays, indexed by latitude, longitude, depth and time. We have a
-NetCDF reader in `services/common/spilltrace_common/`; the problem is our supplied file's dates
-do not overlap our imagery's dates, so we fall back to synthetic forcing.
+multi-dimensional scientific arrays, indexed by latitude, longitude, depth and time. We have
+readers for both products in `services/common/spilltrace_common/`.
+
+**Currents and wind are separate products here, and either can be real while the other is not.**
+That distinction is worth understanding before a judge asks, because it is the difference between
+a vague "our forcing is synthetic" and a precise claim:
+
+- The supplied CMEMS file's dates do not overlap the imagery's dates, so the **currents** fall
+  back to a synthetic field — labelled as such on every screen.
+- The **wind** is whatever you supply. Drop an ERA5 file covering the scene into `data/raw/` and
+  the wind becomes a measurement without the currents changing at all. The label then reads
+  *"Synthetic currents with ERA5 wind"* rather than claiming either more or less than that.
+
+Four labels exist for the four combinations, and the Forcing card names both halves. Given that
+oil moves at ~3% of the wind — the same magnitude as this scene's current — half the physics being
+real is a materially different claim from none of it being real.
 
 ---
 

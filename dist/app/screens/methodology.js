@@ -50,6 +50,7 @@ export function render(ctx) {
               scaleCard(m),
               h("div", { class: "grid grid--2" }, baselineCard(m), thresholdCard(m)),
               h("div", { class: "grid grid--wide-left" }, perSceneCard(m), protocolCard(m)),
+              lookAlikeCard(m),
               trainingCard(m),
               samplesCard(ctx, m),
               limitationsCard(m),
@@ -102,6 +103,14 @@ function pipelineCard(caseDoc) {
         "Morphological opening then closing, connected components, then area by summing " +
         "each pixel's own area on the ellipsoid row by row. Outlines are traced separately " +
         "and are used only for drawing.",
+    },
+    {
+      key: "screening",
+      name: "Screen look-alikes",
+      detail:
+        "Propose every dark patch in the scene by a relative darkness threshold and score " +
+        "each one with a seven-feature linear screen over shape, texture and darkness. " +
+        "Oil-like or not oil-like only: the screen never names the phenomenon.",
     },
     {
       key: "forcing",
@@ -787,15 +796,17 @@ function samplesCard(ctx, m) {
 function limitationsCard(m) {
   const patch = m.patchScale?.limitations || [];
   const scene = m.sceneScale?.limitations || [];
-  if (!patch.length && !scene.length) return null;
+  const screen = m.lookAlike?.limitations || [];
+  if (!patch.length && !scene.length && !screen.length) return null;
 
   return U.card(
     "Limitations, as recorded by the pipeline",
     {
       id: "limitations",
       note:
-        "These strings are written by the evaluation scripts into metrics.json and " +
-        "scene_metrics.json. They are not editorial: they travel with the numbers.",
+        "These strings are written by the evaluation scripts into metrics.json, " +
+        "scene_metrics.json and lookalike_metrics.json. They are not editorial: they " +
+        "travel with the numbers.",
     },
     h(
       "div",
@@ -814,6 +825,248 @@ function limitationsCard(m) {
             null,
             h("div", { class: "small muted" }, "Scene-scale evaluation"),
             h("ul", { class: "bullets" }, scene.map((text) => h("li", null, h("span", null, text)))),
+          )
+        : null,
+      screen.length
+        ? h(
+            "div",
+            null,
+            h("div", { class: "small muted" }, "Look-alike screening"),
+            h("ul", { class: "bullets" }, screen.map((text) => h("li", null, h("span", null, text)))),
+          )
+        : null,
+    ),
+  );
+}
+
+// -- the look-alike screen ---------------------------------------------------
+
+/**
+ * The one number on this screen that is not about oil.
+ *
+ * Every IoU here is measured on scenes that contain a slick, so all of them answer "how
+ * well is a known slick's shape recovered". None of them answers "how often does dark water
+ * that is not oil raise an alarm", which is the question an operator actually has. This card
+ * carries that second number, measured twice: once held out on this project's own scenes,
+ * and once on a published look-alike archive the screen never trained on.
+ */
+function lookAlikeCard(m) {
+  const block = m.lookAlike;
+  if (!block) return null;
+  if (block.available === false) {
+    return U.card(
+      "Look-alike screening",
+      { id: "lookalike" },
+      U.missingState({
+        title: "The look-alike screen has not been measured",
+        body:
+          "No screen has been fitted in this checkout, so every dark patch in a case comes " +
+          "back as uncertain. Nothing on this card is filled in with a guess.",
+        command: ".venv/bin/python scripts/run_lookalike_eval.py",
+      }),
+    );
+  }
+
+  const held = block.sameDomain?.crossValidation?.pooledHeldOut || {};
+  const training = block.sameDomain?.training || {};
+  const validation = block.sameDomain?.crossValidation || {};
+  const cross = block.crossDomain?.screen;
+  const dataset = block.crossDomain?.dataset;
+  const detector = block.crossDomain?.detector;
+  const single = held.singleFeatureAuc || {};
+  const bestSingle = Object.entries(single)
+    .filter(([, value]) => !F.isMissing(value))
+    .sort((a, b) => b[1] - a[1])[0];
+
+  return U.card(
+    "Look-alike screening: dark water that is not oil",
+    {
+      id: "lookalike",
+      hint: `${F.int(validation.folds)}-fold, grouped by satellite product`,
+      note: block.question,
+    },
+    h(
+      "div",
+      { class: "stack" },
+
+      h(
+        "div",
+        { class: "grid grid--stats" },
+        U.stat({
+          label: "Held-out AUC",
+          value: F.metric(held.auc, 3),
+          tone: "model",
+          sub: `${F.int(held.regions)} regions, ${F.int(held.oilRegions)} of them labelled oil`,
+        }),
+        U.stat({
+          label: "Labelled oil kept",
+          value: F.pct(held.keptSensitivity),
+          sub: held.definitions?.keptSensitivity,
+        }),
+        U.stat({
+          label: "Not-oil rejected",
+          value: F.pct(held.rejectionSpecificity),
+          sub: held.definitions?.rejectionSpecificity,
+        }),
+        U.stat({
+          label: "Best single feature",
+          value: bestSingle ? F.metric(bestSingle[1], 3) : F.DASH,
+          sub: bestSingle
+            ? `${bestSingle[0]} alone — the seven together must beat this to be worth having`
+            : "not measured",
+        }),
+      ),
+
+      U.rows(
+        U.row("Fitted on", training.labelRule, { stack: true }),
+        U.row(
+          "Fitted from",
+          `${F.int(training.regions)} dark regions across ${F.int(training.scenes)} scenes ` +
+            `and ${F.int(training.products)} parent products, at ${F.num(training.spacingM, 1)} m/pixel`,
+          { stack: true },
+        ),
+        U.row("Folds grouped by", validation.grouping, { stack: true }),
+        U.row(
+          "Proposer recall of the labelled oil",
+          F.pct(training.meanMaskRecallOfProposer),
+          { mono: true },
+        ),
+        U.row("Ambiguous regions dropped", F.int(training.droppedAmbiguous), { mono: true }),
+      ),
+
+      cross
+        ? h(
+            "div",
+            { class: "stack stack--tight" },
+            h("div", { class: "small muted" }, "Measured on a published archive it never trained on"),
+            h(
+              "div",
+              { class: "grid grid--stats" },
+              U.stat({
+                label: "Look-alike regions rejected",
+                value: F.pct(cross.regionRejectionRate),
+                tone: "reference",
+                sub: `${F.int(cross.regionOutcomes?.rejected)} of ${F.int(cross.regions)} proposed regions`,
+              }),
+              U.stat({
+                label: "Images still raising something",
+                value: F.pct(cross.patchFalseAlarmRate),
+                sub:
+                  `${F.int(cross.patchesWithSurvivingRegion)} of ${F.int(cross.patches)} ` +
+                  "look-alike images keep at least one unrejected region",
+              }),
+              U.stat({
+                label: "Images with no dark region at all",
+                value: F.int(cross.patchesWithNoDarkRegion),
+                sub: "the proposer found nothing to screen, so the screen was never asked",
+              }),
+              U.stat({
+                label: "Resampled to",
+                value: F.num(cross.resampledToSpacingM, 1),
+                unit: "m/px",
+                sub: "so a film occupies the same number of pixels it did in training",
+              }),
+            ),
+            dataset
+              ? U.rows(
+                  U.row("Archive", dataset.source, { stack: true }),
+                  U.row("Coverage", dataset.coverage, { stack: true }),
+                  U.row("Independence", cross.note, { stack: true }),
+                )
+              : null,
+            cross.bySubset ? subsetTable(cross.bySubset) : null,
+          )
+        : U.notice(
+            "The published look-alike archive is not on disk in this checkout, so the " +
+              "cross-domain number is not measured. The held-out figures above are from " +
+              "this project's own scenes only.",
+            { kind: "synthetic", strongPrefix: "Same domain only." },
+          ),
+
+      detector ? detectorRows(detector) : null,
+    ),
+  );
+}
+
+/** Rejection rate per archive subset: coastal and open-water look-alikes separately. */
+function subsetTable(bySubset) {
+  const entries = Object.entries(bySubset);
+  if (!entries.length) return null;
+  return h(
+    "div",
+    { class: "table-wrap" },
+    h(
+      "table",
+      { class: "table" },
+      h(
+        "thead",
+        null,
+        h(
+          "tr",
+          null,
+          h("th", null, "Subset"),
+          h("th", { class: "right" }, "Regions"),
+          h("th", { class: "right" }, "Rejected"),
+          h("th", { class: "right" }, "Uncertain"),
+          h("th", { class: "right" }, "Accepted"),
+          h("th", { class: "right" }, "Rejection rate"),
+        ),
+      ),
+      h(
+        "tbody",
+        null,
+        entries.map(([key, bucket]) =>
+          h(
+            "tr",
+            null,
+            h("td", null, bucket.label || key),
+            h("td", { class: "right" }, F.int(bucket.regions)),
+            h("td", { class: "right" }, F.int(bucket.rejected)),
+            h("td", { class: "right" }, F.int(bucket.uncertain)),
+            h("td", { class: "right" }, F.int(bucket.accepted)),
+            h("td", { class: "right" }, F.pct(bucket.rejectionRate)),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * What the segmentation network alone does on the same look-alike images.
+ *
+ * The screen's rejection rate is only meaningful against a baseline, and the honest baseline
+ * is this product's own detector with no screen in front of it.
+ */
+function detectorRows(detector) {
+  const mappings = Object.entries(detector.lookAlikes || {});
+  if (!mappings.length) return null;
+  const sanity = detector.oilSanityCheck;
+  return h(
+    "div",
+    { class: "stack stack--tight" },
+    h("div", { class: "small muted" }, "The detector on the same images, with no screen in front of it"),
+    U.rows(
+      ...mappings.map(([mapping, entry]) =>
+        U.row(
+          mapping,
+          `${F.pct(entry.falseAlarmRate)} of ${F.int(entry.patches)} look-alike images alarm ` +
+            `(${F.int(entry.patchesWithAlarm)} images) — ${entry.assumption}`,
+          { stack: true },
+        ),
+      ),
+      U.row("Alarm rule", detector.alarmRule, { stack: true }),
+      U.row(
+        "Threshold",
+        `${F.num(detector.threshold, 2)} — ${detector.thresholdSource}`,
+        { stack: true },
+      ),
+      sanity
+        ? U.row(
+            "Sanity check on annotated oil",
+            `${F.pct(Object.values(sanity)[0]?.detectionRate)} of the oil patches alarm under ` +
+              `${Object.keys(sanity)[0]}, so the numbers above are not simply a silent detector`,
+            { stack: true },
           )
         : null,
     ),
@@ -881,7 +1134,7 @@ function reproduceCard(ctx, caseDoc) {
         disabled: !caseDoc,
         onClick: () => {
           X.downloadJson(X.exportName(caseDoc, "case", "json"), caseDoc);
-          ctx.announce("Case document downloaded.");
+          ctx.announce("Case document downloaded.", { kind: "success" });
         },
       }),
     },
