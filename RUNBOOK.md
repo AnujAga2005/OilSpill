@@ -36,7 +36,7 @@ Stop it with `Ctrl-C`.
 
 **How to tell it worked:** the badge at the top right of the dashboard reads **Live API**
 (green dot). If it reads **Offline demo** (amber), the page is being served from static files
-and the API is not answering — see §6.
+and the API is not answering — see §7.
 
 The pipeline outputs are already on disk, so this starts in under a second. If
 `data/processed/cases/demo.json` were missing, the server would build the demo case in a
@@ -127,10 +127,12 @@ Every POST body is optional and takes the same keys, all with defaults:
 `detector` (`auto`), `particles` (50–20000), `horizonHours`, `threshold`, `previews`, `seed`.
 An empty body `{}` is valid and uses the configured defaults.
 
-A `drift` run on `00053` with the parameters above takes **about 20 seconds** and moves through
-nine stages — `decode, detect, geometry, forcing, backward, forward, ais, scoring, previews`.
-Most of that is fixed cost you pay whatever you ask for: 9.5 s decoding the 2048 × 2048 GeoTIFF
-and 5.8 s of inference. The two drift stages are 1 s each at 1200 particles, so particle count is
+A `drift` run on `00053` with the parameters above takes **about 25 seconds** and moves through
+ten stages — `decode, detect, geometry, screening, forcing, backward, forward, ais, scoring,
+previews`.
+Most of that is fixed cost you pay whatever you ask for: 9.4 s decoding the 2048 × 2048 GeoTIFF,
+5.7 s of inference, 3.8 s of geometry and 3.6 s screening the dark patches for look-alikes. The two
+drift stages are 1 s each at 1200 particles, so particle count is
 a cheap dial. The run is seeded, so running it twice gives byte-identical figures; only the
 timing block and the generated timestamp change.
 
@@ -195,13 +197,157 @@ are scored. Writes `data/processed/scene_metrics.json`. This is the honest numbe
 flatters the model badly, and the Method screen shows both.
 
 ```bash
+.venv/bin/python scripts/run_lookalike_eval.py
+```
+Answers the one question every other metric assumes away: given a *dark* region, is it oil or a
+look-alike? Fits the seven-feature screen on the supplied scenes, cross-validates it grouped by
+parent Sentinel-1 product, then scores it against the published DARTIS 2019 look-alike archive it
+never trained on. Writes `data/processed/lookalike_metrics.json`. The same-domain half takes
+minutes; the full run took **2 h 57 m**.
+
+The cross-domain half needs the archive on disk first, which is a separate download:
+
+```bash
+.venv/bin/python scripts/fetch_dartis2019.py --subset nc,nw
+```
+Fetches the 2 290 no-oil / look-alike patches (`doi:10.1594/PANGAEA.980773`, CC-BY-4.0). Add
+`--subset oc,ow` for the 1 365 oil patches too. `--manifest` prints the catalogue without
+downloading, and `--limit N` stops after N patches. Skip both commands and the eval still runs —
+it reports the same-domain half and says the cross-domain half is absent.
+
+```bash
 .venv/bin/python scripts/run_api.py --build-demo
 ```
 Rebuilds the seeded offline demo case and exits.
 
 ---
 
-## 6. The offline static bundle
+## 6. Optional: give the drift a real ocean
+
+The drift takes its currents and its wind from **two different products**, and either one can
+be real while the other is not. Nothing here is required — the app runs without both — but each
+file you supply moves one half of the physics from "plausible construction" to "measurement",
+and the interface relabels itself accordingly.
+
+| You supply | Currents | Wind | Label the dashboard shows |
+| --- | --- | --- | --- |
+| nothing | synthetic | synthetic | `Drift forcing: Synthetic scenario data` |
+| ERA5 wind only | synthetic | **real** | `Drift forcing: Synthetic currents with ERA5 wind` |
+| CMEMS covering the scene | **real** | none | `Drift forcing: CMEMS data` |
+| both | **real** | **real** | `Drift forcing: CMEMS currents with ERA5 wind` |
+
+Wind is worth more than its billing suggests. Oil moves at about 3 % of the wind speed
+(`windage_factor = 0.03`), and against the 0.0939 m/s current this scene is anchored to, that
+term is the **same size as the current itself** — so where the wind comes from is half the
+answer, not a footnote.
+
+### 6a. ERA5 10 m wind (free, needs an account)
+
+1. Register at [cds.climate.copernicus.eu](https://cds.climate.copernicus.eu) and accept the
+   ERA5 licence. No key goes anywhere near this repository — you download the file by hand.
+2. Open **ERA5 hourly data on single levels from 1940 to present** and request exactly:
+   - Variables: `10m_u_component_of_wind` and `10m_v_component_of_wind` — both, and nothing
+     else. The reader looks for `u10`/`v10` and will refuse a file that lacks either.
+   - Date: the acquisition day **and the day either side**, because a 24 h hindcast reaches
+     back past midnight. For the shipped demo scene (`00053`, Persian Gulf,
+     `2017-03-11T02:15:12Z`) that is 10–12 March 2017.
+   - Times: all 24 hours. Wind is the one product interpolated in time, so cadence is used.
+   - Geographical area: **sub-region**, padded ~1° around the scene footprint. The demo scene
+     spans `54.598…54.782 E, 25.502…25.686 N`, so North `27`, West `53`, South `24`, East `56`.
+   - Format: **NetCDF4**. GRIB is not readable here.
+3. Save it as `data/raw/era5_wind_2017-03.nc` — anything matching `era5_wind*.nc` in
+   `data/raw/` or the repository root is found automatically. To keep it elsewhere:
+
+```bash
+export SPILLTRACE_ERA5=/absolute/path/to/your_wind.nc
+```
+
+4. Rebuild a case and check the Drift screen's **Forcing** card. It now names ERA5 as the wind
+   source, the mean wind over the footprint, how many hourly frames were read, and what
+   fraction of the drift horizon the file actually covered:
+
+```bash
+.venv/bin/python scripts/run_api.py --build-demo
+```
+
+The file is small — a padded footprint at ERA5's 0.25° grid is a few hundred cells per hour, so
+three days of hourly wind is a couple of megabytes, not gigabytes.
+
+**What happens if the file does not cover the scene.** Nothing breaks and nothing is faked. The
+wind is rejected, the reason appears in the Forcing card's reason list, and the drift falls
+back to the synthetic rotation (synthetic currents) or to no wind at all (CMEMS currents) — in
+which case the card says the spread is a *lower bound* on where the oil could have gone,
+because real oil also moves with the wind. Coverage shorter than the horizon is not a
+rejection: the wind clamps at the ends of the file and the card reports the fraction covered.
+
+### 6b. CMEMS currents
+
+The `.nc` that ships here is a real CMEMS global physics product, but it does not cover March
+2017, so the temporal overlap check fails and the currents stay synthetic — visibly, on every
+screen. To make the currents real, download a product whose time axis contains the acquisition
+from the [Copernicus Marine Service](https://marine.copernicus.eu), keep the
+`cmems_mod_glo_phy_*.nc` naming (or point `SPILLTRACE_CMEMS` at it), and rebuild. The overlap
+check re-runs on its own; there is no flag to force it, by design.
+
+---
+
+## 7. The incident report, and emailing it
+
+A case can leave the screen as a signed-off PDF. Fastest way to look at the document:
+
+```bash
+.venv/bin/python scripts/make_report.py
+```
+
+It prints the path it wrote under `data/processed/reports/`. `--case <id>` picks a different
+stored case and `--number ST-DEMO-0001` overrides the generated case number.
+
+Nine sections: case information, incident location, the detection, the drift hindcast and
+estimated origin, spill age, vessel triage with the score broken into its components and the
+reason behind each, provenance, the stated limitations verbatim, and a disclaimer with a blank
+sign-off block. Every page is footed with the case number and *"Research proof of concept — not
+evidence — human review required"*.
+
+To exercise the email path as well:
+
+```bash
+.venv/bin/python scripts/make_report.py --dispatch ops@example.gov
+```
+
+It prints the dispatch mode first, so you know what is about to happen before you read the
+result. **With no SMTP host configured it writes a `.eml` file beside the PDF and sends nothing**
+— that is the default in a fresh clone, and the dashboard says so too: the button in the page
+header opens a dialog that reads **Write .eml** rather than **Send report**, with one line
+explaining which piece is missing.
+
+To actually send, copy the template and fill it in:
+
+```bash
+cp .env.example .env
+```
+
+Two variables matter more than the rest:
+
+- `SPILLTRACE_ALERT_RECIPIENTS` — an allowlist of addresses, or `@domain` entries. **Required
+  before anything is sent.** The dispatch endpoint has no authentication in front of it, so
+  without an allowlist the server refuses instead of relaying mail to arbitrary addresses.
+- `SPILLTRACE_EMAIL_DRY_RUN=1` — keeps it in dry run even once SMTP works. Leave it set until
+  you have read a `.eml` and are happy with it.
+
+`.env` is gitignored. For Gmail use an App Password, never the account password.
+
+`reportlab` is the project's only optional dependency, and it needs a working Pillow. If the
+import fails, that one route answers **503 with the exact install command** and the rest of the
+app is unaffected — the server does not fall over and the test suite skips those cases rather
+than failing:
+
+```bash
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+---
+
+## 8. The offline static bundle
 
 There is a second way to run the frontend with no Python API at all — a self-contained folder
 that replays the demo case from static files:
@@ -223,21 +369,28 @@ asserts that on every run.
 
 ---
 
-## 7. Tests
+## 9. Tests
 
 ```bash
 .venv/bin/python -m pytest
 ```
 
-532 tests, about 40 seconds. Add `-v` for names, or point it at one file:
+772 tests, about 42 seconds. Add `-v` for names, or point it at one file:
 
 ```bash
 .venv/bin/python -m pytest tests/test_api.py -v
 ```
 
+With `reportlab` and Pillow both installed — which is the state of this machine — **all 772 pass
+and nothing skips**. Without them, the dozen or so tests that render a real PDF report as
+**skipped** instead, and turn themselves back on the moment the import works. Everything the
+report *says* — every drift figure, every score component, the limitations, the absence of
+accusatory language — is asserted by tests that do not need either library, so a blocked install
+cannot hide a broken document.
+
 ---
 
-## 8. If something looks wrong
+## 10. If something looks wrong
 
 **Badge says "Offline demo" while the API is running.** The page was loaded from `dist/` on
 port 8787, not from the API on 8765. Open http://localhost:8765 instead.
@@ -249,8 +402,15 @@ port 8787, not from the API on 8765. Open http://localhost:8765 instead.
 `.venv/bin/python scripts/run_api.py --build-demo`.
 
 **Stylesheet or script changes do not appear.** The dashboard is served as plain files with no
-bundler, so the browser cache is the only thing between you and your edit. Hard-reload
-(`Cmd-Shift-R`).
+bundler. The API sends `no-cache` plus an ETag for `.html`, `.js`, `.css` and `.json`, so an edit
+shows up on a normal reload; if you are on port 8787 serving `dist/`, that is `http.server` and
+you will need a hard reload (`Cmd-Shift-R`) plus a rerun of `scripts/build_web.py`.
+
+**"Report generation requires reportlab".** The PDF route is the one place with an optional
+dependency. `.venv/bin/python -m pip install -r requirements.txt`. If it then complains about
+`_imaging`, the installed Pillow wheel was built for a different Python than the venv's —
+`.venv/bin/python -m pip install --force-reinstall --no-cache-dir pillow` fixes it. Nothing else
+in the app is affected either way.
 
 **A number looks wrong.** Every figure on every screen has a provenance row or a card note
 saying where it came from. The Method screen is the full account. If a value is not available
@@ -265,6 +425,8 @@ the interface shows an em dash and the reason, never a zero.
 | Sentinel-1 imagery and reference masks | **real**, the supplied dataset, unmodified |
 | Segmentation model and all metrics | **real**, trained here, measured here |
 | Slick geometry, area, perimeter, orientation | **real**, computed on a sphere from the mask |
-| Drift forcing | **synthetic** deterministic field — the supplied CMEMS reanalysis does not cover this acquisition time, and the interface says so on every screen |
+| Drift currents | **synthetic** deterministic field — the supplied CMEMS reanalysis does not cover this acquisition time, and the interface says so on every screen. Supply a covering product (§6b) and this row becomes real on its own |
+| Drift wind | **synthetic** rotating field by default, because no ERA5 file ships here. Download one (§6a) and this row becomes real on its own — it is a separate product from the currents and the label names both halves |
 | AIS vessel tracks | **synthetic demonstration data**, labelled as such everywhere |
 | Vessel ranking | real arithmetic over synthetic tracks — a methodology demonstration, not evidence |
+| Incident PDF and email dispatch | **real** document, real SMTP client — but every figure in it inherits the status of the row above it, which is why the report prints its own provenance and limitations rather than leaving them to the reader |

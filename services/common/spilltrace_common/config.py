@@ -45,6 +45,8 @@ _load_local_env()
 IMAGE_DIR = Path(os.environ.get("SPILLTRACE_IMAGE_DIR", REPO_ROOT / "Oil"))
 MASK_DIR = Path(os.environ.get("SPILLTRACE_MASK_DIR", REPO_ROOT / "Mask_oil"))
 CMEMS_GLOB = "cmems_mod_glo_phy_*.nc"
+# No wind file ships with the repository; see era5_path() for why.
+ERA5_GLOB = "era5_wind*.nc"
 
 DATA_DIR = REPO_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
@@ -85,6 +87,10 @@ LABEL_REFERENCE = "Reference mask: Supplied ground truth"
 LABEL_AIS = "AIS mode: Synthetic demonstration data"
 LABEL_DRIFT_CMEMS = "Drift forcing: CMEMS data"
 LABEL_DRIFT_SYNTHETIC = "Drift forcing: Synthetic scenario data"
+# Wind and currents come from different products and either can be real on its own, so
+# the label names both halves rather than collapsing them into one verdict.
+LABEL_DRIFT_HYBRID = "Drift forcing: Synthetic currents with ERA5 wind"
+LABEL_DRIFT_REAL = "Drift forcing: CMEMS currents with ERA5 wind"
 LABEL_STATUS = "Status: Research PoC - human review required"
 LABEL_CANDIDATE = "Priority candidate for investigation"
 # Region names come from a hand-written bounding-box table (see regions.py), not from a
@@ -110,7 +116,7 @@ class PreprocessConfig:
     test_fraction: float = 0.15
     seed: int = SEED_SPLIT
     # Clip limits are derived from training-split percentiles rather than fixed
-    # constants: DATA_AUDIT.md shows VH reaching -78 dB and VV +18 dB, so any
+    # constants: DATA_AUDIT.md shows VH reaching -84 dB and VV +22 dB, so any
     # hard-coded window would silently truncate real signal.
     clip_percentiles: tuple[float, float] = (0.5, 99.5)
 
@@ -210,6 +216,22 @@ class ScoringWeights:
         }
 
 
+def display_path(path: Path | str) -> str:
+    """A path fit to publish: relative to the repository whenever it sits inside it.
+
+    Reports, case payloads and the audit are all committed or bundled, so an absolute
+    path in one pins the artefact to a single machine's home directory and reads as
+    nonsense after a clone. ``build_web.py`` refuses a bundle containing one. A dataset
+    kept outside the repository is left absolute, because there is nothing shorter to say
+    about it.
+    """
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return str(resolved)
+
+
 def cmems_path() -> Path | None:
     """Locate the supplied CMEMS NetCDF, if present."""
     override = os.environ.get("SPILLTRACE_CMEMS")
@@ -218,6 +240,24 @@ def cmems_path() -> Path | None:
         return candidate if candidate.exists() else None
     matches = sorted(REPO_ROOT.glob(CMEMS_GLOB))
     return matches[0] if matches else None
+
+
+def era5_path() -> Path | None:
+    """Locate an ERA5 10 m wind NetCDF, if the operator has downloaded one.
+
+    Absent by design: the Copernicus Data Store needs an account, so no wind file ships
+    with the repository and the drift stays honest about having no wind rather than
+    inventing one. ``SPILLTRACE_ERA5`` overrides the search.
+    """
+    override = os.environ.get("SPILLTRACE_ERA5")
+    if override:
+        candidate = Path(override)
+        return candidate if candidate.exists() else None
+    for root in (RAW_DIR, REPO_ROOT):
+        matches = sorted(root.glob(ERA5_GLOB))
+        if matches:
+            return matches[0]
+    return None
 
 
 def utc_now_iso() -> str:

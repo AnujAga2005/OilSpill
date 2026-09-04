@@ -20,8 +20,14 @@ Operational detail is in [RUNBOOK.md](../../RUNBOOK.md).
 ## The three things nobody has done yet
 
 1. **Watch the NTRO briefing video** — https://www.youtube.com/watch?v=cQoHSStTEdM
-2. **Verify our dataset is the Zenodo one** the problem statement recommends
+2. **Get one Indian scene** — the recommended dataset contains no Indian water at all. Document 3,
+   §3.8 item 6 has the Copernicus recipe.
 3. **Get an ocean current field covering 11 March 2017** so the forcing label flips to real
+
+The dataset identity is now settled: it is Part I of the Zenodo Sentinel-1 SAR oil-spill dataset,
+DOI `10.5281/zenodo.8346860`, matched on eight independent fingerprints and documented by a Marine
+Pollution Bulletin paper. Document 1, §1.3. **The dataset is global, not Persian Gulf** — 24 seas,
+388 Gulf of Mexico scenes to the Persian Gulf's 88. Do not repeat the old framing.
 
 The MarineCadastre header is now settled: a real daily extract
 (`data/raw/AIS_2022_06_01.csv`) was downloaded and its 17-column header matched byte-for-byte

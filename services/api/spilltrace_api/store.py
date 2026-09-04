@@ -171,6 +171,7 @@ def summarise(payload: dict[str, Any], path: Path | None = None) -> dict[str, An
         "detectionSource": provenance.get("detectionSource"),
         "detectionLabel": provenance.get("detectionLabel"),
         "driftMode": provenance.get("driftMode"),
+        "windMode": provenance.get("windMode"),
         "aisLabel": provenance.get("aisLabel"),
         "status": payload.get("status"),
         "spillAgeLabel": (payload.get("spillAge") or {}).get("label"),
