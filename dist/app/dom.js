@@ -9,6 +9,8 @@
  * with literals written in this repository.
  */
 
+import { ICONS } from "./icons.js";
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 const SVG_TAGS = new Set([
   "svg", "g", "path", "circle", "ellipse", "line", "polyline", "polygon", "rect",
@@ -141,9 +143,42 @@ export function trapFocus(container, onEscape) {
   };
 }
 
-/** Announce a message to screen readers without moving focus. */
+/** Announce a message to screen readers, and show the same message on screen.
+ *
+ * Two nodes, deliberately. The live region is a permanent `sr-only` div, because a
+ * freshly inserted `aria-live` element is not reliably spoken -- assistive tech watches
+ * regions it already knows about. The visible toast is rebuilt per message and marked
+ * `aria-hidden`, so one sentence is never read twice.
+ *
+ * Every status in this app once went to the live region alone. That made the interface
+ * silent for anyone not running a screen reader: clicking "Write .eml" closed the sheet,
+ * the server wrote both the PDF and the .eml, and the page said nothing at all. Feedback
+ * a sighted reader cannot see is not feedback.
+ *
+ * `progress` has no timeout -- it is superseded by the next call, so a multi-step action
+ * reads as one message that changes rather than a stack that piles up. Errors sit ten
+ * times longer than a confirmation because they are the ones worth reading twice.
+ *
+ * `silent` speaks without showing. The two channels do not want the same messages: a
+ * screen reader needs to be told the case changed, because the whole screen just did,
+ * while a sighted reader can see the new case name in the topbar and does not need a
+ * card about it on every load.
+ *
+ * @param {string} message
+ * @param {object} [options]
+ * @param {"info"|"success"|"error"|"progress"} [options.kind]
+ * @param {boolean} [options.silent] - announce to assistive tech only, show no toast
+ * @param {{label: string, href: string, download?: string}} [options.action] - one
+ *   optional link, for when the message names something the reader will want to open.
+ */
+const TOAST_MS = { info: 5000, success: 9000, error: 14000, progress: 0 };
+const TOAST_GLYPH = { info: "info", success: "check", error: "warning", progress: null };
+
 let liveRegion = null;
-export function announce(message) {
+let toastHost = null;
+let toastTimer = 0;
+
+export function announce(message, { kind = "info", action = null, silent = false } = {}) {
   if (!liveRegion) {
     liveRegion = h("div", {
       class: "sr-only",
@@ -158,6 +193,66 @@ export function announce(message) {
   setTimeout(() => {
     liveRegion.textContent = message;
   }, 30);
+
+  if (!silent) toast(message, kind, action);
+}
+
+/** The visible half of `announce`. Not exported: one status channel, not two. */
+function toast(message, kind, action) {
+  if (!toastHost) {
+    // `aria-hidden` for the whole layer: the live region above already spoke. Everything
+    // focusable inside is therefore `tabindex="-1"`, since focusing a hidden node is
+    // invalid ARIA -- the toast expires on its own, so nothing here is a dead end.
+    toastHost = h("div", { class: "toast-host", "aria-hidden": "true" });
+    document.body.appendChild(toastHost);
+  }
+  clearTimeout(toastTimer);
+
+  const name = TOAST_GLYPH[kind];
+  mount(
+    toastHost,
+    h(
+      "div",
+      { class: `toast toast--${kind}`, onClick: dismissToast },
+      h(
+        "span",
+        { class: "toast__glyph" },
+        name ? icon(ICONS[name], { size: 15 }) : h("span", { class: "toast__pulse" }),
+      ),
+      h("p", { class: "toast__msg" }, message),
+      action?.href
+        ? h(
+            "a",
+            {
+              class: "toast__action",
+              href: action.href,
+              target: "_blank",
+              rel: "noopener",
+              download: action.download || null,
+              tabindex: "-1",
+              onClick: (event) => event.stopPropagation(),
+            },
+            action.label,
+          )
+        : null,
+      h(
+        "button",
+        { class: "toast__close", type: "button", tabindex: "-1", onClick: dismissToast },
+        icon(ICONS.close, { size: 13 }),
+      ),
+    ),
+  );
+
+  const ms = TOAST_MS[kind] ?? TOAST_MS.info;
+  if (ms) toastTimer = setTimeout(dismissToast, ms);
+}
+
+function dismissToast() {
+  clearTimeout(toastTimer);
+  const card = toastHost?.firstElementChild;
+  if (!card) return;
+  card.classList.add("is-leaving");
+  setTimeout(() => card.remove(), 220);
 }
 
 /** Trailing-edge debounce, for resize and pointer-move handlers. */

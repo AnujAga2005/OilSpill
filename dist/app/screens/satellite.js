@@ -453,7 +453,7 @@ function analystCard(ctx, caseDoc) {
   const note = ctx.store.annotation(id);
   const set = (patch) => {
     ctx.store.annotate(id, patch);
-    ctx.announce("Analyst note saved locally.");
+    ctx.announce("Analyst note saved locally.", { kind: "success" });
   };
 
   return U.card(

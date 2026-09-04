@@ -99,6 +99,8 @@ export function slicksCsv(caseDoc) {
     "touches_scene_edge",
     "geometry_valid",
     "quality_flags",
+    "screening_label",
+    "screening_oil_likelihood",
     "detection_source",
   ];
   const source = caseDoc?.provenance?.detectionLabel || caseDoc?.detection?.source || "";
@@ -122,7 +124,66 @@ export function slicksCsv(caseDoc) {
         slick.touchesSceneEdge,
         slick.geometryValid,
         (slick.qualityFlags || []).join("; "),
+        slick.screening?.label,
+        slick.screening?.oilLikelihood,
         source,
+      ]
+        .map(cell)
+        .join(","),
+    );
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+/**
+ * The screened dark patches as CSV: one row per proposal, verdict included.
+ *
+ * Exported separately from the slicks because these are not detections. A patch that
+ * overlaps no published slick is evidence about what the screen rejects, and mixing it into
+ * the slick table would read as a detection the case is making.
+ */
+export function patchesCsv(caseDoc) {
+  const header = [
+    "id",
+    "label",
+    "oil_likelihood",
+    "area_km2",
+    "pixels",
+    "centroid_lon",
+    "centroid_lat",
+    "overlaps_slick",
+    "overlap_fraction",
+    "darkness_z",
+    "darkness_p10_z",
+    "texture_ratio",
+    "edge_sharpness",
+    "compactness",
+    "solidity",
+    "elongation",
+    "reasons",
+  ];
+  const lines = [header.join(",")];
+  for (const patch of caseDoc?.screening?.patches || []) {
+    const measured = patch.measured || {};
+    lines.push(
+      [
+        patch.id,
+        patch.label,
+        patch.oilLikelihood,
+        patch.areaKm2,
+        patch.pixels,
+        patch.centroid?.[0],
+        patch.centroid?.[1],
+        patch.overlapsSlick,
+        patch.overlapFraction,
+        measured.darknessZ,
+        measured.darknessP10Z,
+        measured.textureRatio,
+        measured.edgeSharpness,
+        measured.compactness,
+        measured.solidity,
+        measured.elongation,
+        (patch.reasons || []).join("; "),
       ]
         .map(cell)
         .join(","),

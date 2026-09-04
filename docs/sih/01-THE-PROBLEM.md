@@ -126,11 +126,36 @@ schema. This is a strong hint: if your synthetic feed emits *exactly* those colu
 pipeline is provably real-AIS-ready and a judge can see that switching to a live feed is a file
 drop rather than a rewrite. Download their sample CSV and match the header exactly.
 
-**Gift 3 — they named the imagery dataset.** "Zenodo – Sentinel-1 SAR Oil Spill Dataset" is
-almost certainly the dataset already in this repository (1,200 image/mask pairs in `Oil/` and
-`Mask_oil/`). **Verify this against the Zenodo record.** If it matches, then "why are you using
-Persian Gulf data instead of Indian waters?" has a one-line answer: *because it is the dataset
-the problem statement recommended.* That converts a weakness into compliance.
+**Gift 3 — they named the imagery dataset, and it is the one we have.** *Verified, not assumed.*
+"Zenodo – Sentinel-1 SAR Oil Spill Dataset" is:
+
+> Trujillo-Acatitla, R., Tuxpan-Vargas, J., Ovando-Vázquez, C., & Monterrubio-Martínez, E. (2023).
+> *Sentinel-1 SAR oil spill image dataset for train, validate, and test deep learning models.
+> Part I.* Zenodo. DOI **10.5281/zenodo.8346860** (concept DOI `10.5281/zenodo.8346859`),
+> CC BY 4.0. Authors at IPICYT, Mexico.
+
+That is the archive holding our 1,200 image/mask pairs in `Oil/` and `Mask_oil/`. It is documented
+by a peer-reviewed paper you can hand a judge: *"Marine oil spill detection and segmentation in SAR
+data with two steps Deep Learning framework,"* **Marine Pollution Bulletin 204: 116549** (2024),
+DOI `10.1016/j.marpolbul.2024.116549`. The match was confirmed on eight independent fingerprints —
+file count, the `NNNNN.tif` naming, raster dimensions, band naming, dtype, the embedded BEAM-DIMAP
+processing chain, mask value encoding, and the acquisition date span.
+
+**Two things follow, and the second one matters more.**
+
+*The compliance answer is now a fact, not a guess.* "Which dataset is this?" has a citation with two
+DOIs and a journal article behind it.
+
+*But do not repeat the "Persian Gulf data" framing — it is wrong, and it is our own error.* This
+dataset is **global**, not regional: 1,200 scenes across **24 named seas**, from 95°W to 130°E and
+8°S to 61°N. The Gulf of Mexico is the largest block at 388 scenes; the Eastern Mediterranean has
+172; the **Persian Gulf is 88, about 7%**. Only our *demo case* is a Persian Gulf scene. The full
+breakdown is the "Approximate regions covered" table in `DATA_AUDIT.md`.
+
+So the honest version of the awkward question is not "why the Persian Gulf?" but **"why no Indian
+water?"** — and the answer is that the recommended dataset contains none. Not one of the 1,200
+scenes falls between 65–95°E and 5–25°N. That is a real gap, it is a generalisation question rather
+than a compliance one, and §3.8 item 6 is how we close it.
 
 ---
 
@@ -168,8 +193,9 @@ Sentinel-1 SAR image
 [9] Visual interface ───────────────────► the analyst's screen      (expected soln)
 ```
 
-Nine stages. Our pipeline implements nine stages with almost exactly these boundaries — see
-document 3.
+Nine boxes. Our pipeline implements them as **ten** named stages with almost exactly these
+boundaries — the extra one is the look-alike screen, which sits between the geometry and the
+forcing and has no box of its own above because the PS never asked for it. See document 3.
 
 ---
 
@@ -203,7 +229,9 @@ intelligence audience.
 - [ ] **Watch the briefing video** (link above). These NTRO videos usually state what the
       evaluators actually want. Ten minutes that could redirect a week of work. Nobody has
       watched it yet.
-- [ ] **Verify the Zenodo dataset identity** against our `Oil/` filenames.
+- [x] **Verify the Zenodo dataset identity** against our `Oil/` filenames. Done — Part I,
+      DOI `10.5281/zenodo.8346860`, matched on eight independent fingerprints. See §1.3, gift 3.
+- [ ] **Add one Indian scene.** The recommended dataset has none; §3.8 item 6 has the recipe.
 - [x] **Download the MarineCadastre sample CSV** and record its exact column header. Done —
       `data/raw/AIS_2022_06_01.csv`, and the 17-column header now matches what the app emits at
       `/api/cases/demo/ais.csv` byte-for-byte.

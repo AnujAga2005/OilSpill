@@ -82,7 +82,7 @@ export function render(ctx) {
                 X.exportName(caseDoc, "slicks", "geojson"),
                 caseDoc.geometry?.geojson || { type: "FeatureCollection", features: [] },
               );
-              ctx.announce("Slick outlines downloaded as GeoJSON.");
+              ctx.announce("Slick outlines downloaded as GeoJSON.", { kind: "success" });
             },
           }),
           U.button("CSV", {
@@ -91,7 +91,7 @@ export function render(ctx) {
             iconPath: ICONS.download,
             onClick: () => {
               X.downloadCsv(X.exportName(caseDoc, "slicks", "csv"), X.slicksCsv(caseDoc));
-              ctx.announce("Slick table downloaded as CSV.");
+              ctx.announce("Slick table downloaded as CSV.", { kind: "success" });
             },
           }),
         ),
@@ -141,7 +141,238 @@ export function render(ctx) {
       ),
     ),
 
+    screeningCard(ctx, caseDoc),
+
     qualityCard(caseDoc, slick),
+  );
+}
+
+// -- look-alike screening ----------------------------------------------------
+
+/** Verdict label -> badge tone. Amber is the one that wants an analyst's eye. */
+const VERDICT_TONE = {
+  accepted: "model",
+  uncertain: "synthetic",
+  rejected: "supplied",
+  unscreened: "",
+};
+
+function verdictBadge(label) {
+  if (!label) return null;
+  return U.badge(label, VERDICT_TONE[label] ?? "", {
+    title:
+      label === "rejected"
+        ? "More consistent with a look-alike than with oil. The screen does not name which look-alike."
+        : label === "accepted"
+          ? "Consistent with an oil film."
+          : label === "uncertain"
+            ? "Between the two thresholds, so kept for human review."
+            : "No clear water around this region to measure it against, so no verdict is offered.",
+  });
+}
+
+/**
+ * What else in this scene looked like oil, and what the screen made of it.
+ *
+ * This is the one card on the screen that reports something the pipeline *rejected*, so it
+ * is written to be checkable: every patch carries the three statistics the decision turned
+ * on, the verdict, and whether it lands on a published slick or somewhere else entirely. A
+ * rejected patch that overlaps nothing was never in the case, and the limits say so - the
+ * value is the evidence about what the screen throws out, not a correction to the table above.
+ */
+function screeningCard(ctx, caseDoc) {
+  const block = caseDoc.screening;
+  if (!block) return null;
+
+  const counts = block.counts || {};
+  const patches = block.patches || [];
+  const thresholds = block.thresholds || {};
+  const components = block.components || {};
+  const rejected = patches.filter((patch) => patch.label === "rejected");
+
+  return U.card(
+    "Look-alike screening",
+    {
+      id: "screening",
+      hint: block.fitted ? "seven-feature linear screen" : "no screen fitted",
+      note: block.question,
+      actions: patches.length
+        ? U.button("CSV", {
+            kind: "quiet",
+            small: true,
+            iconPath: ICONS.download,
+            onClick: () => {
+              X.downloadCsv(X.exportName(caseDoc, "dark-patches", "csv"), X.patchesCsv(caseDoc));
+              ctx.announce("Screened dark patches downloaded as CSV.", { kind: "success" });
+            },
+          })
+        : null,
+    },
+    h(
+      "div",
+      { class: "stack stack--tight" },
+
+      block.fitted
+        ? null
+        : U.notice(block.limits?.[0] || "No look-alike screen has been fitted.", {
+            kind: "synthetic",
+            strongPrefix: "Unfitted.",
+          }),
+
+      // The reconciling fact, above the patch counts rather than below them. The proposals
+      // are cut out of the scene by a darkness threshold and the regions above by the
+      // network, so the screen can reject every proposal and still keep every region --
+      // and a reader who saw only the rejections would think this scene held no oil.
+      components.screened
+        ? U.notice(
+            // An em dash, not a full stop: the note is written to follow a label, so it
+            // opens lower-case and a sentence break would read as a typo here.
+            `${F.int(components.accepted)} of ${F.int(components.screened)} published ` +
+              `${components.screened === 1 ? "region is" : "regions are"} consistent with oil — ` +
+              components.note,
+            { strongPrefix: "The regions above:" },
+          )
+        : null,
+
+      h(
+        "div",
+        { class: "grid grid--stats" },
+        U.stat({
+          label: "Dark patches examined",
+          value: F.int(counts.proposed),
+          sub: `${F.int(counts.overlappingPublishedSlick)} of them land on a published slick`,
+        }),
+        U.stat({
+          label: "Rejected as look-alikes",
+          value: F.int(counts.rejected),
+          sub: `likelihood at or below ${F.num(thresholds.rejectAtOrBelow, 2)}`,
+        }),
+        U.stat({
+          label: "Kept for review",
+          value: F.int(counts.uncertain),
+          tone: "synthetic",
+          sub: "between the two thresholds, so not suppressed",
+        }),
+        U.stat({
+          label: "Consistent with oil",
+          value: F.int(counts.accepted),
+          tone: "oil",
+          sub: `likelihood at or above ${F.num(thresholds.acceptAtOrAbove, 2)}`,
+        }),
+      ),
+
+      patches.length ? patchTable(ctx, caseDoc, patches) : null,
+
+      rejected.length
+        ? h(
+            "div",
+            { class: "stack stack--tight" },
+            h(
+              "p",
+              { class: "small muted" },
+              `Why ${F.int(rejected.length)} patch${rejected.length === 1 ? " was" : "es were"} rejected:`,
+            ),
+            h(
+              "ul",
+              { class: "bullets" },
+              rejected.slice(0, 4).map((patch) =>
+                h(
+                  "li",
+                  null,
+                  h("span", null, h("span", { class: "mono" }, patch.id), " — ", patch.reasons?.[0] || patch.headline),
+                ),
+              ),
+            ),
+            rejected.length > 4
+              ? h("p", { class: "small muted" }, `${F.int(rejected.length - 4)} more in the table above.`)
+              : null,
+          )
+        : null,
+
+      block.limits?.length
+        ? h(
+            "ul",
+            { class: "bullets small muted" },
+            (block.fitted ? block.limits : block.limits.slice(1)).map((limit) =>
+              h("li", null, h("span", null, limit)),
+            ),
+          )
+        : null,
+
+      U.rows(
+        U.row("Proposer", block.proposer?.rule, { stack: true }),
+        U.row("Calibration", block.calibration, { stack: true }),
+      ),
+    ),
+  );
+}
+
+function patchTable(ctx, caseDoc, patches) {
+  const regionIds = new Set((caseDoc.geometry?.slicks || []).map((region) => region.id));
+  return h(
+    "div",
+    { class: "table-wrap" },
+    h(
+      "table",
+      { class: "table" },
+      h(
+        "thead",
+        null,
+        h(
+          "tr",
+          null,
+          h("th", null, "Patch"),
+          h("th", { class: "right" }, "Area km²"),
+          h("th", { class: "right" }, "Darkness σ"),
+          h("th", { class: "right" }, "Roughness"),
+          h("th", { class: "right" }, "Elongation"),
+          h("th", { class: "right" }, "Oil-like"),
+          h("th", null, "Verdict"),
+          h("th", null, "Region"),
+        ),
+      ),
+      h(
+        "tbody",
+        null,
+        patches.map((patch) => {
+          const measured = patch.measured || {};
+          // Clicking a patch that sits on a published slick selects that slick, so the
+          // detail card and the map follow. A patch that overlaps nothing has nowhere to go.
+          const target = regionIds.has(patch.overlapsSlick) ? patch.overlapsSlick : null;
+          const select = target ? () => ctx.setParams({ slick: target }) : null;
+          return h(
+            "tr",
+            {
+              tabindex: target ? "0" : null,
+              role: target ? "button" : null,
+              onClick: select,
+              onKeydown: select
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      select();
+                    }
+                  }
+                : null,
+            },
+            h("td", { class: "mono" }, patch.id),
+            h("td", { class: "right" }, F.km2(patch.areaKm2)),
+            h("td", { class: "right" }, F.num(measured.darknessZ, 2)),
+            h("td", { class: "right" }, F.num(measured.textureRatio, 2)),
+            h("td", { class: "right" }, F.num(measured.elongation, 2)),
+            h("td", { class: "right" }, F.pct(patch.oilLikelihood)),
+            h("td", null, verdictBadge(patch.label)),
+            h(
+              "td",
+              { class: "mono" },
+              patch.overlapsSlick
+                ? `${patch.overlapsSlick} · ${F.pct(patch.overlapFraction)}`
+                : h("span", { class: "muted" }, "elsewhere in the scene"),
+            ),
+          );
+        }),
+      ),
+    ),
   );
 }
 
@@ -400,7 +631,10 @@ function editControls(ctx, edit, target, { paintMap, paintChrome }) {
             note: "Analyst delineation. Not a model output.",
           },
         });
-        ctx.announce(`Analyst boundary saved, ${F.km2(ringAreaKm2(ring))} square kilometres.`);
+        ctx.announce(
+          `Analyst boundary saved, ${F.km2(ringAreaKm2(ring))} square kilometres.`,
+          { kind: "success" },
+        );
       },
     }),
     U.button("Reset to model", {
@@ -544,6 +778,20 @@ function regionsCard(ctx, caseDoc, regions, selectedId) {
                   region.elongation >= (caseDoc.geometry?.config?.elongation_flag || 4)
                     ? U.badge("linear", "synthetic")
                     : null,
+                  // Only the exceptions. A badge on every accepted region would be noise,
+                  // and this column is where a reader looks for what needs a second look.
+                  region.screening?.label === "rejected"
+                    ? U.badge("look-alike", "supplied", {
+                        title:
+                          "The look-alike screen finds this region more consistent with " +
+                          "something other than oil. It is still published.",
+                      })
+                    : null,
+                  region.screening?.label === "uncertain"
+                    ? U.badge("uncertain", "synthetic", {
+                        title: "The look-alike screen could not separate this region either way.",
+                      })
+                    : null,
                 ),
               ),
             ),
@@ -558,6 +806,8 @@ function regionDetailCard(region) {
   if (!region) {
     return U.card("Region detail", { id: "region" }, U.emptyState({ title: "Nothing selected" }));
   }
+  const screening = region.screening;
+  const measured = screening?.measured || {};
   return U.card(
     "Region detail",
     { id: "region", hint: region.id },
@@ -576,6 +826,48 @@ function regionDetailCard(region) {
       U.row("Above 0.8", F.pct(region.fractionAbove0_8), { mono: true }),
       U.row("Outline geometry", region.ringGeometry, { mono: true }),
     ),
+    // The look-alike verdict for this one region, kept below the geometry because it is a
+    // different kind of claim: everything above is measured, this is inferred.
+    screening
+      ? h(
+          "div",
+          { class: "stack stack--tight", style: { "margin-top": "var(--s4)" } },
+          h(
+            "div",
+            { class: "inline" },
+            verdictBadge(screening.label),
+            h("span", { class: "small muted" }, screening.headline),
+          ),
+          U.rows(
+            U.row("Oil-likelihood", F.pct(screening.oilLikelihood), { mono: true }),
+            U.row("Darkness", `${F.num(measured.darknessZ, 2)} σ below the water around it`, { mono: true }),
+            U.row("Darkest tenth", `${F.num(measured.darknessP10Z, 2)} σ`, { mono: true }),
+            U.row("Interior roughness", `${F.num(measured.textureRatio, 2)} × the background`, { mono: true }),
+            U.row("Edge definition", `${F.num(measured.edgeSharpness, 2)} × the ambient gradient`, { mono: true }),
+            U.row("Solidity", F.num(measured.solidity, 3), { mono: true }),
+            U.row(
+              "Contrast",
+              F.isMissing(measured.contrast)
+                ? null
+                : `${F.num(measured.contrast, 2)} ${measured.contrastUnit || ""}`.trim(),
+              { mono: true },
+            ),
+            U.row(
+              "Depolarisation",
+              F.isMissing(measured.depolarisation) ? null : `${F.num(measured.depolarisation, 2)} dB VV−VH`,
+              { mono: true },
+            ),
+          ),
+          screening.reasons?.length
+            ? h(
+                "ul",
+                { class: "bullets small" },
+                screening.reasons.map((reason) => h("li", null, h("span", null, reason))),
+              )
+            : null,
+          h("p", { class: "card__note" }, screening.appliedTo),
+        )
+      : null,
   );
 }
 

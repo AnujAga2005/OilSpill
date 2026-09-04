@@ -54,7 +54,14 @@ class Response:
         return json.loads(self.body.decode())
 
 
-def request(method: str, path: str, body: dict[str, Any] | None = None, *, api_only: bool = False):
+def request(
+    method: str,
+    path: str,
+    body: dict[str, Any] | None = None,
+    *,
+    api_only: bool = False,
+    headers: dict[str, str] | None = None,
+):
     """Drive one request through the real handler and return the parsed response."""
     base = server_mod.ApiOnlyHandler if api_only else server_mod.SpillTraceHandler
 
@@ -80,6 +87,8 @@ def request(method: str, path: str, body: dict[str, Any] | None = None, *, api_o
             pass
 
     head = f"{method} {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n"
+    for name, value in (headers or {}).items():
+        head += f"{name}: {value}\r\n"
     payload = b"" if body is None else json.dumps(body).encode()
     if body is not None:
         head += f"Content-Type: application/json\r\nContent-Length: {len(payload)}\r\n"
@@ -363,6 +372,29 @@ class TestCaseReads:
         assert payload["limits"] == ["synthetic AIS"]
         assert "detectionMetrics" in payload
 
+    def test_the_report_summarises_the_screening_without_the_patch_detail(self, store):
+        """The counts are the part a brief needs; the per-patch table is a download."""
+        case = sample_case()
+        case["screening"] = {
+            "headline": "2 of 9 dark patches rejected as look-alikes",
+            "fitted": True,
+            "counts": {"proposed": 9, "rejected": 2, "accepted": 6, "uncertain": 1},
+            "thresholds": {"rejectAtOrBelow": 0.35, "acceptAtOrAbove": 0.65},
+            "limits": ["the screen cannot name the phenomenon"],
+            "patches": [{"id": f"patch-{index:02d}"} for index in range(9)],
+        }
+        store.save("demo", case)
+        block = get("/api/cases/demo/report", api_only=True).json()["screening"]
+        assert block["counts"]["rejected"] == 2
+        assert block["headline"].startswith("2 of 9")
+        assert block["thresholds"]["acceptAtOrAbove"] == 0.65
+        assert block["limits"]
+        assert "patches" not in block
+
+    def test_a_case_with_no_screening_says_so_rather_than_omitting_the_key(self, store):
+        store.save("demo", sample_case())
+        assert get("/api/cases/demo/report", api_only=True).json()["screening"] is None
+
     def test_the_csv_report_is_an_attachment(self, store):
         store.save("demo", sample_case())
         response = get("/api/cases/demo/report?format=csv", api_only=True)
@@ -465,6 +497,24 @@ class TestMetricsAndHealth:
         scene = ((payload["sceneScale"]["test"] or {}).get("atSceneThreshold") or {})
         if scene:
             assert scene["pooled"]["iou"] != patch  # they genuinely disagree
+
+    def test_the_look_alike_screen_answers_a_question_iou_cannot(self):
+        """Every IoU on this product is measured on scenes that contain oil, so none of them
+        says how often dark water that is not oil raises an alarm. That figure lives here, and
+        when it has not been measured the endpoint has to say so rather than stay silent."""
+        block = get("/api/metrics", api_only=True).json()["lookAlike"]
+        if block["available"]:
+            assert set(block) >= {
+                "question",
+                "screen",
+                "features",
+                "sameDomain",
+                "crossDomain",
+                "limitations",
+            }
+            assert block["limitations"]
+        else:
+            assert "run_lookalike_eval" in block["note"]
 
     def test_health_publishes_the_disclaimers_the_interface_renders(self):
         payload = get("/api/health", api_only=True).json()
@@ -574,6 +624,36 @@ class TestStaticFiles:
         response = get("/app/main.js")
         assert response.status == 200
         assert response.headers["content-type"].startswith("text/javascript")
+
+    def test_source_revalidates_instead_of_being_cached_for_five_minutes(self):
+        """`apps/web` is served off disk, so a stale module is code that is not there.
+
+        This cost an hour once: an edit to `ui.js` was invisible in the browser, the
+        served bytes were correct, and the page was running the copy it had cached under
+        `max-age=300` with no validator to revalidate against.
+        """
+        for path in ("/app/main.js", "/styles/components.css", "/"):
+            response = get(path)
+            assert response.headers["cache-control"] == "no-cache", path
+            assert response.headers.get("etag"), path
+
+    def test_an_unchanged_module_answers_304(self):
+        first = get("/app/main.js")
+        again = get("/app/main.js", headers={"If-None-Match": first.headers["etag"]})
+        assert again.status == 304
+        assert again.body == b""
+
+    def test_a_raster_keeps_the_long_cache(self):
+        """Previews are content-addressed by case; they do not change under a running server."""
+        response = get("/demo/previews/does-not-exist.png")
+        # Absent files fall back to the shell, so assert on the rule instead of a fixture.
+        assert response.status == 200
+        png = ROOT / "apps" / "web" / "demo" / "previews"
+        names = sorted(p.name for p in png.glob("*.png")) if png.is_dir() else []
+        if not names:
+            pytest.skip("no bundled previews on disk; run scripts/build_web.py")
+        served = get(f"/demo/previews/{names[0]}")
+        assert served.headers["cache-control"] == "public, max-age=300"
 
     def test_an_unknown_path_falls_back_to_the_shell(self):
         """Client-side routing: `/vessels` is a screen, not a file."""

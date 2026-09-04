@@ -13,7 +13,7 @@ is written so it can be cut down or stretched without losing the spine.
 **Get the slides out of the way in about 90 seconds, then demo.**
 
 Almost every team in the room will have a deck, an architecture diagram and a promise. Very few
-will have a thing that runs. Yours runs, offline, on a laptop, in about 20 seconds, with no
+will have a thing that runs. Yours runs, offline, on a laptop, in about 25 seconds, with no
 internet.
 That is your entire competitive advantage and every minute spent on slides is a minute spent not
 using it.
@@ -44,7 +44,7 @@ keeps happening. Detection is not the problem. **Attribution is the problem.**
 **2. The idea.** Oil drifts. Drift is physics. Physics runs backwards. So if you can see the oil
 now, you can compute where it started and when — and then ask which ships were there.
 
-**3. The chain.** Nine stages, satellite pixel to ranked candidate. Show, do not describe.
+**3. The chain.** Ten stages, satellite pixel to ranked candidate. Show, do not describe.
 
 **4. The proof.** Real data, real model, and a measured comparison against the non-AI method.
 0.771 IoU against 0.582.
@@ -67,11 +67,11 @@ Keep it this short. The demo is the presentation.
 |---|---|---|
 | 1 | **Title** | SpillTrace · PS 26143 · NTRO · Disaster Management · team name. Nothing else. |
 | 2 | **The gap** | One number about spill frequency or damage, and NTRO's "remain un-attributable" quote. 15 seconds. |
-| 3 | **The chain** | The nine-stage diagram from document 1 §1.4. **This is your most important slide.** Point at it once, then never return. |
+| 3 | **The chain** | The ten-stage diagram from document 1 §1.4. **This is your most important slide.** Point at it once, then never return. |
 | 4 | **PS compliance** | Left column: verbatim (a)/(b)/(c). Right column: the screen that does it and the number it produces. **Built for you: [document 6](06-PS-COMPLIANCE.md).** Show five of its thirteen rows; hand the full table over as a printout. Judges score against a rubric — hand it to them filled in. |
 | 5 | **The proof** | 1,200 real pairs · 270 acquisitions · grouped by acquisition (see the leakage note in doc 3 §3.5 — quote it, don't claim "no leakage") · **0.771 IoU vs 0.582 classical baseline**. |
 | 6 | **What's real, what's synthetic** | The table from document 3 §3.4, verbatim. Put it *before* the demo, not after. |
-| 7 | **Architecture** | Nine stages, three Python dependencies, zero frontend dependencies, runs offline. One line: *Node handles people and process, Python handles physics and pixels.* |
+| 7 | **Architecture** | Ten stages, two pipeline dependencies, zero frontend dependencies, runs offline. One line: *Node handles people and process, Python handles physics and pixels.* |
 | 8 | **Roadmap** | Tier 0 is done — say so in one line and move on. Then the Tier-1 items from doc 3 §3.10 with honest effort estimates, real forcing data first. |
 
 **Slide 6 goes before the demo deliberately.** Disclosing the synthetic parts *before* showing
@@ -220,7 +220,9 @@ of judgement — in about eighty seconds.
 > sampled near known oil, so that number flatters us. On full 2048-pixel scenes the honest
 > figures are 0.78 pooled and **0.64 averaged per scene**, and our single worst scene is far
 > worse than that — it's on this screen. The dataset contains no labelled algal blooms or
-> low-wind zones, so our ability to reject look-alikes is untested. All of that ships in the
+> low-wind zones, so we went and got 2,290 published look-alike patches and scored ourselves on
+> them: **our U-Net alone alarms on all of them.** A dedicated screen removes about seven in ten
+> of those dark regions, which is an improvement and not a solution. All of that ships in the
 > product, not just in the pitch."
 
 **Land the plane here.** Do not go back to the Command centre for a triumphant flourish. Ending
@@ -246,7 +248,7 @@ sentence and the three numbers.**
 |---|---|
 | **1,200 real Sentinel-1 image/mask pairs, 270 acquisitions, grouped by acquisition** | real data, and a splitting rule you can defend — with the leakage caveat volunteered, not hidden |
 | **0.771 IoU vs 0.582 for the classical dark-spot baseline** | the ML earns its place, measured not asserted |
-| **532 automated tests; the whole pipeline runs offline on one scene in 19 seconds** | it is engineering, not a notebook |
+| **772 automated tests; the whole pipeline runs offline on one scene in 24 seconds** | it is engineering, not a notebook |
 
 Have **0.64 mean per-scene IoU** ready as the fourth number the moment anyone probes. Offering
 it unprompted is even better.
@@ -305,7 +307,7 @@ hesitation.
 | "99% accurate" | accuracy is meaningless at 1% positive class, and it invites a demolition |
 | "Real time" | Sentinel-1 revisits every ~6 days. Say **"within hours of the image being available."** |
 | "Our AIS is real" | it is not. It is permitted, labelled, and defensible — but not real. |
-| "It works everywhere" | untested on look-alikes, one region, one sensor |
+| "It works everywhere" | 24 seas but **no Indian water at all**, one sensor, and a look-alike rejection rate of 69%, not 100% |
 | "We use AI" *(and stop there)* | say what it replaced and by how much: +0.19 IoU over the classical baseline |
 | Any MARPOL ppm figure you have not verified | a wrong regulatory detail in front of NTRO costs more than silence |
 | "I don't know" *(and stop there)* | always follow with what you would do to find out. See document 5. |
@@ -335,7 +337,7 @@ hesitation.
       mid-demo, switch tabs and keep talking — the demo case replays from static files.
 - [ ] Laptop on mains power. Notifications off. Screen sleep off. Slack and mail quit.
 - [ ] `RUNBOOK.md` open in a spare tab so any team member can restart anything.
-- [ ] A printed copy of the nine-stage diagram and the real-vs-synthetic table, for judges who
+- [ ] A printed copy of the ten-stage diagram and the real-vs-synthetic table, for judges who
       prefer paper.
 - [ ] A printed copy of the **[document 6](06-PS-COMPLIANCE.md)** compliance table — one per judge.
       It is the one page that answers "does it do what we asked?" without you saying a word.

@@ -1,0 +1,3059 @@
+{
+  "pipelineVersion": "spilltrace-0.1.0",
+  "generatedUtc": "2026-09-04T09:31:11Z",
+  "elapsedSeconds": 10621.16,
+  "question": "Given a dark region in a SAR scene, is it oil or a look-alike? Every other metric in this project assumes the answer is already oil.",
+  "screen": {
+    "features": [
+      {
+        "name": "darknessZ",
+        "label": "darkness against local water",
+        "unit": "background standard deviations",
+        "oilDirection": 1,
+        "rationale": "oil damps the short capillary waves the radar sees, so a film sits several standard deviations below the water around it; a low-wind patch is shallower because the water is only slightly smoother, not covered",
+        "weight": 2.31423,
+        "trainingMean": 1.46926,
+        "trainingStd": 0.54426
+      },
+      {
+        "name": "darknessP10Z",
+        "label": "darkness of the darkest tenth",
+        "unit": "background standard deviations",
+        "oilDirection": 1,
+        "rationale": "a mean can be dragged down by a few very dark pixels, so the tenth percentile asks whether the whole region is dark or only part of it",
+        "weight": 1.06789,
+        "trainingMean": 2.58555,
+        "trainingStd": 0.85314
+      },
+      {
+        "name": "textureRatio",
+        "label": "interior roughness",
+        "unit": "ratio to background",
+        "oilDirection": -1,
+        "rationale": "a damped surface is smoother than the sea around it, so its pixel spread is narrower; wind shadows and blooms stay as speckled as open water",
+        "weight": -0.47627,
+        "trainingMean": 0.88266,
+        "trainingStd": 0.25545
+      },
+      {
+        "name": "edgeSharpness",
+        "label": "edge definition",
+        "unit": "ratio to background gradient",
+        "oilDirection": 1,
+        "rationale": "a film has a physical boundary and the backscatter steps across it; a low-wind zone fades, so its edge gradient is no stronger than the ambient texture",
+        "weight": -0.66163,
+        "trainingMean": 1.39878,
+        "trainingStd": 0.21856
+      },
+      {
+        "name": "compactness",
+        "label": "compactness",
+        "unit": "4piA/P^2, 1.0 is a circle",
+        "oilDirection": -1,
+        "rationale": "spills are drawn out by wind and current into ragged forms; a compact blob is more consistent with a wind cell or a bloom patch",
+        "weight": -0.37238,
+        "trainingMean": 0.18974,
+        "trainingStd": 0.10394
+      },
+      {
+        "name": "solidity",
+        "label": "solidity",
+        "unit": "area / convex hull area",
+        "oilDirection": -1,
+        "rationale": "a slick feathers at its edges and leaves gaps inside its hull; a smooth convex region is a weaker candidate",
+        "weight": 0.67476,
+        "trainingMean": 0.56083,
+        "trainingStd": 0.12316
+      },
+      {
+        "name": "elongation",
+        "label": "elongation",
+        "unit": "length / width",
+        "oilDirection": 1,
+        "rationale": "a discharge from a moving vessel is linear, and wind stretches any film along its axis, so elongation argues for oil -- though a ship wake is linear too, which is why this feature is never decisive on its own",
+        "weight": 0.5224,
+        "trainingMean": 2.0187,
+        "trainingStd": 1.16137
+      }
+    ],
+    "intercept": -1.68299,
+    "calibration": "fitted on 11623 dark regions (930 over labelled oil, 10693 not)",
+    "trainedOn": {
+      "domain": "Sentinel-1 VV decibels, the scenes supplied with this project",
+      "productsInDataset": 270,
+      "scenes": 270,
+      "products": 270,
+      "regions": 11623,
+      "oilRegions": 930,
+      "lookAlikeRegions": 10693,
+      "droppedAmbiguous": 336,
+      "droppedNoBackground": 0,
+      "spacingM": 9.3441,
+      "labelRule": "a dark region counts as oil when the supplied reference mask covers >= 50% of it and as not-oil when it covers <= 5%; the rest are dropped rather than guessed at",
+      "meanMaskRecallOfProposer": 0.9227,
+      "proposerNote": "the proposer is the same code that runs on the look-alike set and is given no reference mask; its recall of the labelled oil is reported so a high screening score cannot hide a proposer that simply missed the slick"
+    },
+    "classMeans": {
+      "oil": {
+        "darknessZ": 2.79382,
+        "darknessP10Z": 4.64774,
+        "textureRatio": 1.37954,
+        "edgeSharpness": 1.79233,
+        "compactness": 0.2038,
+        "solidity": 0.61604,
+        "elongation": 3.62539
+      },
+      "lookAlike": {
+        "darknessZ": 1.35406,
+        "darknessP10Z": 2.4062,
+        "textureRatio": 0.83944,
+        "edgeSharpness": 1.36455,
+        "compactness": 0.18851,
+        "solidity": 0.55603,
+        "elongation": 1.87897
+      }
+    },
+    "config": {
+      "smoothSigmaPx": 1.5,
+      "darknessK": 1.0,
+      "minAreaPx": 400,
+      "openRadiusPx": 2,
+      "closeRadiusPx": 3,
+      "maxRegions": 64,
+      "guardPx": 3,
+      "annulusPx": 20,
+      "boundaryPx": 2,
+      "minBackgroundPx": 200,
+      "rejectAtOrBelow": 0.35,
+      "acceptAtOrAbove": 0.65
+    },
+    "note": "weights apply to standardised features; the standardisation constants are carried with them so the file is self-contained"
+  },
+  "features": [
+    {
+      "name": "darknessZ",
+      "label": "darkness against local water",
+      "unit": "background standard deviations",
+      "oilDirection": 1,
+      "rationale": "oil damps the short capillary waves the radar sees, so a film sits several standard deviations below the water around it; a low-wind patch is shallower because the water is only slightly smoother, not covered",
+      "scaleFree": true
+    },
+    {
+      "name": "darknessP10Z",
+      "label": "darkness of the darkest tenth",
+      "unit": "background standard deviations",
+      "oilDirection": 1,
+      "rationale": "a mean can be dragged down by a few very dark pixels, so the tenth percentile asks whether the whole region is dark or only part of it",
+      "scaleFree": true
+    },
+    {
+      "name": "textureRatio",
+      "label": "interior roughness",
+      "unit": "ratio to background",
+      "oilDirection": -1,
+      "rationale": "a damped surface is smoother than the sea around it, so its pixel spread is narrower; wind shadows and blooms stay as speckled as open water",
+      "scaleFree": true
+    },
+    {
+      "name": "edgeSharpness",
+      "label": "edge definition",
+      "unit": "ratio to background gradient",
+      "oilDirection": 1,
+      "rationale": "a film has a physical boundary and the backscatter steps across it; a low-wind zone fades, so its edge gradient is no stronger than the ambient texture",
+      "scaleFree": true
+    },
+    {
+      "name": "compactness",
+      "label": "compactness",
+      "unit": "4piA/P^2, 1.0 is a circle",
+      "oilDirection": -1,
+      "rationale": "spills are drawn out by wind and current into ragged forms; a compact blob is more consistent with a wind cell or a bloom patch",
+      "scaleFree": true
+    },
+    {
+      "name": "solidity",
+      "label": "solidity",
+      "unit": "area / convex hull area",
+      "oilDirection": -1,
+      "rationale": "a slick feathers at its edges and leaves gaps inside its hull; a smooth convex region is a weaker candidate",
+      "scaleFree": true
+    },
+    {
+      "name": "elongation",
+      "label": "elongation",
+      "unit": "length / width",
+      "oilDirection": 1,
+      "rationale": "a discharge from a moving vessel is linear, and wind stretches any film along its axis, so elongation argues for oil -- though a ship wake is linear too, which is why this feature is never decisive on its own",
+      "scaleFree": true
+    }
+  ],
+  "contextFields": [
+    "pixels",
+    "areaKm2",
+    "contrast",
+    "contrastUnit",
+    "depolarisation",
+    "meanValue",
+    "backgroundMean",
+    "backgroundStd"
+  ],
+  "sameDomain": {
+    "training": {
+      "scenes": 270,
+      "products": 270,
+      "regions": 11623,
+      "oilRegions": 930,
+      "lookAlikeRegions": 10693,
+      "droppedAmbiguous": 336,
+      "droppedNoBackground": 0,
+      "spacingM": 9.3441,
+      "labelRule": "a dark region counts as oil when the supplied reference mask covers >= 50% of it and as not-oil when it covers <= 5%; the rest are dropped rather than guessed at",
+      "overlapHistogram": [
+        {
+          "from": 0.0,
+          "to": 0.001,
+          "regions": 10640
+        },
+        {
+          "from": 0.001,
+          "to": 0.02,
+          "regions": 33
+        },
+        {
+          "from": 0.02,
+          "to": 0.05,
+          "regions": 20
+        },
+        {
+          "from": 0.05,
+          "to": 0.1,
+          "regions": 25
+        },
+        {
+          "from": 0.1,
+          "to": 0.2,
+          "regions": 60
+        },
+        {
+          "from": 0.2,
+          "to": 0.3,
+          "regions": 81
+        },
+        {
+          "from": 0.3,
+          "to": 0.5,
+          "regions": 170
+        },
+        {
+          "from": 0.5,
+          "to": 1.001,
+          "regions": 930
+        }
+      ],
+      "meanMaskRecallOfProposer": 0.9227,
+      "proposerNote": "the proposer is the same code that runs on the look-alike set and is given no reference mask; its recall of the labelled oil is reported so a high screening score cannot hide a proposer that simply missed the slick",
+      "perScene": [
+        {
+          "scene": "00022",
+          "group": "S1A_IW_GRDH_1SDV_20150312T051245_20150312T051310_004994_006422_CE50",
+          "proposals": 64,
+          "labelled": 61,
+          "referenceOilFraction": 0.00796223,
+          "maskRecallOfProposer": 0.8908
+        },
+        {
+          "scene": "00415",
+          "group": "S1A_IW_GRDH_1SDV_20150402T154912_20150402T154937_005307_006B79_76F4",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00543594,
+          "maskRecallOfProposer": 0.9476
+        },
+        {
+          "scene": "00635",
+          "group": "S1A_IW_GRDH_1SDV_20150715T180547_20150715T180612_006825_009309_6B88",
+          "proposals": 64,
+          "labelled": 61,
+          "referenceOilFraction": 0.00734973,
+          "maskRecallOfProposer": 0.9993
+        },
+        {
+          "scene": "00391",
+          "group": "S1A_IW_GRDH_1SDV_20150731T154918_20150731T154943_007057_00998A_E86C",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.00618339,
+          "maskRecallOfProposer": 0.9705
+        },
+        {
+          "scene": "00223",
+          "group": "S1A_IW_GRDH_1SDV_20150804T165529_20150804T165554_007116_009B29_5A79",
+          "proposals": 12,
+          "labelled": 12,
+          "referenceOilFraction": 0.08392072,
+          "maskRecallOfProposer": 0.7627
+        },
+        {
+          "scene": "00176",
+          "group": "S1A_IW_GRDH_1SDV_20150828T165530_20150828T165555_007466_00A4B1_23DB",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.0042417,
+          "maskRecallOfProposer": 0.9501
+        },
+        {
+          "scene": "00408",
+          "group": "S1A_IW_GRDH_1SDV_20150831T154054_20150831T154119_007509_00A5F2_94DC",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00575781,
+          "maskRecallOfProposer": 0.9627
+        },
+        {
+          "scene": "00100",
+          "group": "S1A_IW_GRDH_1SDV_20150906T035109_20150906T035132_007589_00A815_8498",
+          "proposals": 20,
+          "labelled": 20,
+          "referenceOilFraction": 0.02272964,
+          "maskRecallOfProposer": 0.9945
+        },
+        {
+          "scene": "00096",
+          "group": "S1A_IW_GRDH_1SDV_20151012T035110_20151012T035133_008114_00B614_7471",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00506163,
+          "maskRecallOfProposer": 0.9973
+        },
+        {
+          "scene": "00295",
+          "group": "S1A_IW_GRDH_1SDV_20151027T165531_20151027T165556_008341_00BC50_3935",
+          "proposals": 57,
+          "labelled": 56,
+          "referenceOilFraction": 0.02255678,
+          "maskRecallOfProposer": 0.9706
+        },
+        {
+          "scene": "00629",
+          "group": "S1A_IW_GRDH_1SDV_20151031T180410_20151031T180435_008400_00BDD5_B96D",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01192737,
+          "maskRecallOfProposer": 0.9735
+        },
+        {
+          "scene": "00134",
+          "group": "S1A_IW_GRDH_1SDV_20151122T035915_20151122T035940_008712_00C66E_8BBF",
+          "proposals": 7,
+          "labelled": 7,
+          "referenceOilFraction": 0.15634584,
+          "maskRecallOfProposer": 0.8019
+        },
+        {
+          "scene": "00530",
+          "group": "S1A_IW_GRDH_1SDV_20151225T051051_20151225T051116_009194_00D3ED_5016",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00975204,
+          "maskRecallOfProposer": 0.986
+        },
+        {
+          "scene": "00237",
+          "group": "S1A_IW_GRDH_1SDV_20160213T155657_20160213T155722_009930_00E92A_549A",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.04040571,
+          "maskRecallOfProposer": 0.8083
+        },
+        {
+          "scene": "00265",
+          "group": "S1A_IW_GRDH_1SDV_20160425T155659_20160425T155724_010980_0107D9_0E4C",
+          "proposals": 34,
+          "labelled": 34,
+          "referenceOilFraction": 0.0173831,
+          "maskRecallOfProposer": 0.839
+        },
+        {
+          "scene": "01334",
+          "group": "S1A_IW_GRDH_1SDV_20160503T000133_20160503T000202_011087_010B3C_451A",
+          "proposals": 48,
+          "labelled": 48,
+          "referenceOilFraction": 0.02215552,
+          "maskRecallOfProposer": 0.9875
+        },
+        {
+          "scene": "00696",
+          "group": "S1A_IW_GRDH_1SDV_20160511T042246_20160511T042311_011206_010EF7_64CA",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00529194,
+          "maskRecallOfProposer": 0.9991
+        },
+        {
+          "scene": "00303",
+          "group": "S1A_IW_GRDH_1SDV_20160602T154042_20160602T154107_011534_0119A0_AC28",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00893116,
+          "maskRecallOfProposer": 0.8117
+        },
+        {
+          "scene": "00087",
+          "group": "S1A_IW_GRDH_1SDV_20160607T221734_20160607T221759_011611_011C05_5FE4",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.0076704,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00009",
+          "group": "S1A_IW_GRDH_1SDV_20160707T040004_20160707T040024_012037_0129A1_A38C",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.01072669,
+          "maskRecallOfProposer": 0.9515
+        },
+        {
+          "scene": "00974",
+          "group": "S1A_IW_GRDH_1SDV_20160715T171425_20160715T171450_012162_012DA2_4874",
+          "proposals": 2,
+          "labelled": 2,
+          "referenceOilFraction": 0.0435928,
+          "maskRecallOfProposer": 0.84
+        },
+        {
+          "scene": "00624",
+          "group": "S1A_IW_GRDH_1SDV_20160725T173027_20160725T173052_012308_013267_4A7C",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00447631,
+          "maskRecallOfProposer": 0.9914
+        },
+        {
+          "scene": "00914",
+          "group": "S1A_IW_GRDH_1SDV_20160727T171401_20160727T171426_012337_013359_C786",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00242472,
+          "maskRecallOfProposer": 0.7437
+        },
+        {
+          "scene": "00093",
+          "group": "S1A_IW_GRDH_1SDV_20160806T062101_20160806T062126_012476_013807_2C02",
+          "proposals": 47,
+          "labelled": 47,
+          "referenceOilFraction": 0.01347542,
+          "maskRecallOfProposer": 0.9967
+        },
+        {
+          "scene": "00020",
+          "group": "S1A_IW_GRDH_1SDV_20160827T170943_20160827T171006_012789_014272_9810",
+          "proposals": 5,
+          "labelled": 5,
+          "referenceOilFraction": 0.01974845,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00727",
+          "group": "S1A_IW_GRDH_1SDV_20160829T054424_20160829T054449_012811_014333_2E60",
+          "proposals": 5,
+          "labelled": 5,
+          "referenceOilFraction": 0.02999496,
+          "maskRecallOfProposer": 0.9974
+        },
+        {
+          "scene": "00767",
+          "group": "S1A_IW_GRDH_1SDV_20160925T171749_20160925T171814_013212_015050_D9F8",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.02735782,
+          "maskRecallOfProposer": 0.9639
+        },
+        {
+          "scene": "00014",
+          "group": "S1A_IW_GRDH_1SDV_20161011T040007_20161011T040028_013437_015777_6C5A",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00734544,
+          "maskRecallOfProposer": 0.9713
+        },
+        {
+          "scene": "00036",
+          "group": "S1A_IW_GRDH_1SDV_20161014T170939_20161014T171002_013489_015911_1D3A",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00303888,
+          "maskRecallOfProposer": 0.9729
+        },
+        {
+          "scene": "00253",
+          "group": "S1A_IW_GRDH_1SDV_20161029T154922_20161029T154947_013707_015FCD_9EE7",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00876737,
+          "maskRecallOfProposer": 0.9919
+        },
+        {
+          "scene": "00319",
+          "group": "S1A_IW_GRDH_1SDV_20161119T152715_20161119T152740_014013_016957_F849",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.0040977,
+          "maskRecallOfProposer": 0.9811
+        },
+        {
+          "scene": "00007",
+          "group": "S1A_IW_GRDH_1SDV_20170115T040004_20170115T040025_014837_0182F8_2DFF",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01687336,
+          "maskRecallOfProposer": 0.9802
+        },
+        {
+          "scene": "00145",
+          "group": "S1A_IW_GRDH_1SDV_20170116T045149_20170116T045214_014852_01836A_F815",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00951076,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00011",
+          "group": "S1A_IW_GRDH_1SDV_20170208T040004_20170208T040024_015187_018DC8_E79B",
+          "proposals": 43,
+          "labelled": 43,
+          "referenceOilFraction": 0.01191306,
+          "maskRecallOfProposer": 0.9997
+        },
+        {
+          "scene": "00853",
+          "group": "S1A_IW_GRDH_1SDV_20170214T062714_20170214T062739_015276_019087_DD69",
+          "proposals": 63,
+          "labelled": 63,
+          "referenceOilFraction": 0.0040791,
+          "maskRecallOfProposer": 0.9815
+        },
+        {
+          "scene": "00615",
+          "group": "S1A_IW_GRDH_1SDV_20170215T000134_20170215T000159_015287_0190E3_D910",
+          "proposals": 42,
+          "labelled": 41,
+          "referenceOilFraction": 0.01816082,
+          "maskRecallOfProposer": 0.9201
+        },
+        {
+          "scene": "00363",
+          "group": "S1A_IW_GRDH_1SDV_20170221T045123_20170221T045148_015377_0193B1_A93A",
+          "proposals": 64,
+          "labelled": 60,
+          "referenceOilFraction": 0.01876068,
+          "maskRecallOfProposer": 0.9971
+        },
+        {
+          "scene": "00421",
+          "group": "S1A_IW_GRDH_1SDV_20170308T142434_20170308T142459_015602_019A78_F8CB",
+          "proposals": 12,
+          "labelled": 12,
+          "referenceOilFraction": 0.33701205,
+          "maskRecallOfProposer": 0.861
+        },
+        {
+          "scene": "00045",
+          "group": "S1A_IW_GRDH_1SDV_20170311T021505_20170311T021528_015638_019B8B_9D85",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.00713134,
+          "maskRecallOfProposer": 0.9988
+        },
+        {
+          "scene": "00377",
+          "group": "S1A_IW_GRDH_1SDV_20170402T001521_20170402T001546_015958_01A507_FB5D",
+          "proposals": 18,
+          "labelled": 18,
+          "referenceOilFraction": 0.05920935,
+          "maskRecallOfProposer": 0.8561
+        },
+        {
+          "scene": "00593",
+          "group": "S1A_IW_GRDH_1SDV_20170428T000130_20170428T000155_016337_01B092_EA60",
+          "proposals": 10,
+          "labelled": 10,
+          "referenceOilFraction": 0.14639354,
+          "maskRecallOfProposer": 0.9158
+        },
+        {
+          "scene": "00450",
+          "group": "S1A_IW_GRDH_1SDV_20170503T035916_20170503T035941_016412_01B2E4_C093",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00844622,
+          "maskRecallOfProposer": 0.9708
+        },
+        {
+          "scene": "01262",
+          "group": "S1A_IW_GRDH_1SDV_20170504T111842_20170504T111911_016431_01B371_89EF",
+          "proposals": 1,
+          "labelled": 1,
+          "referenceOilFraction": 0.03017187,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00164",
+          "group": "S1A_IW_GRDH_1SDV_20170509T154855_20170509T154920_016507_01B5BF_68BA",
+          "proposals": 14,
+          "labelled": 14,
+          "referenceOilFraction": 0.05772838,
+          "maskRecallOfProposer": 0.7821
+        },
+        {
+          "scene": "00062",
+          "group": "S1A_IW_GRDH_1SDV_20170510T021513_20170510T021536_016513_01B5F0_7A15",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00576067,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00146",
+          "group": "S1A_IW_GRDH_1SDV_20170516T045224_20170516T045249_016602_01B8AB_8B63",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.01523399,
+          "maskRecallOfProposer": 0.8188
+        },
+        {
+          "scene": "00240",
+          "group": "S1A_IW_GRDH_1SDV_20170528T045151_20170528T045216_016777_01BE0F_BF52",
+          "proposals": 6,
+          "labelled": 6,
+          "referenceOilFraction": 0.04252839,
+          "maskRecallOfProposer": 0.9661
+        },
+        {
+          "scene": "00267",
+          "group": "S1A_IW_GRDH_1SDV_20170528T045216_20170528T045241_016777_01BE0F_5BB0",
+          "proposals": 64,
+          "labelled": 61,
+          "referenceOilFraction": 0.00356078,
+          "maskRecallOfProposer": 0.9986
+        },
+        {
+          "scene": "00252",
+          "group": "S1A_IW_GRDH_1SDV_20170606T002525_20170606T002550_016906_01C211_3953",
+          "proposals": 37,
+          "labelled": 37,
+          "referenceOilFraction": 0.03698874,
+          "maskRecallOfProposer": 0.9688
+        },
+        {
+          "scene": "00114",
+          "group": "S1A_IW_GRDH_1SDV_20170616T171859_20170616T171924_017062_01C6D4_2EE1",
+          "proposals": 45,
+          "labelled": 38,
+          "referenceOilFraction": 0.01207376,
+          "maskRecallOfProposer": 0.9998
+        },
+        {
+          "scene": "00475",
+          "group": "S1A_IW_GRDH_1SDV_20170627T000134_20170627T000159_017212_01CB69_C255",
+          "proposals": 64,
+          "labelled": 54,
+          "referenceOilFraction": 0.06448102,
+          "maskRecallOfProposer": 0.6208
+        },
+        {
+          "scene": "00458",
+          "group": "S1A_IW_GRDH_1SDV_20170704T111705_20170704T111730_017320_01CEB7_D612",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.0028895,
+          "maskRecallOfProposer": 0.9496
+        },
+        {
+          "scene": "00113",
+          "group": "S1A_IW_GRDH_1SDV_20170708T050011_20170708T050036_017375_01D04A_16F7",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.00563312,
+          "maskRecallOfProposer": 0.9211
+        },
+        {
+          "scene": "00103",
+          "group": "S1A_IW_GRDH_1SDV_20170708T173515_20170708T173540_017383_01D087_E889",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00904584,
+          "maskRecallOfProposer": 0.9732
+        },
+        {
+          "scene": "00496",
+          "group": "S1A_IW_GRDH_1SDV_20170709T000135_20170709T000200_017387_01D0AA_B7B5",
+          "proposals": 7,
+          "labelled": 7,
+          "referenceOilFraction": 0.11841512,
+          "maskRecallOfProposer": 0.7617
+        },
+        {
+          "scene": "00365",
+          "group": "S1A_IW_GRDH_1SDV_20170709T035159_20170709T035224_017389_01D0B9_1EEA",
+          "proposals": 12,
+          "labelled": 10,
+          "referenceOilFraction": 0.01942506,
+          "maskRecallOfProposer": 0.9868
+        },
+        {
+          "scene": "00088",
+          "group": "S1A_IW_GRDH_1SDV_20170710T224717_20170710T224742_017415_01D18B_5031",
+          "proposals": 17,
+          "labelled": 17,
+          "referenceOilFraction": 0.03538871,
+          "maskRecallOfProposer": 0.6432
+        },
+        {
+          "scene": "00805",
+          "group": "S1A_IW_GRDH_1SDV_20170722T153304_20170722T153329_017586_01D6B1_7B0B",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01473975,
+          "maskRecallOfProposer": 0.9609
+        },
+        {
+          "scene": "00612",
+          "group": "S1A_IW_GRDH_1SDV_20170726T040010_20170726T040035_017637_01D857_C98D",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01763922,
+          "maskRecallOfProposer": 0.9972
+        },
+        {
+          "scene": "00399",
+          "group": "S1A_IW_GRDH_1SDV_20170801T154854_20170801T154919_017732_01DB33_192E",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.01065502,
+          "maskRecallOfProposer": 0.8294
+        },
+        {
+          "scene": "00486",
+          "group": "S1A_IW_GRDH_1SDV_20170802T000136_20170802T000201_017737_01DB5F_BF7B",
+          "proposals": 57,
+          "labelled": 56,
+          "referenceOilFraction": 0.01919532,
+          "maskRecallOfProposer": 0.9836
+        },
+        {
+          "scene": "00231",
+          "group": "S1A_IW_GRDH_1SDV_20170807T000823_20170807T000848_017810_01DD99_6B25",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00814629,
+          "maskRecallOfProposer": 0.8587
+        },
+        {
+          "scene": "00150",
+          "group": "S1A_IW_GRDH_1SDV_20170810T024649_20170810T024714_017855_01DEF7_3B52",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01467323,
+          "maskRecallOfProposer": 0.941
+        },
+        {
+          "scene": "00039",
+          "group": "S1A_IW_GRDH_1SDV_20170810T024714_20170810T024738_017855_01DEF7_F48C",
+          "proposals": 23,
+          "labelled": 23,
+          "referenceOilFraction": 0.14350057,
+          "maskRecallOfProposer": 0.9407
+        },
+        {
+          "scene": "00119",
+          "group": "S1A_IW_GRDH_1SDV_20170813T173452_20170813T173517_017908_01E086_910C",
+          "proposals": 57,
+          "labelled": 57,
+          "referenceOilFraction": 0.01138258,
+          "maskRecallOfProposer": 0.9963
+        },
+        {
+          "scene": "00551",
+          "group": "S1A_IW_GRDH_1SDV_20170814T000137_20170814T000202_017912_01E0A9_DA58",
+          "proposals": 4,
+          "labelled": 4,
+          "referenceOilFraction": 0.13701487,
+          "maskRecallOfProposer": 0.866
+        },
+        {
+          "scene": "00368",
+          "group": "S1A_IW_GRDH_1SDV_20170814T035201_20170814T035226_017914_01E0B9_B1EA",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01626492,
+          "maskRecallOfProposer": 0.9279
+        },
+        {
+          "scene": "00188",
+          "group": "S1A_IW_GRDH_1SDV_20170817T023857_20170817T023922_017957_01E207_7BFA",
+          "proposals": 24,
+          "labelled": 24,
+          "referenceOilFraction": 0.0972507,
+          "maskRecallOfProposer": 0.7153
+        },
+        {
+          "scene": "00797",
+          "group": "S1A_IW_GRDH_1SDV_20170818T063539_20170818T063604_017974_01E28B_B491",
+          "proposals": 26,
+          "labelled": 13,
+          "referenceOilFraction": 0.04958677,
+          "maskRecallOfProposer": 0.9557
+        },
+        {
+          "scene": "00218",
+          "group": "S1A_IW_GRDH_1SDV_20170820T045156_20170820T045221_018002_01E370_4EE3",
+          "proposals": 21,
+          "labelled": 17,
+          "referenceOilFraction": 0.02311873,
+          "maskRecallOfProposer": 0.9969
+        },
+        {
+          "scene": "00131",
+          "group": "S1A_IW_GRDH_1SDV_20170825T173453_20170825T173518_018083_01E5D6_631F",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.03536081,
+          "maskRecallOfProposer": 0.8926
+        },
+        {
+          "scene": "00366",
+          "group": "S1A_IW_GRDH_1SDV_20170826T035202_20170826T035227_018089_01E606_CA22",
+          "proposals": 33,
+          "labelled": 32,
+          "referenceOilFraction": 0.02105308,
+          "maskRecallOfProposer": 0.9248
+        },
+        {
+          "scene": "00130",
+          "group": "S1A_IW_GRDH_1SDV_20170827T171903_20170827T171928_018112_01E6B5_288E",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00589371,
+          "maskRecallOfProposer": 0.8996
+        },
+        {
+          "scene": "00135",
+          "group": "S1A_IW_GRDH_1SDV_20170830T174257_20170830T174322_018156_01E80E_46BF",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00465965,
+          "maskRecallOfProposer": 0.9992
+        },
+        {
+          "scene": "00490",
+          "group": "S1A_IW_GRDH_1SDV_20170901T154118_20170901T154143_018184_01E8E5_F41E",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00640535,
+          "maskRecallOfProposer": 0.8377
+        },
+        {
+          "scene": "00099",
+          "group": "S1A_IW_GRDH_1SDV_20170901T172701_20170901T172726_018185_01E8EF_AA89",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.01593952,
+          "maskRecallOfProposer": 0.9775
+        },
+        {
+          "scene": "00402",
+          "group": "S1A_IW_GRDH_1SDV_20170905T001529_20170905T001554_018233_01EA6C_00E8",
+          "proposals": 35,
+          "labelled": 33,
+          "referenceOilFraction": 0.01429033,
+          "maskRecallOfProposer": 0.9371
+        },
+        {
+          "scene": "00398",
+          "group": "S1A_IW_GRDH_1SDV_20170905T182623_20170905T182648_018244_01EABD_EAFE",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00671887,
+          "maskRecallOfProposer": 0.8132
+        },
+        {
+          "scene": "00484",
+          "group": "S1A_IW_GRDH_1SDV_20170907T000138_20170907T000203_018262_01EB49_F85F",
+          "proposals": 38,
+          "labelled": 34,
+          "referenceOilFraction": 0.04284739,
+          "maskRecallOfProposer": 0.8705
+        },
+        {
+          "scene": "00152",
+          "group": "S1A_IW_GRDH_1SDV_20170913T045157_20170913T045222_018352_01EE2E_DD64",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.02634382,
+          "maskRecallOfProposer": 0.9904
+        },
+        {
+          "scene": "00372",
+          "group": "S1A_IW_GRDH_1SDV_20170917T001530_20170917T001555_018408_01EFE0_A779",
+          "proposals": 15,
+          "labelled": 15,
+          "referenceOilFraction": 0.07114601,
+          "maskRecallOfProposer": 0.8285
+        },
+        {
+          "scene": "00293",
+          "group": "S1A_IW_GRDH_1SDV_20170924T000940_20170924T001005_018510_01F303_4E14",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.0202961,
+          "maskRecallOfProposer": 0.878
+        },
+        {
+          "scene": "00180",
+          "group": "S1A_IW_GRDH_1SDV_20170925T045157_20170925T045222_018527_01F38E_8063",
+          "proposals": 43,
+          "labelled": 38,
+          "referenceOilFraction": 0.04598689,
+          "maskRecallOfProposer": 0.9711
+        },
+        {
+          "scene": "00275",
+          "group": "S1A_IW_GRDH_1SDV_20171001T000113_20171001T000138_018612_01F616_AD54",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.01597599,
+          "maskRecallOfProposer": 0.8367
+        },
+        {
+          "scene": "00737",
+          "group": "S1A_IW_GRDH_1SDV_20171006T022305_20171006T022330_018686_01F861_636B",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00840592,
+          "maskRecallOfProposer": 0.6334
+        },
+        {
+          "scene": "00778",
+          "group": "S1A_IW_GRDH_1SDV_20171009T170355_20171009T170420_018739_01F9F0_7DBB",
+          "proposals": 14,
+          "labelled": 13,
+          "referenceOilFraction": 0.06531429,
+          "maskRecallOfProposer": 0.9625
+        },
+        {
+          "scene": "00348",
+          "group": "S1A_IW_GRDH_1SDV_20171010T142441_20171010T142506_018752_01FA61_AEEA",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.00455713,
+          "maskRecallOfProposer": 0.9731
+        },
+        {
+          "scene": "00815",
+          "group": "S1A_IW_GRDH_1SDV_20171011T023057_20171011T023122_018759_01FA92_6AD4",
+          "proposals": 64,
+          "labelled": 61,
+          "referenceOilFraction": 0.00241947,
+          "maskRecallOfProposer": 0.7444
+        },
+        {
+          "scene": "00935",
+          "group": "S1A_IW_GRDH_1SDV_20171011T023147_20171011T023213_018759_01FA92_75B3",
+          "proposals": 61,
+          "labelled": 57,
+          "referenceOilFraction": 0.01793504,
+          "maskRecallOfProposer": 0.9859
+        },
+        {
+          "scene": "00513",
+          "group": "S1A_IW_GRDH_1SDV_20171013T000139_20171013T000204_018787_01FB66_8385",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00200891,
+          "maskRecallOfProposer": 0.9582
+        },
+        {
+          "scene": "00376",
+          "group": "S1A_IW_GRDH_1SDV_20171013T035203_20171013T035228_018789_01FB76_DE86",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00978184,
+          "maskRecallOfProposer": 0.9625
+        },
+        {
+          "scene": "00025",
+          "group": "S1A_IW_GRDH_1SDV_20171016T023924_20171016T023947_018832_01FCC7_E86E",
+          "proposals": 50,
+          "labelled": 49,
+          "referenceOilFraction": 0.02553996,
+          "maskRecallOfProposer": 0.9566
+        },
+        {
+          "scene": "00793",
+          "group": "S1A_IW_GRDH_1SDV_20171017T155749_20171017T155814_018855_01FD8C_9271",
+          "proposals": 41,
+          "labelled": 41,
+          "referenceOilFraction": 0.01557922,
+          "maskRecallOfProposer": 0.9025
+        },
+        {
+          "scene": "00438",
+          "group": "S1A_IW_GRDH_1SDV_20171018T035948_20171018T040013_018862_01FDC4_C249",
+          "proposals": 3,
+          "labelled": 3,
+          "referenceOilFraction": 0.04930499,
+          "maskRecallOfProposer": 0.8931
+        },
+        {
+          "scene": "00111",
+          "group": "S1A_IW_GRDH_1SDV_20171031T172702_20171031T172727_019060_0203C9_C184",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00827003,
+          "maskRecallOfProposer": 0.8868
+        },
+        {
+          "scene": "00451",
+          "group": "S1A_IW_GRDH_1SDV_20171102T233545_20171102T233610_019093_0204CA_3395",
+          "proposals": 9,
+          "labelled": 8,
+          "referenceOilFraction": 0.06346488,
+          "maskRecallOfProposer": 0.9189
+        },
+        {
+          "scene": "00224",
+          "group": "S1A_IW_GRDH_1SDV_20171112T045158_20171112T045223_019227_0208F6_3E5C",
+          "proposals": 13,
+          "labelled": 13,
+          "referenceOilFraction": 0.04013968,
+          "maskRecallOfProposer": 0.8075
+        },
+        {
+          "scene": "00171",
+          "group": "S1A_IW_GRDH_1SDV_20171116T001710_20171116T001735_019283_020AB6_E7DB",
+          "proposals": 50,
+          "labelled": 49,
+          "referenceOilFraction": 0.02251697,
+          "maskRecallOfProposer": 0.9349
+        },
+        {
+          "scene": "00522",
+          "group": "S1A_IW_GRDH_1SDV_20171118T000138_20171118T000203_019312_020B93_770E",
+          "proposals": 12,
+          "labelled": 12,
+          "referenceOilFraction": 0.03704023,
+          "maskRecallOfProposer": 0.9982
+        },
+        {
+          "scene": "00255",
+          "group": "S1A_IW_GRDH_1SDV_20171203T002530_20171203T002555_019531_021270_B4AB",
+          "proposals": 16,
+          "labelled": 12,
+          "referenceOilFraction": 0.04293084,
+          "maskRecallOfProposer": 0.8856
+        },
+        {
+          "scene": "00384",
+          "group": "S1A_IW_GRDH_1SDV_20171206T045132_20171206T045157_019577_0213FB_431A",
+          "proposals": 55,
+          "labelled": 52,
+          "referenceOilFraction": 0.17170787,
+          "maskRecallOfProposer": 0.6241
+        },
+        {
+          "scene": "00286",
+          "group": "S1A_IW_GRDH_1SDV_20171212T000113_20171212T000138_019662_021690_6A30",
+          "proposals": 64,
+          "labelled": 59,
+          "referenceOilFraction": 0.02496362,
+          "maskRecallOfProposer": 0.9139
+        },
+        {
+          "scene": "00564",
+          "group": "S1A_IW_GRDH_1SDV_20171212T000138_20171212T000203_019662_021690_47E2",
+          "proposals": 51,
+          "labelled": 50,
+          "referenceOilFraction": 0.00442529,
+          "maskRecallOfProposer": 0.9975
+        },
+        {
+          "scene": "00419",
+          "group": "S1A_IW_GRDH_1SDV_20171222T001528_20171222T001553_019808_021B17_D75D",
+          "proposals": 37,
+          "labelled": 36,
+          "referenceOilFraction": 0.01323104,
+          "maskRecallOfProposer": 0.9082
+        },
+        {
+          "scene": "00258",
+          "group": "S1A_IW_GRDH_1SDV_20171224T000112_20171224T000137_019837_021BF1_C1EC",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00514936,
+          "maskRecallOfProposer": 0.9422
+        },
+        {
+          "scene": "00599",
+          "group": "S1A_IW_GRDH_1SDV_20171224T000137_20171224T000202_019837_021BF1_C719",
+          "proposals": 4,
+          "labelled": 4,
+          "referenceOilFraction": 0.09509945,
+          "maskRecallOfProposer": 0.8466
+        },
+        {
+          "scene": "00236",
+          "group": "S1A_IW_GRDH_1SDV_20171227T002529_20171227T002554_019881_021D52_4E0D",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00751734,
+          "maskRecallOfProposer": 0.9382
+        },
+        {
+          "scene": "00285",
+          "group": "S1A_IW_GRDH_1SDV_20180105T000111_20180105T000136_020012_022178_FD4E",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01003392,
+          "maskRecallOfProposer": 0.9246
+        },
+        {
+          "scene": "00556",
+          "group": "S1A_IW_GRDH_1SDV_20180105T000136_20180105T000201_020012_022178_8DA2",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00751901,
+          "maskRecallOfProposer": 0.9728
+        },
+        {
+          "scene": "00537",
+          "group": "S1A_IW_GRDH_1SDV_20180111T172520_20180111T172545_020110_02249A_F770",
+          "proposals": 3,
+          "labelled": 3,
+          "referenceOilFraction": 0.15534329,
+          "maskRecallOfProposer": 0.9662
+        },
+        {
+          "scene": "00104",
+          "group": "S1A_IW_GRDH_1SDV_20180111T172719_20180111T172744_020110_02249B_B117",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.01185203,
+          "maskRecallOfProposer": 0.9982
+        },
+        {
+          "scene": "00748",
+          "group": "S1A_IW_GRDH_1SDV_20180205T034316_20180205T034341_020466_022FF1_BCD9",
+          "proposals": 36,
+          "labelled": 36,
+          "referenceOilFraction": 0.02665448,
+          "maskRecallOfProposer": 0.9104
+        },
+        {
+          "scene": "00326",
+          "group": "S1A_IW_GRDH_1SDV_20180208T001527_20180208T001552_020508_023144_1FCE",
+          "proposals": 47,
+          "labelled": 47,
+          "referenceOilFraction": 0.02886248,
+          "maskRecallOfProposer": 0.7722
+        },
+        {
+          "scene": "00663",
+          "group": "S1A_IW_GRDH_1SDV_20180216T154115_20180216T154140_020634_023548_2B58",
+          "proposals": 47,
+          "labelled": 46,
+          "referenceOilFraction": 0.0240171,
+          "maskRecallOfProposer": 0.8399
+        },
+        {
+          "scene": "00412",
+          "group": "S1A_IW_GRDH_1SDV_20180220T001527_20180220T001552_020683_0236D8_1EB7",
+          "proposals": 16,
+          "labelled": 16,
+          "referenceOilFraction": 0.07971382,
+          "maskRecallOfProposer": 0.8687
+        },
+        {
+          "scene": "00248",
+          "group": "S1A_IW_GRDH_1SDV_20180227T000822_20180227T000847_020785_023A21_C502",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00999999,
+          "maskRecallOfProposer": 0.8921
+        },
+        {
+          "scene": "01259",
+          "group": "S1A_IW_GRDH_1SDV_20180305T221727_20180305T221756_020886_023D3E_B420",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00165391,
+          "maskRecallOfProposer": 0.9999
+        },
+        {
+          "scene": "00339",
+          "group": "S1A_IW_GRDH_1SDV_20180312T045130_20180312T045155_020977_02402E_BA7C",
+          "proposals": 15,
+          "labelled": 15,
+          "referenceOilFraction": 0.21511316,
+          "maskRecallOfProposer": 0.6894
+        },
+        {
+          "scene": "00428",
+          "group": "S1A_IW_GRDH_1SDV_20180312T154050_20180312T154115_020984_024060_99A6",
+          "proposals": 62,
+          "labelled": 62,
+          "referenceOilFraction": 0.02709794,
+          "maskRecallOfProposer": 0.9882
+        },
+        {
+          "scene": "00704",
+          "group": "S1A_IW_GRDH_1SDV_20180313T034405_20180313T034430_020991_02409D_B2C6",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00475144,
+          "maskRecallOfProposer": 0.9292
+        },
+        {
+          "scene": "01267",
+          "group": "S1A_IW_GRDH_1SDV_20180317T221727_20180317T221756_021061_0242CF_F927",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.00543714,
+          "maskRecallOfProposer": 0.9999
+        },
+        {
+          "scene": "00427",
+          "group": "S1A_IW_GRDH_1SDV_20180324T045130_20180324T045155_021152_0245BD_48DC",
+          "proposals": 22,
+          "labelled": 22,
+          "referenceOilFraction": 0.03724861,
+          "maskRecallOfProposer": 0.9643
+        },
+        {
+          "scene": "00847",
+          "group": "S1A_IW_GRDH_1SDV_20180402T165805_20180402T165830_021291_024A10_C573",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00354028,
+          "maskRecallOfProposer": 0.5328
+        },
+        {
+          "scene": "00874",
+          "group": "S1A_IW_GRDH_1SDV_20180403T063513_20180403T063538_021299_024A5D_424D",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00581789,
+          "maskRecallOfProposer": 0.9811
+        },
+        {
+          "scene": "00734",
+          "group": "S1A_IW_GRDH_1SDV_20180410T173301_20180410T173326_021408_024DB2_79D2",
+          "proposals": 1,
+          "labelled": 1,
+          "referenceOilFraction": 0.07317805,
+          "maskRecallOfProposer": 0.9735
+        },
+        {
+          "scene": "00548",
+          "group": "S1A_IW_GRDH_1SDV_20180415T174133_20180415T174158_021481_025009_5821",
+          "proposals": 6,
+          "labelled": 6,
+          "referenceOilFraction": 0.15854573,
+          "maskRecallOfProposer": 0.7778
+        },
+        {
+          "scene": "00444",
+          "group": "S1A_IW_GRDH_1SDV_20180415T174256_20180415T174321_021481_02500A_4099",
+          "proposals": 62,
+          "labelled": 60,
+          "referenceOilFraction": 0.01140618,
+          "maskRecallOfProposer": 0.9991
+        },
+        {
+          "scene": "00777",
+          "group": "S1A_IW_GRDH_1SDV_20180423T000137_20180423T000202_021587_02534B_857C",
+          "proposals": 41,
+          "labelled": 41,
+          "referenceOilFraction": 0.02242374,
+          "maskRecallOfProposer": 0.9931
+        },
+        {
+          "scene": "00577",
+          "group": "S1A_IW_GRDH_1SDV_20180426T002529_20180426T002554_021631_0254A6_6015",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00593066,
+          "maskRecallOfProposer": 0.9809
+        },
+        {
+          "scene": "00545",
+          "group": "S1A_IW_GRDH_1SDV_20180428T000939_20180428T001004_021660_0255A1_FE8D",
+          "proposals": 35,
+          "labelled": 34,
+          "referenceOilFraction": 0.02260089,
+          "maskRecallOfProposer": 0.9973
+        },
+        {
+          "scene": "00263",
+          "group": "S1A_IW_GRDH_1SDV_20180429T172711_20180429T172736_021685_02566B_8CF2",
+          "proposals": 15,
+          "labelled": 14,
+          "referenceOilFraction": 0.04380059,
+          "maskRecallOfProposer": 0.9927
+        },
+        {
+          "scene": "00700",
+          "group": "S1A_IW_GRDH_1SDV_20180503T001529_20180503T001554_021733_0257F1_84A5",
+          "proposals": 54,
+          "labelled": 53,
+          "referenceOilFraction": 0.01128507,
+          "maskRecallOfProposer": 0.904
+        },
+        {
+          "scene": "00610",
+          "group": "S1A_IW_GRDH_1SDV_20180505T000112_20180505T000137_021762_0258D5_08D3",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00710153,
+          "maskRecallOfProposer": 0.9431
+        },
+        {
+          "scene": "00559",
+          "group": "S1A_IW_GRDH_1SDV_20180508T002530_20180508T002555_021806_025A34_BAC9",
+          "proposals": 23,
+          "labelled": 23,
+          "referenceOilFraction": 0.11582065,
+          "maskRecallOfProposer": 0.6477
+        },
+        {
+          "scene": "00828",
+          "group": "S1A_IW_GRDH_1SDV_20180519T175403_20180519T175428_021977_025FA2_3EEB",
+          "proposals": 10,
+          "labelled": 10,
+          "referenceOilFraction": 0.01049972,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00660",
+          "group": "S1A_IW_GRDH_1SDV_20180522T035948_20180522T040013_022012_0260D6_92E3",
+          "proposals": 23,
+          "labelled": 21,
+          "referenceOilFraction": 0.02641439,
+          "maskRecallOfProposer": 0.7924
+        },
+        {
+          "scene": "00441",
+          "group": "S1A_IW_GRDH_1SDV_20180523T045157_20180523T045222_022027_026151_8D54",
+          "proposals": 31,
+          "labelled": 30,
+          "referenceOilFraction": 0.03564548,
+          "maskRecallOfProposer": 0.9924
+        },
+        {
+          "scene": "00764",
+          "group": "S1A_IW_GRDH_1SDV_20180524T034318_20180524T034343_022041_0261C3_61AF",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00533295,
+          "maskRecallOfProposer": 0.8598
+        },
+        {
+          "scene": "00603",
+          "group": "S1A_IW_GRDH_1SDV_20180529T000114_20180529T000139_022112_026401_D19B",
+          "proposals": 30,
+          "labelled": 30,
+          "referenceOilFraction": 0.03065014,
+          "maskRecallOfProposer": 0.8182
+        },
+        {
+          "scene": "00781",
+          "group": "S1A_IW_GRDH_1SDV_20180529T000139_20180529T000204_022112_026401_2694",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00540853,
+          "maskRecallOfProposer": 0.9891
+        },
+        {
+          "scene": "00591",
+          "group": "S1A_IW_GRDH_1SDV_20180601T002531_20180601T002556_022156_026562_C426",
+          "proposals": 48,
+          "labelled": 46,
+          "referenceOilFraction": 0.01258159,
+          "maskRecallOfProposer": 0.8632
+        },
+        {
+          "scene": "00879",
+          "group": "S1A_IW_GRDH_1SDV_20180602T155724_20180602T155749_022180_02662B_E72B",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00376821,
+          "maskRecallOfProposer": 0.9827
+        },
+        {
+          "scene": "00730",
+          "group": "S1A_IW_GRDH_1SDV_20180616T154120_20180616T154145_022384_026C73_CB62",
+          "proposals": 43,
+          "labelled": 42,
+          "referenceOilFraction": 0.01609802,
+          "maskRecallOfProposer": 0.8677
+        },
+        {
+          "scene": "00783",
+          "group": "S1A_IW_GRDH_1SDV_20180622T000140_20180622T000205_022462_026EC6_82DF",
+          "proposals": 60,
+          "labelled": 60,
+          "referenceOilFraction": 0.02291417,
+          "maskRecallOfProposer": 0.9602
+        },
+        {
+          "scene": "01319",
+          "group": "S1A_IW_GRDH_1SDV_20180628T235339_20180628T235408_022564_0271B9_CEDC",
+          "proposals": 28,
+          "labelled": 26,
+          "referenceOilFraction": 0.01469636,
+          "maskRecallOfProposer": 0.9993
+        },
+        {
+          "scene": "01013",
+          "group": "S1A_IW_GRDH_1SDV_20180702T001802_20180702T001827_022608_02730A_4E5F",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00262809,
+          "maskRecallOfProposer": 0.7408
+        },
+        {
+          "scene": "01222",
+          "group": "S1A_IW_GRDH_1SDV_20180704T000141_20180704T000206_022637_0273E0_CAEF",
+          "proposals": 23,
+          "labelled": 23,
+          "referenceOilFraction": 0.04112935,
+          "maskRecallOfProposer": 0.9167
+        },
+        {
+          "scene": "01176",
+          "group": "S1A_IW_GRDH_1SDV_20180716T000142_20180716T000207_022812_027929_4B86",
+          "proposals": 9,
+          "labelled": 8,
+          "referenceOilFraction": 0.08141351,
+          "maskRecallOfProposer": 0.8853
+        },
+        {
+          "scene": "01035",
+          "group": "S1A_IW_GRDH_1SDV_20180719T002444_20180719T002509_022856_027A78_4DB1",
+          "proposals": 21,
+          "labelled": 19,
+          "referenceOilFraction": 0.02302575,
+          "maskRecallOfProposer": 0.8286
+        },
+        {
+          "scene": "01023",
+          "group": "S1A_IW_GRDH_1SDV_20180724T042302_20180724T042327_022931_027CEC_08F4",
+          "proposals": 36,
+          "labelled": 36,
+          "referenceOilFraction": 0.01566409,
+          "maskRecallOfProposer": 0.9853
+        },
+        {
+          "scene": "00978",
+          "group": "S1A_IW_GRDH_1SDV_20180729T171154_20180729T171219_023012_027F72_2304",
+          "proposals": 5,
+          "labelled": 4,
+          "referenceOilFraction": 0.02605128,
+          "maskRecallOfProposer": 0.997
+        },
+        {
+          "scene": "00000",
+          "group": "S1A_IW_GRDH_1SDV_20180803T172551_20180803T172608_023085_0281B1_DB30",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00346637,
+          "maskRecallOfProposer": 0.997
+        },
+        {
+          "scene": "00801",
+          "group": "S1A_IW_GRDH_1SDV_20180807T182628_20180807T182653_023144_028394_2037",
+          "proposals": 64,
+          "labelled": 61,
+          "referenceOilFraction": 0.01683354,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00569",
+          "group": "S1A_IW_GRDH_1SDV_20180813T174303_20180813T174328_023231_028668_93C1",
+          "proposals": 3,
+          "labelled": 3,
+          "referenceOilFraction": 0.11252761,
+          "maskRecallOfProposer": 0.8717
+        },
+        {
+          "scene": "01114",
+          "group": "S1A_IW_GRDH_1SDV_20180819T001535_20180819T001600_023308_0288E8_81AC",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.0041244,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "01191",
+          "group": "S1A_IW_GRDH_1SDV_20180821T000144_20180821T000209_023337_0289D2_F4AD",
+          "proposals": 11,
+          "labelled": 11,
+          "referenceOilFraction": 0.0666604,
+          "maskRecallOfProposer": 0.9484
+        },
+        {
+          "scene": "01225",
+          "group": "S1A_IW_GRDH_1SDV_20180823T175408_20180823T175433_023377_028B16_C6CE",
+          "proposals": 30,
+          "labelled": 30,
+          "referenceOilFraction": 0.02727747,
+          "maskRecallOfProposer": 0.8973
+        },
+        {
+          "scene": "00666",
+          "group": "S1A_IW_GRDH_1SDV_20180827T045138_20180827T045203_023427_028CAE_388B",
+          "proposals": 30,
+          "labelled": 30,
+          "referenceOilFraction": 0.03108025,
+          "maskRecallOfProposer": 0.9983
+        },
+        {
+          "scene": "01095",
+          "group": "S1A_IW_GRDH_1SDV_20180831T001536_20180831T001601_023483_028E75_4C10",
+          "proposals": 21,
+          "labelled": 20,
+          "referenceOilFraction": 0.0120194,
+          "maskRecallOfProposer": 0.9922
+        },
+        {
+          "scene": "01275",
+          "group": "S1A_IW_GRDH_1SDV_20180901T211633_20180901T211702_023510_028F58_62DC",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01081896,
+          "maskRecallOfProposer": 0.9999
+        },
+        {
+          "scene": "00838",
+          "group": "S1A_IW_GRDH_1SDV_20180906T174116_20180906T174141_023581_02919D_8911",
+          "proposals": 20,
+          "labelled": 20,
+          "referenceOilFraction": 0.04649997,
+          "maskRecallOfProposer": 0.9796
+        },
+        {
+          "scene": "01108",
+          "group": "S1A_IW_GRDH_1SDV_20180912T001536_20180912T001601_023658_029410_FDB1",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00203633,
+          "maskRecallOfProposer": 0.9938
+        },
+        {
+          "scene": "01134",
+          "group": "S1A_IW_GRDH_1SDV_20180924T001536_20180924T001601_023833_0299C2_B436",
+          "proposals": 37,
+          "labelled": 34,
+          "referenceOilFraction": 0.01068211,
+          "maskRecallOfProposer": 0.9736
+        },
+        {
+          "scene": "01084",
+          "group": "S1A_IW_GRDH_1SDV_20181006T001537_20181006T001602_024008_029F7D_50DC",
+          "proposals": 18,
+          "labelled": 17,
+          "referenceOilFraction": 0.00902295,
+          "maskRecallOfProposer": 0.9757
+        },
+        {
+          "scene": "00985",
+          "group": "S1A_IW_GRDH_1SDV_20181009T171427_20181009T171452_024062_02A131_E887",
+          "proposals": 56,
+          "labelled": 56,
+          "referenceOilFraction": 0.03312325,
+          "maskRecallOfProposer": 0.8348
+        },
+        {
+          "scene": "00949",
+          "group": "S1A_IW_GRDH_1SDV_20181014T172234_20181014T172259_024135_02A39B_BAD2",
+          "proposals": 49,
+          "labelled": 45,
+          "referenceOilFraction": 0.02669512,
+          "maskRecallOfProposer": 0.8281
+        },
+        {
+          "scene": "01107",
+          "group": "S1A_IW_GRDH_1SDV_20181030T001537_20181030T001602_024358_02AAD0_7A0E",
+          "proposals": 35,
+          "labelled": 34,
+          "referenceOilFraction": 0.00890255,
+          "maskRecallOfProposer": 0.9821
+        },
+        {
+          "scene": "00674",
+          "group": "S1A_IW_GRDH_1SDV_20181107T045139_20181107T045204_024477_02AF04_4293",
+          "proposals": 5,
+          "labelled": 5,
+          "referenceOilFraction": 0.02382112,
+          "maskRecallOfProposer": 0.9738
+        },
+        {
+          "scene": "01137",
+          "group": "S1A_IW_GRDH_1SDV_20181111T001537_20181111T001602_024533_02B121_8A1D",
+          "proposals": 22,
+          "labelled": 22,
+          "referenceOilFraction": 0.0477736,
+          "maskRecallOfProposer": 0.761
+        },
+        {
+          "scene": "00997",
+          "group": "S1A_IW_GRDH_1SDV_20181111T001627_20181111T001652_024533_02B121_F7A2",
+          "proposals": 53,
+          "labelled": 53,
+          "referenceOilFraction": 0.01072812,
+          "maskRecallOfProposer": 0.987
+        },
+        {
+          "scene": "00432",
+          "group": "S1A_IW_GRDH_1SDV_20181112T095159_20181112T095224_024553_02B1DF_3BEF",
+          "proposals": 27,
+          "labelled": 26,
+          "referenceOilFraction": 0.01396298,
+          "maskRecallOfProposer": 0.9905
+        },
+        {
+          "scene": "01007",
+          "group": "S1A_IW_GRDH_1SDV_20181118T000947_20181118T001012_024635_02B4D5_3492",
+          "proposals": 64,
+          "labelled": 59,
+          "referenceOilFraction": 0.02109885,
+          "maskRecallOfProposer": 0.9999
+        },
+        {
+          "scene": "01152",
+          "group": "S1A_IW_GRDH_1SDV_20181123T001536_20181123T001601_024708_02B792_4673",
+          "proposals": 18,
+          "labelled": 17,
+          "referenceOilFraction": 0.01841307,
+          "maskRecallOfProposer": 0.9952
+        },
+        {
+          "scene": "01188",
+          "group": "S1A_IW_GRDH_1SDV_20181125T000145_20181125T000210_024737_02B8A0_60CA",
+          "proposals": 27,
+          "labelled": 22,
+          "referenceOilFraction": 0.05694246,
+          "maskRecallOfProposer": 0.9991
+        },
+        {
+          "scene": "00769",
+          "group": "S1A_IW_GRDH_1SDV_20181205T001536_20181205T001601_024883_02BD82_4AE4",
+          "proposals": 27,
+          "labelled": 27,
+          "referenceOilFraction": 0.04188442,
+          "maskRecallOfProposer": 0.7296
+        },
+        {
+          "scene": "01277",
+          "group": "S1A_IW_GRDH_1SDV_20181206T221736_20181206T221805_024911_02BE76_2307",
+          "proposals": 53,
+          "labelled": 53,
+          "referenceOilFraction": 0.02664948,
+          "maskRecallOfProposer": 0.6752
+        },
+        {
+          "scene": "01201",
+          "group": "S1A_IW_GRDH_1SDV_20181207T000144_20181207T000209_024912_02BE7D_4097",
+          "proposals": 31,
+          "labelled": 31,
+          "referenceOilFraction": 0.03710008,
+          "maskRecallOfProposer": 0.9718
+        },
+        {
+          "scene": "01209",
+          "group": "S1A_IW_GRDH_1SDV_20181219T000144_20181219T000209_025087_02C4D5_EE7D",
+          "proposals": 18,
+          "labelled": 18,
+          "referenceOilFraction": 0.17131352,
+          "maskRecallOfProposer": 0.7333
+        },
+        {
+          "scene": "00719",
+          "group": "S1A_IW_GRDH_1SDV_20181225T045203_20181225T045228_025177_02C817_C7B4",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00756593,
+          "maskRecallOfProposer": 0.9659
+        },
+        {
+          "scene": "01120",
+          "group": "S1A_IW_GRDH_1SDV_20181229T001535_20181229T001600_025233_02CA25_DAF3",
+          "proposals": 49,
+          "labelled": 44,
+          "referenceOilFraction": 0.04182673,
+          "maskRecallOfProposer": 0.704
+        },
+        {
+          "scene": "01207",
+          "group": "S1A_IW_GRDH_1SDV_20181231T000144_20181231T000209_025262_02CB2C_196A",
+          "proposals": 10,
+          "labelled": 8,
+          "referenceOilFraction": 0.06920838,
+          "maskRecallOfProposer": 0.9481
+        },
+        {
+          "scene": "00753",
+          "group": "S1A_IW_GRDH_1SDV_20190108T224024_20190108T224049_025392_02CFEC_DBB6",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00619674,
+          "maskRecallOfProposer": 0.9613
+        },
+        {
+          "scene": "01204",
+          "group": "S1A_IW_GRDH_1SDV_20190112T000143_20190112T000208_025437_02D177_1EFC",
+          "proposals": 45,
+          "labelled": 45,
+          "referenceOilFraction": 0.05034781,
+          "maskRecallOfProposer": 0.6303
+        },
+        {
+          "scene": "00435",
+          "group": "S1A_IW_GRDH_1SDV_20190204T095156_20190204T095221_025778_02DDE3_29ED",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00353861,
+          "maskRecallOfProposer": 0.9927
+        },
+        {
+          "scene": "00685",
+          "group": "S1A_IW_GRDH_1SDV_20190211T045136_20190211T045201_025877_02E164_324F",
+          "proposals": 7,
+          "labelled": 7,
+          "referenceOilFraction": 0.02585365,
+          "maskRecallOfProposer": 0.9903
+        },
+        {
+          "scene": "00579",
+          "group": "S1A_IW_GRDH_1SDV_20190215T114238_20190215T114303_025940_02E3A1_F94A",
+          "proposals": 17,
+          "labelled": 17,
+          "referenceOilFraction": 0.00936675,
+          "maskRecallOfProposer": 0.9958
+        },
+        {
+          "scene": "00921",
+          "group": "S1A_IW_GRDH_1SDV_20190313T000142_20190313T000207_026312_02F101_603B",
+          "proposals": 15,
+          "labelled": 14,
+          "referenceOilFraction": 0.03784847,
+          "maskRecallOfProposer": 0.9069
+        },
+        {
+          "scene": "01215",
+          "group": "S1A_IW_GRDH_1SDV_20190325T000142_20190325T000207_026487_02F77B_19BF",
+          "proposals": 17,
+          "labelled": 15,
+          "referenceOilFraction": 0.00780821,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00845",
+          "group": "S1A_IW_GRDH_1SDV_20190407T153311_20190407T153336_026686_02FEBD_284D",
+          "proposals": 24,
+          "labelled": 24,
+          "referenceOilFraction": 0.05366015,
+          "maskRecallOfProposer": 0.8948
+        },
+        {
+          "scene": "00710",
+          "group": "S1A_IW_GRDH_1SDV_20190412T045202_20190412T045227_026752_03012F_7DB1",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.02948427,
+          "maskRecallOfProposer": 0.9151
+        },
+        {
+          "scene": "00472",
+          "group": "S1A_IW_GRDH_1SDV_20190429T050020_20190429T050045_027000_030A2C_FE8D",
+          "proposals": 64,
+          "labelled": 60,
+          "referenceOilFraction": 0.00672102,
+          "maskRecallOfProposer": 0.7938
+        },
+        {
+          "scene": "01190",
+          "group": "S1A_IW_GRDH_1SDV_20190430T000143_20190430T000208_027012_030AA6_F1DA",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.0141263,
+          "maskRecallOfProposer": 0.9915
+        },
+        {
+          "scene": "01066",
+          "group": "S1A_IW_GRDH_1SDV_20190604T154953_20190604T155018_027532_031B5A_8B9B",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.0057199,
+          "maskRecallOfProposer": 0.9997
+        },
+        {
+          "scene": "01197",
+          "group": "S1A_IW_GRDH_1SDV_20190605T000145_20190605T000210_027537_031B82_AABF",
+          "proposals": 40,
+          "labelled": 27,
+          "referenceOilFraction": 0.02065969,
+          "maskRecallOfProposer": 0.9988
+        },
+        {
+          "scene": "00900",
+          "group": "S1A_IW_GRDH_1SDV_20190610T035930_20190610T035955_027612_031DBE_CF47",
+          "proposals": 64,
+          "labelled": 59,
+          "referenceOilFraction": 0.00288683,
+          "maskRecallOfProposer": 0.9992
+        },
+        {
+          "scene": "01240",
+          "group": "S1A_IW_GRDH_1SDV_20190612T111511_20190612T111536_027645_031ED2_9323",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.00248313,
+          "maskRecallOfProposer": 0.9962
+        },
+        {
+          "scene": "00695",
+          "group": "S1A_IW_GRDH_1SDV_20190620T223322_20190620T223347_027769_03226C_8B7A",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01987314,
+          "maskRecallOfProposer": 0.9933
+        },
+        {
+          "scene": "00981",
+          "group": "S1A_IW_GRDH_1SDV_20190623T154126_20190623T154151_027809_0323A6_DF6C",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00508046,
+          "maskRecallOfProposer": 0.9461
+        },
+        {
+          "scene": "00970",
+          "group": "S1A_IW_GRDH_1SDV_20190702T002539_20190702T002604_027931_032749_948A",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.01091814,
+          "maskRecallOfProposer": 0.9393
+        },
+        {
+          "scene": "01251",
+          "group": "S1A_IW_GRDH_1SDV_20190702T223348_20190702T223415_027944_0327B6_7BF5",
+          "proposals": 40,
+          "labelled": 40,
+          "referenceOilFraction": 0.00921082,
+          "maskRecallOfProposer": 0.9486
+        },
+        {
+          "scene": "00942",
+          "group": "S1A_IW_GRDH_1SDV_20190704T000948_20190704T001013_027960_032833_0688",
+          "proposals": 29,
+          "labelled": 27,
+          "referenceOilFraction": 0.01441979,
+          "maskRecallOfProposer": 0.9999
+        },
+        {
+          "scene": "01083",
+          "group": "S1A_IW_GRDH_1SDV_20190710T154905_20190710T154930_028057_032B2E_E9D6",
+          "proposals": 3,
+          "labelled": 2,
+          "referenceOilFraction": 0.03195095,
+          "maskRecallOfProposer": 0.9667
+        },
+        {
+          "scene": "00939",
+          "group": "S1A_IW_GRDH_1SDV_20190716T000949_20190716T001014_028135_032D7F_A3E3",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.01098156,
+          "maskRecallOfProposer": 0.9805
+        },
+        {
+          "scene": "00844",
+          "group": "S1A_IW_GRDH_1SDV_20190716T022314_20190716T022339_028136_032D88_3F6F",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00300097,
+          "maskRecallOfProposer": 0.9427
+        },
+        {
+          "scene": "01232",
+          "group": "S1A_IW_GRDH_1SDV_20190718T111514_20190718T111539_028170_032E9E_8AD1",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00768852,
+          "maskRecallOfProposer": 0.9863
+        },
+        {
+          "scene": "00996",
+          "group": "S1A_IW_GRDH_1SDV_20190723T021504_20190723T021529_028238_0330A0_652B",
+          "proposals": 37,
+          "labelled": 37,
+          "referenceOilFraction": 0.01183795,
+          "maskRecallOfProposer": 0.9999
+        },
+        {
+          "scene": "01041",
+          "group": "S1A_IW_GRDH_1SDV_20190729T154128_20190729T154153_028334_033394_8B82",
+          "proposals": 34,
+          "labelled": 33,
+          "referenceOilFraction": 0.01333356,
+          "maskRecallOfProposer": 0.9976
+        },
+        {
+          "scene": "01237",
+          "group": "S1A_IW_GRDH_1SDV_20190730T111514_20190730T111539_028345_0333FB_3615",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.0395298,
+          "maskRecallOfProposer": 0.9046
+        },
+        {
+          "scene": "00955",
+          "group": "S1A_IW_GRDH_1SDV_20190807T002542_20190807T002607_028456_033737_5081",
+          "proposals": 64,
+          "labelled": 55,
+          "referenceOilFraction": 0.00956607,
+          "maskRecallOfProposer": 0.999
+        },
+        {
+          "scene": "01172",
+          "group": "S1A_IW_GRDH_1SDV_20190809T001016_20190809T001041_028485_033839_AE7A",
+          "proposals": 63,
+          "labelled": 58,
+          "referenceOilFraction": 0.00254631,
+          "maskRecallOfProposer": 0.9902
+        },
+        {
+          "scene": "01060",
+          "group": "S1A_IW_GRDH_1SDV_20190816T000100_20190816T000125_028587_033BC6_3ADE",
+          "proposals": 64,
+          "labelled": 61,
+          "referenceOilFraction": 0.00714619,
+          "maskRecallOfProposer": 0.9751
+        },
+        {
+          "scene": "00962",
+          "group": "S1A_IW_GRDH_1SDV_20190826T001747_20190826T001812_028733_0340D4_9E2F",
+          "proposals": 46,
+          "labelled": 45,
+          "referenceOilFraction": 0.02776074,
+          "maskRecallOfProposer": 0.9986
+        },
+        {
+          "scene": "00869",
+          "group": "S1A_IW_GRDH_1SDV_20190828T035124_20190828T035149_028764_0341F0_DBEB",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00446701,
+          "maskRecallOfProposer": 0.9662
+        },
+        {
+          "scene": "00864",
+          "group": "S1A_IW_GRDH_1SDV_20190828T035214_20190828T035239_028764_0341F0_762B",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00432372,
+          "maskRecallOfProposer": 0.9629
+        },
+        {
+          "scene": "00925",
+          "group": "S1A_IW_GRDH_1SDV_20190831T232736_20190831T232801_028820_0343E0_5008",
+          "proposals": 36,
+          "labelled": 35,
+          "referenceOilFraction": 0.0105114,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00947",
+          "group": "S1A_IW_GRDH_1SDV_20190907T001722_20190907T001747_028908_0346F0_862C",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.01226807,
+          "maskRecallOfProposer": 0.9884
+        },
+        {
+          "scene": "01171",
+          "group": "S1A_IW_GRDH_1SDV_20190908T154934_20190908T154959_028932_0347C3_EDE4",
+          "proposals": 43,
+          "labelled": 43,
+          "referenceOilFraction": 0.00954668,
+          "maskRecallOfProposer": 0.9845
+        },
+        {
+          "scene": "01079",
+          "group": "S1A_IW_GRDH_1SDV_20190908T154959_20190908T155024_028932_0347C3_7123",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00341201,
+          "maskRecallOfProposer": 0.9052
+        },
+        {
+          "scene": "00994",
+          "group": "S1A_IW_GRDH_1SDV_20190919T001632_20190919T001657_029083_034D00_05B9",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00316811,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00328",
+          "group": "S1A_IW_GRDH_1SDV_20190920T095205_20190920T095230_029103_034DAB_3201",
+          "proposals": 47,
+          "labelled": 43,
+          "referenceOilFraction": 0.00761461,
+          "maskRecallOfProposer": 0.9631
+        },
+        {
+          "scene": "00857",
+          "group": "S1A_IW_GRDH_1SDV_20190921T035215_20190921T035240_029114_034E08_9927",
+          "proposals": 64,
+          "labelled": 55,
+          "referenceOilFraction": 0.00734472,
+          "maskRecallOfProposer": 0.9746
+        },
+        {
+          "scene": "01309",
+          "group": "S1A_IW_GRDH_1SDV_20190925T032240_20190925T032309_029172_034FF8_07DB",
+          "proposals": 40,
+          "labelled": 40,
+          "referenceOilFraction": 0.03203869,
+          "maskRecallOfProposer": 0.7121
+        },
+        {
+          "scene": "00346",
+          "group": "S1A_IW_GRDH_1SDV_20191002T095206_20191002T095231_029278_0353AF_58BB",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00674415,
+          "maskRecallOfProposer": 0.9998
+        },
+        {
+          "scene": "00958",
+          "group": "S1A_IW_GRDH_1SDV_20191006T002544_20191006T002609_029331_035579_A39B",
+          "proposals": 47,
+          "labelled": 45,
+          "referenceOilFraction": 0.00683689,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00929",
+          "group": "S1A_IW_GRDH_1SDV_20191008T040001_20191008T040026_029362_03568A_1887",
+          "proposals": 4,
+          "labelled": 4,
+          "referenceOilFraction": 0.01937294,
+          "maskRecallOfProposer": 0.9958
+        },
+        {
+          "scene": "01282",
+          "group": "S1A_IW_GRDH_1SDV_20191014T031431_20191014T031500_029449_03598E_1B6C",
+          "proposals": 57,
+          "labelled": 56,
+          "referenceOilFraction": 0.03554871,
+          "maskRecallOfProposer": 0.9838
+        },
+        {
+          "scene": "00637",
+          "group": "S1A_IW_GRDH_1SDV_20191014T031500_20191014T031525_029449_03598E_ED4C",
+          "proposals": 20,
+          "labelled": 20,
+          "referenceOilFraction": 0.01221382,
+          "maskRecallOfProposer": 0.9861
+        },
+        {
+          "scene": "01173",
+          "group": "S1A_IW_GRDH_1SDV_20191015T000152_20191015T000217_029462_035A0E_6CA9",
+          "proposals": 24,
+          "labelled": 20,
+          "referenceOilFraction": 0.0685184,
+          "maskRecallOfProposer": 0.8715
+        },
+        {
+          "scene": "00468",
+          "group": "S1A_IW_GRDH_1SDV_20191016T025937_20191016T030002_029478_035A87_B9F2",
+          "proposals": 32,
+          "labelled": 27,
+          "referenceOilFraction": 0.04758549,
+          "maskRecallOfProposer": 0.9287
+        },
+        {
+          "scene": "01044",
+          "group": "S1A_IW_GRDH_1SDV_20191022T034356_20191022T034421_029566_035D93_FD78",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.01516938,
+          "maskRecallOfProposer": 0.9989
+        },
+        {
+          "scene": "01295",
+          "group": "S1A_IW_GRDH_1SDV_20191026T031431_20191026T031500_029624_035F8D_0944",
+          "proposals": 64,
+          "labelled": 58,
+          "referenceOilFraction": 0.01320219,
+          "maskRecallOfProposer": 0.9999
+        },
+        {
+          "scene": "00317",
+          "group": "S1A_IW_GRDH_1SDV_20191026T095206_20191026T095231_029628_035FBA_B120",
+          "proposals": 11,
+          "labelled": 10,
+          "referenceOilFraction": 0.05176044,
+          "maskRecallOfProposer": 0.6917
+        },
+        {
+          "scene": "01278",
+          "group": "S1A_IW_GRDH_1SDV_20191026T221743_20191026T221812_029636_036008_C0F4",
+          "proposals": 64,
+          "labelled": 60,
+          "referenceOilFraction": 0.00860692,
+          "maskRecallOfProposer": 0.9837
+        },
+        {
+          "scene": "00965",
+          "group": "S1A_IW_GRDH_1SDV_20191030T002544_20191030T002609_029681_036197_5CDB",
+          "proposals": 17,
+          "labelled": 15,
+          "referenceOilFraction": 0.0102787,
+          "maskRecallOfProposer": 1.0
+        },
+        {
+          "scene": "00203",
+          "group": "S1B_IW_GRDH_1SDV_20170801T035908_20170801T035933_006741_00BDC7_5356",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.00192523,
+          "maskRecallOfProposer": 0.9558
+        },
+        {
+          "scene": "01328",
+          "group": "S1B_IW_GRDH_1SDV_20170817T173241_20170817T173316_006982_00C4C2_4FC7",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00577426,
+          "maskRecallOfProposer": 0.9737
+        },
+        {
+          "scene": "00461",
+          "group": "S1B_IW_GRDH_1SDV_20170818T182534_20170818T182559_006998_00C540_C896",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00475383,
+          "maskRecallOfProposer": 0.7509
+        },
+        {
+          "scene": "01162",
+          "group": "S1B_IW_GRDH_1SDV_20170819T062633_20170819T062658_007005_00C576_3AC7",
+          "proposals": 14,
+          "labelled": 12,
+          "referenceOilFraction": 0.0454185,
+          "maskRecallOfProposer": 0.9856
+        },
+        {
+          "scene": "00227",
+          "group": "S1B_IW_GRDH_1SDV_20170913T035125_20170913T035150_007368_00D005_305E",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00828862,
+          "maskRecallOfProposer": 0.9491
+        },
+        {
+          "scene": "00792",
+          "group": "S1B_IW_GRDH_1SDV_20170914T171056_20170914T171121_007391_00D0A7_0523",
+          "proposals": 57,
+          "labelled": 55,
+          "referenceOilFraction": 0.00801873,
+          "maskRecallOfProposer": 0.9992
+        },
+        {
+          "scene": "00791",
+          "group": "S1B_IW_GRDH_1SDV_20170926T171056_20170926T171121_007566_00D5B3_4CA7",
+          "proposals": 64,
+          "labelled": 61,
+          "referenceOilFraction": 0.00304675,
+          "maskRecallOfProposer": 0.7749
+        },
+        {
+          "scene": "00112",
+          "group": "S1B_IW_GRDH_1SDV_20170929T155606_20170929T155630_007609_00D6F3_36B8",
+          "proposals": 36,
+          "labelled": 34,
+          "referenceOilFraction": 0.01673508,
+          "maskRecallOfProposer": 0.987
+        },
+        {
+          "scene": "01323",
+          "group": "S1B_IW_GRDH_1SDV_20171004T173243_20171004T173317_007682_00D90D_1148",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00508388,
+          "maskRecallOfProposer": 0.685
+        },
+        {
+          "scene": "00126",
+          "group": "S1B_IW_GRDH_1SDV_20171023T155606_20171023T155631_007959_00E0EF_4900",
+          "proposals": 64,
+          "labelled": 55,
+          "referenceOilFraction": 0.01404357,
+          "maskRecallOfProposer": 0.9991
+        },
+        {
+          "scene": "00244",
+          "group": "S1B_IW_GRDH_1SDV_20171024T035846_20171024T035911_007966_00E12D_BB95",
+          "proposals": 1,
+          "labelled": 1,
+          "referenceOilFraction": 0.04515896,
+          "maskRecallOfProposer": 0.9153
+        },
+        {
+          "scene": "01261",
+          "group": "S1B_IW_GRDH_1SDV_20171201T120016_20171201T120045_008525_00F1F5_E307",
+          "proposals": 22,
+          "labelled": 19,
+          "referenceOilFraction": 0.04413843,
+          "maskRecallOfProposer": 0.9388
+        },
+        {
+          "scene": "00082",
+          "group": "S1B_IW_GRDH_1SDV_20171204T001458_20171204T001523_008562_00F323_2A9C",
+          "proposals": 64,
+          "labelled": 58,
+          "referenceOilFraction": 0.0073607,
+          "maskRecallOfProposer": 0.9515
+        },
+        {
+          "scene": "00167",
+          "group": "S1B_IW_GRDH_1SDV_20171211T035910_20171211T035935_008666_00F66D_2BA9",
+          "proposals": 24,
+          "labelled": 24,
+          "referenceOilFraction": 0.03146529,
+          "maskRecallOfProposer": 0.8663
+        },
+        {
+          "scene": "01325",
+          "group": "S1B_IW_GRDH_1SDV_20171227T173242_20171227T173316_008907_00FE1E_7C39",
+          "proposals": 1,
+          "labelled": 1,
+          "referenceOilFraction": 0.00246692,
+          "maskRecallOfProposer": 0.8932
+        },
+        {
+          "scene": "00210",
+          "group": "S1B_IW_GRDH_1SDV_20171230T035124_20171230T035149_008943_00FF46_09E9",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.016011,
+          "maskRecallOfProposer": 0.981
+        },
+        {
+          "scene": "00452",
+          "group": "S1B_IW_GRDH_1SDV_20180120T092853_20180120T092918_009253_010962_4338",
+          "proposals": 64,
+          "labelled": 61,
+          "referenceOilFraction": 0.00608158,
+          "maskRecallOfProposer": 0.9295
+        },
+        {
+          "scene": "00821",
+          "group": "S1B_IW_GRDH_1SDV_20180131T060035_20180131T060100_009411_010E90_3192",
+          "proposals": 64,
+          "labelled": 62,
+          "referenceOilFraction": 0.0094087,
+          "maskRecallOfProposer": 0.9898
+        },
+        {
+          "scene": "00160",
+          "group": "S1B_IW_GRDH_1SDV_20180204T035058_20180204T035123_009468_011070_A886",
+          "proposals": 54,
+          "labelled": 54,
+          "referenceOilFraction": 0.02167654,
+          "maskRecallOfProposer": 0.8315
+        },
+        {
+          "scene": "00206",
+          "group": "S1B_IW_GRDH_1SDV_20180221T035933_20180221T035958_009716_011896_E830",
+          "proposals": 21,
+          "labelled": 21,
+          "referenceOilFraction": 0.01962195,
+          "maskRecallOfProposer": 0.7595
+        },
+        {
+          "scene": "00074",
+          "group": "S1B_IW_GRDH_1SDV_20180226T001456_20180226T001521_009787_011AFF_6791",
+          "proposals": 17,
+          "labelled": 17,
+          "referenceOilFraction": 0.08381977,
+          "maskRecallOfProposer": 0.9352
+        },
+        {
+          "scene": "00211",
+          "group": "S1B_IW_GRDH_1SDV_20180228T035123_20180228T035148_009818_011BFF_A6C6",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.0064218,
+          "maskRecallOfProposer": 0.9797
+        },
+        {
+          "scene": "00073",
+          "group": "S1B_IW_GRDH_1SDV_20180310T001456_20180310T001521_009962_0120DE_7E83",
+          "proposals": 15,
+          "labelled": 15,
+          "referenceOilFraction": 0.04403712,
+          "maskRecallOfProposer": 0.9665
+        },
+        {
+          "scene": "00387",
+          "group": "S1B_IW_GRDH_1SDV_20180311T154853_20180311T154918_009986_01219E_3634",
+          "proposals": 64,
+          "labelled": 64,
+          "referenceOilFraction": 0.00707926,
+          "maskRecallOfProposer": 0.9998
+        },
+        {
+          "scene": "01268",
+          "group": "S1B_IW_GRDH_1SDV_20180331T120014_20180331T120043_010275_012AFA_82DC",
+          "proposals": 10,
+          "labelled": 9,
+          "referenceOilFraction": 0.03511119,
+          "maskRecallOfProposer": 0.8768
+        },
+        {
+          "scene": "00156",
+          "group": "S1B_IW_GRDH_1SDV_20180403T001457_20180403T001522_010312_012C3C_8B5F",
+          "proposals": 22,
+          "labelled": 14,
+          "referenceOilFraction": 0.05330641,
+          "maskRecallOfProposer": 0.9991
+        },
+        {
+          "scene": "00893",
+          "group": "S1B_IW_GRDH_1SDV_20180404T062632_20180404T062657_010330_012CD5_1B1B",
+          "proposals": 17,
+          "labelled": 15,
+          "referenceOilFraction": 0.03175497,
+          "maskRecallOfProposer": 0.8673
+        },
+        {
+          "scene": "00888",
+          "group": "S1B_IW_GRDH_1SDV_20180408T165722_20180408T165747_010395_012EDB_BCD4",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00388813,
+          "maskRecallOfProposer": 0.5999
+        },
+        {
+          "scene": "00809",
+          "group": "S1B_IW_GRDH_1SDV_20180601T174553_20180601T174618_011183_014840_19C3",
+          "proposals": 24,
+          "labelled": 24,
+          "referenceOilFraction": 0.02251458,
+          "maskRecallOfProposer": 0.9996
+        },
+        {
+          "scene": "00506",
+          "group": "S1B_IW_GRDH_1SDV_20180615T154858_20180615T154923_011386_014E8F_4E24",
+          "proposals": 64,
+          "labelled": 61,
+          "referenceOilFraction": 0.00231433,
+          "maskRecallOfProposer": 0.9965
+        },
+        {
+          "scene": "00878",
+          "group": "S1B_IW_GRDH_1SDV_20180617T171057_20180617T171122_011416_014F7D_9248",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.00965738,
+          "maskRecallOfProposer": 0.9961
+        },
+        {
+          "scene": "00840",
+          "group": "S1B_IW_GRDH_1SDV_20180706T042229_20180706T042254_011685_0157E9_18EB",
+          "proposals": 64,
+          "labelled": 58,
+          "referenceOilFraction": 0.01891136,
+          "maskRecallOfProposer": 0.8992
+        },
+        {
+          "scene": "01269",
+          "group": "S1B_IW_GRDH_1SDV_20180717T120020_20180717T120049_011850_015CFB_926A",
+          "proposals": 64,
+          "labelled": 63,
+          "referenceOilFraction": 0.0152936,
+          "maskRecallOfProposer": 0.974
+        },
+        {
+          "scene": "00456",
+          "group": "S1B_IW_GRDH_1SDV_20180720T001503_20180720T001528_011887_015E13_ACEB",
+          "proposals": 8,
+          "labelled": 8,
+          "referenceOilFraction": 0.11174884,
+          "maskRecallOfProposer": 0.6449
+        },
+        {
+          "scene": "00837",
+          "group": "S1B_IW_GRDH_1SDV_20180721T154900_20180721T154925_011911_015ECC_6373",
+          "proposals": 4,
+          "labelled": 3,
+          "referenceOilFraction": 0.01428429,
+          "maskRecallOfProposer": 0.998
+        },
+        {
+          "scene": "01270",
+          "group": "S1B_IW_GRDH_1SDV_20180729T120021_20180729T120050_012025_01623E_7E83",
+          "proposals": 23,
+          "labelled": 19,
+          "referenceOilFraction": 0.01219368,
+          "maskRecallOfProposer": 0.9833
+        }
+      ]
+    },
+    "crossValidation": {
+      "folds": 5,
+      "grouping": "parent Sentinel-1 product id from the DIMAP header",
+      "pooledHeldOut": {
+        "regions": 11623,
+        "oilRegions": 930,
+        "lookAlikeRegions": 10693,
+        "oilOutcomes": {
+          "accepted": 777,
+          "uncertain": 62,
+          "rejected": 91
+        },
+        "lookAlikeOutcomes": {
+          "accepted": 508,
+          "uncertain": 627,
+          "rejected": 9558
+        },
+        "keptSensitivity": 0.9022,
+        "rejectionSpecificity": 0.8939,
+        "auc": 0.9573,
+        "singleFeatureAuc": {
+          "darknessZ": 0.948,
+          "darknessP10Z": 0.9323,
+          "textureRatio": 0.1524,
+          "edgeSharpness": 0.88,
+          "compactness": 0.5187,
+          "solidity": 0.3769,
+          "elongation": 0.7911
+        },
+        "definitions": {
+          "keptSensitivity": "labelled-oil regions not rejected / all labelled-oil regions",
+          "rejectionSpecificity": "look-alike regions rejected / all look-alike regions",
+          "uncertain": "likelihood between the two thresholds; kept in the case"
+        }
+      },
+      "perFold": [
+        {
+          "regions": 2325,
+          "oilRegions": 166,
+          "lookAlikeRegions": 2159,
+          "oilOutcomes": {
+            "accepted": 138,
+            "uncertain": 17,
+            "rejected": 11
+          },
+          "lookAlikeOutcomes": {
+            "accepted": 77,
+            "uncertain": 130,
+            "rejected": 1952
+          },
+          "keptSensitivity": 0.9337,
+          "rejectionSpecificity": 0.9041,
+          "auc": 0.9771,
+          "definitions": {
+            "keptSensitivity": "labelled-oil regions not rejected / all labelled-oil regions",
+            "rejectionSpecificity": "look-alike regions rejected / all look-alike regions",
+            "uncertain": "likelihood between the two thresholds; kept in the case"
+          },
+          "fold": 0,
+          "trainRegions": 9298,
+          "products": 54
+        },
+        {
+          "regions": 2325,
+          "oilRegions": 169,
+          "lookAlikeRegions": 2156,
+          "oilOutcomes": {
+            "accepted": 130,
+            "uncertain": 11,
+            "rejected": 28
+          },
+          "lookAlikeOutcomes": {
+            "accepted": 114,
+            "uncertain": 142,
+            "rejected": 1900
+          },
+          "keptSensitivity": 0.8343,
+          "rejectionSpecificity": 0.8813,
+          "auc": 0.9414,
+          "definitions": {
+            "keptSensitivity": "labelled-oil regions not rejected / all labelled-oil regions",
+            "rejectionSpecificity": "look-alike regions rejected / all look-alike regions",
+            "uncertain": "likelihood between the two thresholds; kept in the case"
+          },
+          "fold": 1,
+          "trainRegions": 9298,
+          "products": 54
+        },
+        {
+          "regions": 2325,
+          "oilRegions": 193,
+          "lookAlikeRegions": 2132,
+          "oilOutcomes": {
+            "accepted": 147,
+            "uncertain": 16,
+            "rejected": 30
+          },
+          "lookAlikeOutcomes": {
+            "accepted": 97,
+            "uncertain": 96,
+            "rejected": 1939
+          },
+          "keptSensitivity": 0.8446,
+          "rejectionSpecificity": 0.9095,
+          "auc": 0.9269,
+          "definitions": {
+            "keptSensitivity": "labelled-oil regions not rejected / all labelled-oil regions",
+            "rejectionSpecificity": "look-alike regions rejected / all look-alike regions",
+            "uncertain": "likelihood between the two thresholds; kept in the case"
+          },
+          "fold": 2,
+          "trainRegions": 9298,
+          "products": 54
+        },
+        {
+          "regions": 2324,
+          "oilRegions": 191,
+          "lookAlikeRegions": 2133,
+          "oilOutcomes": {
+            "accepted": 170,
+            "uncertain": 9,
+            "rejected": 12
+          },
+          "lookAlikeOutcomes": {
+            "accepted": 122,
+            "uncertain": 152,
+            "rejected": 1859
+          },
+          "keptSensitivity": 0.9372,
+          "rejectionSpecificity": 0.8715,
+          "auc": 0.968,
+          "definitions": {
+            "keptSensitivity": "labelled-oil regions not rejected / all labelled-oil regions",
+            "rejectionSpecificity": "look-alike regions rejected / all look-alike regions",
+            "uncertain": "likelihood between the two thresholds; kept in the case"
+          },
+          "fold": 3,
+          "trainRegions": 9299,
+          "products": 54
+        },
+        {
+          "regions": 2324,
+          "oilRegions": 211,
+          "lookAlikeRegions": 2113,
+          "oilOutcomes": {
+            "accepted": 192,
+            "uncertain": 9,
+            "rejected": 10
+          },
+          "lookAlikeOutcomes": {
+            "accepted": 98,
+            "uncertain": 107,
+            "rejected": 1908
+          },
+          "keptSensitivity": 0.9526,
+          "rejectionSpecificity": 0.903,
+          "auc": 0.9749,
+          "definitions": {
+            "keptSensitivity": "labelled-oil regions not rejected / all labelled-oil regions",
+            "rejectionSpecificity": "look-alike regions rejected / all look-alike regions",
+            "uncertain": "likelihood between the two thresholds; kept in the case"
+          },
+          "fold": 4,
+          "trainRegions": 9299,
+          "products": 54
+        }
+      ]
+    },
+    "note": "fitted and scored on this project's own Sentinel-1 decibel scenes, labelled by the supplied reference masks"
+  },
+  "crossDomain": {
+    "dataset": {
+      "available": true,
+      "source": "doi:10.1594/PANGAEA.980773 (Yang & Singha 2025, CC-BY-4.0)",
+      "index": "DARTIS_2019.tab",
+      "catalogue": {
+        "patches": 3655,
+        "oilPatches": 1365,
+        "noOilPatches": 2290,
+        "annotatedObjects": 3225,
+        "bySubset": {
+          "nc": 351,
+          "nw": 1939,
+          "oc": 375,
+          "ow": 990
+        },
+        "byCluster": {
+          "nc-00": 76,
+          "nc-01": 84,
+          "nc-02": 75,
+          "nc-03": 44,
+          "nc-04": 72,
+          "nw-00": 172,
+          "nw-01": 171,
+          "nw-02": 160,
+          "nw-03": 162,
+          "nw-04": 81,
+          "nw-05": 166,
+          "nw-06": 166,
+          "nw-07": 171,
+          "nw-08": 175,
+          "nw-09": 168,
+          "nw-10": 174,
+          "nw-11": 173
+        },
+        "subsetLabels": {
+          "oc": "oil, coastal",
+          "ow": "oil, open water",
+          "nc": "no oil, coastal",
+          "nw": "no oil, open water"
+        }
+      },
+      "presentOnDisk": {
+        "patches": 2300,
+        "oilPatches": 10,
+        "noOilPatches": 2290,
+        "annotatedObjects": 18,
+        "bySubset": {
+          "nc": 351,
+          "nw": 1939,
+          "ow": 10
+        },
+        "byCluster": {
+          "nc-00": 76,
+          "nc-01": 84,
+          "nc-02": 75,
+          "nc-03": 44,
+          "nc-04": 72,
+          "nw-00": 172,
+          "nw-01": 171,
+          "nw-02": 160,
+          "nw-03": 162,
+          "nw-04": 81,
+          "nw-05": 166,
+          "nw-06": 166,
+          "nw-07": 171,
+          "nw-08": 175,
+          "nw-09": 168,
+          "nw-10": 174,
+          "nw-11": 173
+        },
+        "subsetLabels": {
+          "ow": "oil, open water",
+          "nc": "no oil, coastal",
+          "nw": "no oil, open water"
+        }
+      },
+      "coverage": "2290 of 2290 published look-alike patches are on disk"
+    },
+    "screen": {
+      "patches": 2290,
+      "patchesWithNoDarkRegion": 126,
+      "regions": 84758,
+      "droppedNoBackground": 0,
+      "resampledToSpacingM": 9.3441,
+      "regionOutcomes": {
+        "accepted": 14152,
+        "uncertain": 11794,
+        "rejected": 58812
+      },
+      "regionRejectionRate": 0.6939,
+      "patchesWithSurvivingRegion": 1677,
+      "patchFalseAlarmRate": 0.7323,
+      "bySubset": {
+        "nc": {
+          "accepted": 1386,
+          "uncertain": 961,
+          "rejected": 4936,
+          "regions": 7283,
+          "rejectionRate": 0.6777,
+          "label": "no oil, coastal"
+        },
+        "nw": {
+          "accepted": 12766,
+          "uncertain": 10833,
+          "rejected": 53876,
+          "regions": 77475,
+          "rejectionRate": 0.6954,
+          "label": "no oil, open water"
+        }
+      },
+      "byCluster": {
+        "nc-00": {
+          "accepted": 345,
+          "uncertain": 234,
+          "rejected": 967,
+          "regions": 1546,
+          "rejectionRate": 0.6255
+        },
+        "nc-01": {
+          "accepted": 244,
+          "uncertain": 169,
+          "rejected": 1102,
+          "regions": 1515,
+          "rejectionRate": 0.7274
+        },
+        "nc-02": {
+          "accepted": 280,
+          "uncertain": 251,
+          "rejected": 1451,
+          "regions": 1982,
+          "rejectionRate": 0.7321
+        },
+        "nc-03": {
+          "accepted": 192,
+          "uncertain": 112,
+          "rejected": 451,
+          "regions": 755,
+          "rejectionRate": 0.5974
+        },
+        "nc-04": {
+          "accepted": 325,
+          "uncertain": 195,
+          "rejected": 965,
+          "regions": 1485,
+          "rejectionRate": 0.6498
+        },
+        "nw-00": {
+          "accepted": 1809,
+          "uncertain": 2064,
+          "rejected": 4859,
+          "regions": 8732,
+          "rejectionRate": 0.5565
+        },
+        "nw-01": {
+          "accepted": 477,
+          "uncertain": 1095,
+          "rejected": 8414,
+          "regions": 9986,
+          "rejectionRate": 0.8426
+        },
+        "nw-02": {
+          "accepted": 724,
+          "uncertain": 569,
+          "rejected": 2417,
+          "regions": 3710,
+          "rejectionRate": 0.6515
+        },
+        "nw-03": {
+          "accepted": 305,
+          "uncertain": 353,
+          "rejected": 3725,
+          "regions": 4383,
+          "rejectionRate": 0.8499
+        },
+        "nw-04": {
+          "accepted": 765,
+          "uncertain": 660,
+          "rejected": 2947,
+          "regions": 4372,
+          "rejectionRate": 0.6741
+        },
+        "nw-05": {
+          "accepted": 95,
+          "uncertain": 215,
+          "rejected": 7860,
+          "regions": 8170,
+          "rejectionRate": 0.9621
+        },
+        "nw-06": {
+          "accepted": 2519,
+          "uncertain": 1880,
+          "rejected": 5149,
+          "regions": 9548,
+          "rejectionRate": 0.5393
+        },
+        "nw-07": {
+          "accepted": 391,
+          "uncertain": 543,
+          "rejected": 4182,
+          "regions": 5116,
+          "rejectionRate": 0.8174
+        },
+        "nw-08": {
+          "accepted": 684,
+          "uncertain": 604,
+          "rejected": 3532,
+          "regions": 4820,
+          "rejectionRate": 0.7328
+        },
+        "nw-09": {
+          "accepted": 430,
+          "uncertain": 579,
+          "rejected": 5063,
+          "regions": 6072,
+          "rejectionRate": 0.8338
+        },
+        "nw-10": {
+          "accepted": 101,
+          "uncertain": 110,
+          "rejected": 2676,
+          "regions": 2887,
+          "rejectionRate": 0.9269
+        },
+        "nw-11": {
+          "accepted": 4466,
+          "uncertain": 2161,
+          "rejected": 3052,
+          "regions": 9679,
+          "rejectionRate": 0.3153
+        }
+      },
+      "note": "the screen was fitted on this project's decibel scenes only; nothing here was used to choose a weight, a threshold or a feature"
+    },
+    "detector": {
+      "threshold": 0.8,
+      "thresholdSource": "sceneThreshold from scene_metrics.json, the operating point chosen on the validation scenes",
+      "alarmRule": "a patch counts as an alarm when a connected region of at least 400 pixels exceeds the threshold",
+      "lookAlikes": {
+        "clipRange": {
+          "assumption": "digital numbers 0-255 mapped linearly onto the clip bounds the training normalisation uses for each polarisation, i.e. assuming the JPEG stretch spanned exactly that dynamic range",
+          "patches": 340,
+          "patchesWithAlarm": 305,
+          "meanPredictedFraction": 0.041381,
+          "byCluster": {
+            "nc-00": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nc-01": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nc-02": {
+              "patches": 20,
+              "alarms": 19,
+              "alarmRate": 0.95
+            },
+            "nc-03": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nc-04": {
+              "patches": 20,
+              "alarms": 18,
+              "alarmRate": 0.9
+            },
+            "nw-00": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-01": {
+              "patches": 20,
+              "alarms": 16,
+              "alarmRate": 0.8
+            },
+            "nw-02": {
+              "patches": 20,
+              "alarms": 18,
+              "alarmRate": 0.9
+            },
+            "nw-03": {
+              "patches": 20,
+              "alarms": 19,
+              "alarmRate": 0.95
+            },
+            "nw-04": {
+              "patches": 20,
+              "alarms": 18,
+              "alarmRate": 0.9
+            },
+            "nw-05": {
+              "patches": 20,
+              "alarms": 7,
+              "alarmRate": 0.35
+            },
+            "nw-06": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-07": {
+              "patches": 20,
+              "alarms": 17,
+              "alarmRate": 0.85
+            },
+            "nw-08": {
+              "patches": 20,
+              "alarms": 19,
+              "alarmRate": 0.95
+            },
+            "nw-09": {
+              "patches": 20,
+              "alarms": 16,
+              "alarmRate": 0.8
+            },
+            "nw-10": {
+              "patches": 20,
+              "alarms": 18,
+              "alarmRate": 0.9
+            },
+            "nw-11": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            }
+          },
+          "falseAlarmRate": 0.8971
+        },
+        "momentMatch": {
+          "assumption": "each patch standardised by its own mean and standard deviation, then given the training mean and standard deviation of each polarisation, i.e. assuming the patch is radiometrically typical of the training scenes",
+          "patches": 340,
+          "patchesWithAlarm": 340,
+          "meanPredictedFraction": 0.17182,
+          "byCluster": {
+            "nc-00": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nc-01": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nc-02": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nc-03": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nc-04": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-00": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-01": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-02": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-03": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-04": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-05": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-06": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-07": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-08": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-09": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-10": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            },
+            "nw-11": {
+              "patches": 20,
+              "alarms": 20,
+              "alarmRate": 1.0
+            }
+          },
+          "falseAlarmRate": 1.0
+        }
+      },
+      "oilSanityCheck": {
+        "clipRange": {
+          "assumption": "digital numbers 0-255 mapped linearly onto the clip bounds the training normalisation uses for each polarisation, i.e. assuming the JPEG stretch spanned exactly that dynamic range",
+          "patches": 10,
+          "patchesWithAlarm": 10,
+          "meanPredictedFraction": 0.020226,
+          "byCluster": {
+            "ow": {
+              "patches": 10,
+              "alarms": 10,
+              "alarmRate": 1.0
+            }
+          },
+          "alarmsInsideAnnotatedBox": 9,
+          "detectionRate": 1.0
+        },
+        "momentMatch": {
+          "assumption": "each patch standardised by its own mean and standard deviation, then given the training mean and standard deviation of each polarisation, i.e. assuming the patch is radiometrically typical of the training scenes",
+          "patches": 10,
+          "patchesWithAlarm": 10,
+          "meanPredictedFraction": 0.179217,
+          "byCluster": {
+            "ow": {
+              "patches": 10,
+              "alarms": 10,
+              "alarmRate": 1.0
+            }
+          },
+          "alarmsInsideAnnotatedBox": 10,
+          "detectionRate": 1.0
+        }
+      }
+    }
+  },
+  "limitations": [
+    "The look-alike labels in the same-domain half are the absence of oil in the supplied reference mask, not a positive identification of a phenomenon. A dark region the mask does not cover may be low wind, a wake, an unlabelled slick, or a labelling error.",
+    "The screen decides between oil and a look-alike for a region that has already been proposed. It cannot recover a slick the proposer never found, and its sensitivity is therefore conditional on the proposer, not on the sea.",
+    "A region the screen calls uncertain stays in the case. That is deliberate for a response tool -- suppressing an unsure detection would trade a measured false positive for an unmeasured missed spill -- but it means the rejection rate is the rate of outright rejections and not one minus the acceptance rate.",
+    "The screen was fitted on 270 parent products; a linear model over seven features on that many independent sites is a screen, not a classifier of phenomena, and it deliberately never names which look-alike it thinks it is looking at.",
+    "The look-alike patches are 8-bit JPEG at about 20 m/pixel from a different sea. They are resampled to this project's ground sampling before scoring and every model feature is a ratio of same-unit quantities, so the comparison is defensible -- but the unpublished greyscale stretch remains an untested assumption behind the invariance claim.",
+    "126 of 2290 look-alike patches produced no dark region at all, so the proposer -- not the screen -- is what rejected them. They are counted in the patch rate and absent from the region rate, which is why both are reported.",
+    "The detector's false-alarm rate is indicative, not a published figure. An 8-bit JPEG cannot be turned back into calibrated decibels and the archive is single-channel, so the second polarisation is synthesised from the first and is perfectly correlated with it. Two mappings are reported precisely because one number would overstate what the data supports."
+  ]
+}

@@ -80,10 +80,10 @@ prepared.
 
 **"Is this real data?"**
 > "The imagery and the ground-truth masks are completely real — 1,200 Sentinel-1 pairs from 270
-> distinct satellite passes, and the problem statement's own recommended Zenodo dataset. The model
-> and every metric are real, trained and measured here. Two things are synthetic and labelled as
-> such on every screen: the ocean current and wind field, and the AIS tracks. I can tell you
-> exactly why for each."
+> distinct satellite passes, across 24 seas, and it is the problem statement's own recommended
+> Zenodo dataset (10.5281/zenodo.8346860). The model and every metric are real, trained and
+> measured here. Two things are synthetic and labelled as such on every screen: the ocean current
+> and wind field, and the AIS tracks. I can tell you exactly why for each."
 
 **"Why is the AIS synthetic?"**
 > "Because the problem statement permits it. It says real AIS may be used 'else synthetic data can
@@ -101,14 +101,23 @@ prepared.
 > current field that covers 11 March 2017, from CMEMS or from INCOIS, flips that label to real
 > without touching the physics."
 
-**"Why the Persian Gulf and not Indian waters?"**
-> "Because it's the dataset the problem statement recommended — the Zenodo Sentinel-1 SAR oil spill
-> dataset. The pipeline is region-agnostic: it reads the geotransform from the file, so any
-> Sentinel-1 GeoTIFF works. Running an Indian scene — Gulf of Kutch, or the 2017 Ennore spill — is
-> a download and a run, and it's the next thing on our list."
+**"Why the Persian Gulf and not Indian waters?"** — *the premise is wrong; correct it, then concede
+the real gap*
+> "It isn't Persian Gulf data — that's just the scene in our demo. The dataset is global: 1,200
+> scenes across 24 seas, 95°W to 130°E. The largest block is the Gulf of Mexico at 388 scenes; the
+> Persian Gulf is 88, about 7%. And it is the dataset the problem statement itself names — Zenodo
+> 10.5281/zenodo.8346860, published with a Marine Pollution Bulletin paper.
+>
+> Where you're right: **there is not one scene in Indian water** in the recommended dataset. Nothing
+> between 65 and 95 east. So we can't claim we've validated on Indian seas, and we don't. The
+> pipeline is region-agnostic in the real sense — it reads the geotransform out of each file, so any
+> Sentinel-1 GeoTIFF works — and running a Gulf of Kutch or Ennore 2017 scene from the Copernicus
+> Data Space is a download and a run. That's a generalisation test we owe you, not a compliance
+> problem."
 
-*(If you have verified the Zenodo match, state it as fact. If not yet, say "we believe it's the
-recommended dataset and we're confirming the exact Zenodo record.")*
+*State the DOI as fact — the identity is verified, matched on eight independent fingerprints
+(file count, `NNNNN.tif` naming, dimensions, band naming, dtype, the BEAM-DIMAP processing chain,
+mask encoding, date span). See document 1, §1.3.*
 
 **"How do you know your model isn't just memorising?"**
 > "Our 1,200 files come from only 270 satellite acquisitions — multiple crops per pass. If crops
@@ -174,18 +183,24 @@ highest-value thing you do all session.
 > data would have inflated our numbers and we didn't."
 
 **"Can it tell oil from algae or a calm patch?"** — *the hardest fair question*
-> "Not yet, and I won't claim otherwise. Algal blooms, low-wind zones, rain cells and ship wakes
+> "Partly, and I can give you the number. Algal blooms, low-wind zones, rain cells and ship wakes
 > all damp the sea surface and look dark in SAR. It's the central unsolved problem in this field.
 >
-> Our specific situation: the supplied dataset contains **no labelled look-alikes**, so our
-> ability to reject them is untested and unquantified — that limitation ships in the product, not
-> just in this answer.
+> Our supplied dataset contains **no labelled look-alikes**, so we went and got some: 2,290
+> published look-alike patches from an independent archive, a different sea, that nothing in our
+> model ever trained on. Two results. First, **our U-Net on its own raises an alarm on every one
+> of them** — so a dark patch alone is not evidence of oil, and we can prove that about our own
+> detector. Second, we built a screen for exactly that: seven shape-and-contrast features per dark
+> region, and it rejects **69% of the dark regions** in that foreign archive while keeping 90% of
+> real oil in held-out testing at AUC 0.957.
 >
-> What we'd do: a second classification stage over each dark patch using shape, texture and
-> backscatter statistics. Low-wind zones have diffuse edges and correlate with low overall scene
-> backscatter; oil slicks have sharper gradients. Algal blooms are seasonal and geographically
-> patterned. Plus a wind-speed gate — below about 3 m/s the whole sea goes dark and no detection
-> should be trusted. That's our next real piece of work."
+> So: a real improvement, not a solution. About a quarter of those patches still raise something,
+> and the screen deliberately won't name *which* look-alike it thinks it's seeing, because nothing
+> in the data labels the phenomenon. All of it is in the shipped output, not just in this answer.
+>
+> What we'd do next: 685 labelled look-alike images exist in Part II of this same dataset. That
+> makes the distinction learnable by the detector itself instead of screened after the fact. Plus a
+> wind-speed gate — below about 3 m/s the whole sea goes dark and no detection should be trusted."
 
 ### C. The drift physics
 
@@ -336,24 +351,29 @@ rather than imagining it is the whole chain.
 ### F. Engineering
 
 **"What's the stack?"**
-> "Python for the pipeline, and deliberately thin: three dependencies — NumPy, OpenCV and pytest.
+> "Python for the pipeline, and deliberately thin: two dependencies do the actual work — NumPy and
+> OpenCV. reportlab renders the PDF report and is imported inside that one function, so losing it
+> costs one endpoint; pytest is tests only.
 > The HTTP server, the PNG encoder, the GeoTIFF reader, the NetCDF reader, the morphology,
 > connected components, contour tracing and spherical geometry are all standard library or written
 > here. The frontend has **zero** dependencies — vanilla ES modules, no framework, no bundler, no
 > `npm install`. Clone it and it runs offline."
 
 **"Is it tested?"**
-> "532 automated tests, about 40 seconds, all passing. And the whole pipeline is seeded — run the
+> "772 automated tests, about 42 seconds, all passing, nothing skipped. And the whole pipeline is
+> seeded — run the
 > same case twice and every figure is byte-identical; only the timestamps change. That matters for
 > an evidentiary product: a result you can't reproduce is a result you can't defend."
 
-**"Will it scale? This takes twenty seconds."**
-> "Twenty seconds for a full nine-stage run on one 2048-pixel scene, on a laptop CPU,
-> single-threaded, with no GPU — and three quarters of that is decoding the GeoTIFF and running
-> inference, not the physics. Sentinel-1 revisits every six days, so throughput isn't the binding
+**"Will it scale? This takes twenty-five seconds."**
+> "Twenty-four seconds for a full ten-stage run on one 2048-pixel scene, on a laptop CPU,
+> single-threaded, with no GPU — and two thirds of that is decoding the GeoTIFF and running
+> inference. Almost all the rest is pixel work too: the whole physics chain — forcing, hindcast,
+> forecast, AIS, scoring — is about one second.
+> Sentinel-1 revisits every six days, so throughput isn't the binding
 > constraint — but the API is already built as a job queue rather than blocking requests, so it
 > parallelises across scenes without redesign. Inference on a GPU would be a small fraction of
-> those twenty seconds."
+> those twenty-four seconds."
 
 **"Why not React? You said you know MERN."**
 > "Because it would have earned nothing. The value here is the model, the drift physics and the
@@ -483,7 +503,7 @@ The one thing to say on each screen if you have only one sentence:
 | **Slick** | "Area integrated row by row on a sphere, because a degree of longitude shrinks with latitude — and an analyst can correct the boundary by hand." |
 | **Drift** | "The ocean run backwards — and it gives a region and a 24-hour window, not a point, because uncertainty grows every step back." |
 | **Vessels** | "Ranked by spatio-temporal correlation, every score component and its evidence visible, and never called guilty." |
-| **Method** | "Everything we can't tell you: patch metrics flatter, the honest whole-scene number is 0.64 mean and 0.13 at our worst scene, and look-alike rejection is untested." |
+| **Method** | "Everything we can't tell you: patch metrics flatter, the honest whole-scene number is 0.64 mean and 0.13 at our worst scene, and our U-Net alone alarms on 100% of the look-alike patches we tested it against." |
 
 ---
 
@@ -506,7 +526,7 @@ a vessel guilty — points the same way. That consistency is the pitch. Lean on 
 ## 5.8 Final checklist before you walk in
 
 - [ ] The three numbers, cold: **1,200 pairs / 270 acquisitions** · **0.771 vs 0.582 IoU** ·
-      **532 tests · whole pipeline offline in 19 s**
+      **772 tests · whole pipeline offline in 24 s**
 - [ ] The fourth number ready for probing: **0.64 mean per-scene IoU**
 - [ ] The PS sentence permitting synthetic AIS, quotable
 - [ ] The seven minimum concepts from document 2 §2.9
