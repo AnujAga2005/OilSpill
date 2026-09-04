@@ -92,7 +92,7 @@ export function render(ctx) {
                 X.exportName(caseDoc, `drift-${direction}`, "csv"),
                 X.driftCsv(caseDoc, direction),
               );
-              ctx.announce("Drift timeline downloaded as CSV.");
+              ctx.announce("Drift timeline downloaded as CSV.", { kind: "success" });
             },
           }),
         ),
@@ -337,7 +337,9 @@ function mapCard(ctx, caseDoc, direction, run) {
     if (!holder.isConnected) return;
     map = createMap(holder, {
       onSelect: (hit) => {
-        if (hit?.label) ctx.announce(hit.label);
+        // Spoken only: the map already highlights what was clicked, and a card per click
+        // would bury the selection it is describing.
+        if (hit?.label) ctx.announce(hit.label, { silent: true });
       },
     });
     map.setRasters(baseRasters(caseDoc, ctx.caseId, { kind: "vv", opacity: 0.8 }));
@@ -624,6 +626,77 @@ function outcomesCard(run) {
 }
 
 /**
+ * The wind half of the forcing, which is resolved from a different product than the
+ * currents and can be real when they are not. Oil moves at about 3% of the wind, and at
+ * the current speeds here that term is the same size as the current, so "which wind" is
+ * a substantive claim rather than a footnote.
+ */
+function windRows(forcing, spec) {
+  // A case stored before the wind became a product of its own has no `forcing.wind`, and
+  // its wind was the synthetic rotation the spec describes. Reconstructing that is honest;
+  // reporting "no wind" for a run that had one would not be.
+  const wind =
+    forcing.wind ||
+    (spec.windSpeedMs == null
+      ? {}
+      : {
+          source: "synthetic",
+          available: true,
+          speedMs: spec.windSpeedMs,
+          directionDeg: spec.windDirectionDeg,
+        });
+  const overlap = wind.overlap || {};
+  const coverage = overlap.horizonCoverageFraction;
+  const era5 = wind.source === "era5";
+  // `available: false` on a synthetic wind means the run was configured without windage,
+  // which is a third state: the field exists but never entered the velocity.
+  const off = wind.available === false && wind.source === "synthetic";
+  const synthetic = wind.source === "synthetic" && !off;
+  const sourceText = era5
+    ? `ERA5 reanalysis · ${wind.product || "operator-supplied file"}`
+    : off
+      ? "Synthetic scenario wind · disabled for this run"
+      : synthetic
+        ? "Synthetic scenario wind"
+        : "None — currents only";
+  return h(
+    "div",
+    { class: "stack stack--tight" },
+    U.rows(
+      U.row("Wind source", sourceText, { stack: true, muted: !era5 }),
+      era5
+        ? U.row("Mean wind over the footprint", `${F.num(wind.speedMs, 2)} m/s`, { mono: true })
+        : synthetic
+          ? U.row("Wind", `${F.num(wind.speedMs, 2)} m/s from ${F.bearing(wind.directionDeg)}`, {
+              mono: true,
+            })
+          : null,
+      era5
+        ? U.row(
+            "Hours read",
+            `${F.int(wind.frameCount)} at ${F.num(wind.cadenceHours, 0)} h cadence`,
+            { mono: true, title: wind.interpolation },
+          )
+        : null,
+      era5 && coverage != null
+        ? U.row("Horizon covered by the wind file", F.pct(coverage), {
+            mono: true,
+            title: (overlap.notes || []).join(" "),
+          })
+        : null,
+      era5
+        ? U.row("Nearest wind hour", F.utc(overlap.nearestProductTimeUtc), { stack: true })
+        : null,
+      U.row("Wind drift contribution", `${F.num(forcing.windDriftMs, 4)} m/s`, {
+        mono: true,
+        title: forcing.windNote,
+      }),
+    ),
+    h("p", { class: "small muted" }, wind.note || forcing.windNote || ""),
+  );
+}
+
+/**
  * The forcing card. This is the one card on the screen that determines whether anything
  * else on it means anything, so it states the mode first and the numbers second.
  */
@@ -676,12 +749,14 @@ function forcingCard(caseDoc) {
             U.row("Anchor source", anchor.source, { stack: true }),
             U.row("Target speed", `${F.num(spec.targetSpeedMs, 4)} m/s`, { mono: true }),
             U.row("Current RMS speed", `${F.num(spec.currentRmsSpeedMs, 4)} m/s`, { mono: true }),
-            U.row("Wind", `${F.num(spec.windSpeedMs, 2)} m/s from ${F.bearing(spec.windDirectionDeg)}`, { mono: true }),
-            U.row("Wind drift contribution", `${F.num(forcing.windDriftMs, 4)} m/s`, { mono: true, title: forcing.windNote }),
             U.row("Modes", F.int((spec.modes || []).length), { mono: true }),
             U.row("Seed", F.int(spec.seed), { mono: true }),
           )
         : null,
+      // The wind is reported outside the synthetic branch because it is a separate
+      // product: a real ERA5 wind can force a synthetic current field, and a CMEMS run
+      // can have no wind at all. Reading it off `spec` would mislabel both.
+      windRows(forcing, spec),
       forcing.landMask?.available
         ? h(
             "div",

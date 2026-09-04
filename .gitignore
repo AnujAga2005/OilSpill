@@ -26,12 +26,23 @@
 # three files are over GitHub's 100 MB hard limit on their own.
 /data/processed/cache/
 
+# Incident PDFs and their dry-run .eml siblings, written per request by
+# services/api/spilltrace_api/reports.py. Regenerated on demand, never inputs.
+/data/processed/reports/
+
 # -- the virtualenv ----------------------------------------------------------
 # Recreate with: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/
 venv/
 env/
-.env/
+
+# -- secrets -----------------------------------------------------------------
+# No trailing slash. `.env/` matches only a directory, and config.py's
+# _load_local_env() reads REPO_ROOT/".env" as a *file* — SMTP credentials.
+# With the slash, `git add -A` would commit them.
+.env
+.env.*
+!.env.example
 
 # -- python noise ------------------------------------------------------------
 __pycache__/

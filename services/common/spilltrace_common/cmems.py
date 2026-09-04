@@ -19,6 +19,7 @@ from typing import Any, Sequence
 
 import numpy as np
 
+from . import config
 from .netcdf4 import NetCDF4File
 
 # Candidate variable names, in preference order, so a differently-named product
@@ -46,6 +47,19 @@ _UNIT_SECONDS = {
 
 class CmemsError(Exception):
     """Raised when a NetCDF file cannot serve as current forcing."""
+
+
+def _time_list(times: Sequence[datetime], limit: int = 8) -> list[str]:
+    """Timestamps for a payload, abridged in the middle when there are many.
+
+    A month of hourly currents is 720 steps. The overlap verdict is embedded in every
+    case, so the whole axis is not printed there.
+    """
+    stamps = [t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in times]
+    if len(stamps) <= limit:
+        return stamps
+    half = limit // 2
+    return stamps[:half] + [f"... {len(stamps) - limit} more ..."] + stamps[-half:]
 
 
 def parse_time_units(units: str | None) -> tuple[float, datetime] | None:
@@ -84,6 +98,9 @@ class CmemsWindow:
     v: np.ndarray
     water: np.ndarray  # bool, True where both components are finite
     time_utc: str | None
+    # Which timestep of the product this window was cut from. Defaulted so the
+    # single-timestep supplied product reads the same as it always did.
+    time_index: int = 0
 
     def stats(self) -> dict[str, Any]:
         finite = self.water
@@ -112,9 +129,13 @@ class CmemsWindow:
 class CmemsSurface:
     """Reader for the surface layer of a CMEMS physics product."""
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, file: Any | None = None):
         self.path = str(path)
-        self._file = NetCDF4File(self.path)
+        # The handle is injectable so the timestep logic below can be tested against
+        # a multi-timestep product. Nothing in this repository can *write* NetCDF-4,
+        # and the one supplied file holds a single timestep, so a fake handle is the
+        # only way to exercise the branch that matters.
+        self._file = file if file is not None else NetCDF4File(self.path)
         self._vars = self._file.variables()
         self.u_name = self._pick(U_NAMES)
         self.v_name = self._pick(V_NAMES)
@@ -144,6 +165,7 @@ class CmemsSurface:
         )
         self._u_cache: np.ndarray | None = None
         self._v_cache: np.ndarray | None = None
+        self._cache_key: tuple[int, int] | None = None
 
     # -- lifecycle ---------------------------------------------------------
     def __enter__(self) -> "CmemsSurface":
@@ -179,10 +201,59 @@ class CmemsSurface:
         return out
 
     # -- field access ------------------------------------------------------
-    def _surface(self, name: str) -> np.ndarray:
+    def leading_axis_roles(self, shape: Sequence[int]) -> list[str]:
+        """Name the axes in front of ``(lat, lon)`` for an array of this shape.
+
+        The HDF5 parser exposes shapes and attributes but not ``DIMENSION_LIST``, so
+        the roles are inferred from the axis lengths, falling back on the CF ordering
+        that puts time before depth.
+
+        This exists because the alternative was silent. The reader used to collapse
+        leading axes with a bare ``data = data[0]`` in a loop, so a product holding a
+        hundred timesteps was *always* sampled at the first one -- while
+        :meth:`overlap` went on reporting the gap to the nearest one. A user who
+        downloaded real currents for their acquisition would have been shown
+        ``timeGapHours: 0.5`` over a field taken from a different week, and nothing in
+        the payload would have contradicted it.
+        """
+        sizes = [int(s) for s in shape[:-2]]
+        n_times = len(self.times)
+        n_depths = int(self.depths.size)
+        roles: list[str] = []
+        for size in sizes:
+            if "time" not in roles and (size == n_times or n_times == 0):
+                roles.append("time")
+            elif "depth" not in roles and size == n_depths:
+                roles.append("depth")
+            elif "time" not in roles:
+                roles.append("time")
+            else:
+                roles.append("other")
+        return roles
+
+    def nearest_time_index(self, when: datetime | None) -> tuple[int, float | None]:
+        """Index of the timestep closest to ``when``, and that gap in hours."""
+        if when is None or not self.times:
+            return 0, None
+        gaps = [abs((t - when).total_seconds()) for t in self.times]
+        index = int(min(range(len(gaps)), key=gaps.__getitem__))
+        return index, gaps[index] / 3600.0
+
+    def _surface(self, name: str, time_index: int = 0, depth_index: int = 0) -> np.ndarray:
         """Read one variable and reduce it to a (lat, lon) surface slice."""
         data = np.asarray(self._file.read_variable(name), dtype=np.float32)
-        while data.ndim > 2:
+        picks = {"time": int(time_index), "depth": int(depth_index)}
+        for role in self.leading_axis_roles(data.shape):
+            index = picks.get(role, 0)
+            if not 0 <= index < data.shape[0]:
+                # Raised rather than clamped: a silent clamp is exactly the failure
+                # this method was rewritten to remove.
+                raise CmemsError(
+                    f"{name}: {role} index {index} is outside the product's "
+                    f"{data.shape[0]} {role} step(s)"
+                )
+            data = data[index]
+        while data.ndim > 2:  # any axis the roles could not account for
             data = data[0]
         if data.shape != (self.lats.size, self.lons.size):
             raise CmemsError(
@@ -191,15 +262,24 @@ class CmemsSurface:
             )
         return data
 
-    def surface_u(self) -> np.ndarray:
-        if self._u_cache is None:
-            self._u_cache = self._surface(self.u_name)
-        return self._u_cache
+    def _load(self, time_index: int = 0, depth_index: int = 0) -> tuple[np.ndarray, np.ndarray]:
+        """Both components at one timestep, caching only the most recent one.
 
-    def surface_v(self) -> np.ndarray:
-        if self._v_cache is None:
-            self._v_cache = self._surface(self.v_name)
-        return self._v_cache
+        A single global timestep is 35 MB per component in the supplied product, so
+        the cache holds one step rather than every step a caller asks for.
+        """
+        key = (int(time_index), int(depth_index))
+        if self._cache_key != key or self._u_cache is None or self._v_cache is None:
+            self._u_cache = self._surface(self.u_name, time_index, depth_index)
+            self._v_cache = self._surface(self.v_name, time_index, depth_index)
+            self._cache_key = key
+        return self._u_cache, self._v_cache
+
+    def surface_u(self, time_index: int = 0, depth_index: int = 0) -> np.ndarray:
+        return self._load(time_index, depth_index)[0]
+
+    def surface_v(self, time_index: int = 0, depth_index: int = 0) -> np.ndarray:
+        return self._load(time_index, depth_index)[1]
 
     # -- geometry ----------------------------------------------------------
     @property
@@ -239,14 +319,25 @@ class CmemsSurface:
             slice(int(lon_hits[0]), int(lon_hits[-1]) + 1),
         )
 
-    def window(self, bounds: Sequence[float], pad_deg: float = 0.5) -> CmemsWindow | None:
-        """Extract the current field over a bounding box."""
+    def window(
+        self,
+        bounds: Sequence[float],
+        pad_deg: float = 0.5,
+        when: datetime | None = None,
+    ) -> CmemsWindow | None:
+        """Extract the current field over a bounding box.
+
+        ``when`` selects the timestep: the one nearest the acquisition, not the first
+        one in the file. With ``when`` unset, or on a single-timestep product, that is
+        timestep 0 either way.
+        """
         window = self.index_window(bounds, pad_deg)
         if window is None:
             return None
         lat_slice, lon_slice = window
-        u = self.surface_u()[lat_slice, lon_slice]
-        v = self.surface_v()[lat_slice, lon_slice]
+        time_index, _ = self.nearest_time_index(when)
+        u = self.surface_u(time_index)[lat_slice, lon_slice]
+        v = self.surface_v(time_index)[lat_slice, lon_slice]
         water = np.isfinite(u) & np.isfinite(v)
         return CmemsWindow(
             lats=self.lats[lat_slice],
@@ -255,8 +346,11 @@ class CmemsSurface:
             v=v,
             water=water,
             time_utc=(
-                self.times[0].strftime("%Y-%m-%dT%H:%M:%SZ") if self.times else None
+                self.times[time_index].strftime("%Y-%m-%dT%H:%M:%SZ")
+                if time_index < len(self.times)
+                else None
             ),
+            time_index=time_index,
         )
 
     # -- overlap verdict ---------------------------------------------------
@@ -279,17 +373,13 @@ class CmemsSurface:
         inside = (
             lon_lo <= west and east <= lon_hi and lat_lo <= south and north <= lat_hi
         )
-        window = self.window(bounds, pad_deg)
+        window = self.window(bounds, pad_deg, when)
         water_cells = int(window.water.sum()) if window else 0
         spatial_ok = bool(inside and window is not None and water_cells > 0)
 
-        gap_hours: float | None = None
-        temporal_ok = False
-        nearest: datetime | None = None
-        if when is not None and self.times:
-            nearest = min(self.times, key=lambda t: abs((t - when).total_seconds()))
-            gap_hours = abs((nearest - when).total_seconds()) / 3600.0
-            temporal_ok = gap_hours <= max_time_gap_hours
+        index, gap_hours = self.nearest_time_index(when)
+        nearest = self.times[index] if self.times and when is not None else None
+        temporal_ok = gap_hours is not None and gap_hours <= max_time_gap_hours
 
         reasons: list[str] = []
         if not inside:
@@ -314,7 +404,8 @@ class CmemsSurface:
             "sceneBounds": [west, south, east, north],
             "productLatRange": [round(lat_lo, 6), round(lat_hi, 6)],
             "productLonRange": [round(lon_lo, 6), round(lon_hi, 6)],
-            "productTimesUtc": [t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in self.times],
+            "productTimesUtc": _time_list(self.times),
+            "productTimeStepCount": len(self.times),
             "sceneTimeUtc": (
                 when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
                 if when
@@ -323,6 +414,9 @@ class CmemsSurface:
             "nearestProductTimeUtc": (
                 nearest.strftime("%Y-%m-%dT%H:%M:%SZ") if nearest else None
             ),
+            # The slice a run would actually integrate, so the gap below can be checked
+            # against the field that was read rather than trusted.
+            "nearestProductTimeIndex": index if nearest else None,
             "timeGapHours": round(gap_hours, 2) if gap_hours is not None else None,
             "timeToleranceHours": max_time_gap_hours,
             "waterCellsOverScene": water_cells,
@@ -333,7 +427,9 @@ class CmemsSurface:
     def describe(self) -> dict[str, Any]:
         dlat, dlon = self.resolution()
         return {
-            "path": self.path,
+            # Repo-relative: this description is embedded in the committed audit report
+            # and in case payloads that get bundled into ``dist/``.
+            "path": config.display_path(self.path),
             "file": Path(self.path).name,
             "variables": sorted(self._vars),
             "currentVariables": {"u": self.u_name, "v": self.v_name},
@@ -342,7 +438,7 @@ class CmemsSurface:
             "lonRange": [round(v, 6) for v in self.lon_range],
             "resolutionDeg": [round(dlat, 6), round(dlon, 6)],
             "depthsM": [round(float(d), 4) for d in self.depths[:4]],
-            "timesUtc": [t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in self.times],
+            "timesUtc": _time_list(self.times),
             "timeStepCount": len(self.times),
             "globalAttributes": {
                 k: v
@@ -354,9 +450,7 @@ class CmemsSurface:
 
 def open_default() -> CmemsSurface | None:
     """Open the CMEMS file supplied with the repository, if present."""
-    from .config import cmems_path
-
-    path = cmems_path()
+    path = config.cmems_path()
     if path is None:
         return None
     try:

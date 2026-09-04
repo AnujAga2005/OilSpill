@@ -781,6 +781,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+.field__hint {
+  margin: 0;
+  font-size: var(--t-footnote);
+  color: var(--text-tertiary);
+}
+
 .select,
 .input {
   appearance: none;
@@ -1254,6 +1260,102 @@
   }
 }
 
+/* -- modal ------------------------------------------------------------- */
+/* Centred on a desktop, a bottom sheet on a phone -- the same split the drawer above
+ * makes, for the same reason: on a phone the buttons belong under the thumb. */
+
+.modal {
+  position: fixed;
+  z-index: 100;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 2 * var(--s5)));
+  max-height: min(80vh, 640px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+  padding: var(--s6);
+  border-radius: var(--r-xl);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-3);
+  animation: modal-in var(--normal) var(--ease) both;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.97);
+  }
+}
+
+.modal__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal__title {
+  font-size: var(--t-title3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.modal__lede {
+  font-size: var(--t-footnote);
+  color: var(--text-secondary);
+}
+
+.modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.modal__error {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--danger-line);
+  background: var(--danger-dim);
+  color: var(--danger-text);
+  font-size: var(--t-footnote);
+}
+
+.modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s3);
+}
+
+@media (max-width: 640px) {
+  .modal {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    transform: none;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    padding-bottom: calc(var(--s6) + env(safe-area-inset-bottom, 0px));
+    animation-name: slide-up-modal;
+  }
+
+  @keyframes slide-up-modal {
+    from {
+      transform: translateY(100%);
+    }
+  }
+
+  .modal__foot .btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+}
+
 /* -- score decomposition bar ------------------------------------------- */
 /* One segment per scoring component, so the reader sees that 91.5 is a sum of six
  * measured things rather than a single opaque number. */
@@ -1278,6 +1380,180 @@
     rgba(0, 0, 0, 0.09) 0 3px,
     transparent 3px 6px
   );
+}
+
+/* -- toast -------------------------------------------------------------- */
+/* The visible half of `announce()` in dom.js. One at a time, bottom-centre on a phone
+ * and bottom-right on a desktop, above the modal layer because a dispatch reports its
+ * result after the sheet that started it has already closed.
+ *
+ * Deliberately quiet: white card, hairline, the same diffuse shadow as everything else
+ * that floats. Only the glyph carries colour, and it borrows from the data palette's
+ * `-text` variants so 13 px type on white still passes contrast. A status is chrome, so
+ * it never uses a saturated fill -- that is reserved for measurements. */
+
+.toast-host {
+  position: fixed;
+  z-index: 200;
+  right: var(--s5);
+  bottom: var(--s5);
+  left: auto;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+  width: min(430px, calc(100vw - 2 * var(--s5)));
+  padding: var(--s3) var(--s3) var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-3);
+  cursor: pointer;
+  animation: toast-in var(--normal) var(--ease) both;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+.toast.is-leaving {
+  animation: toast-out 200ms var(--ease) both;
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+.toast__glyph {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--text-tertiary);
+}
+
+.toast--success .toast__glyph {
+  color: var(--agree-text);
+}
+
+.toast--error .toast__glyph {
+  color: var(--danger-text);
+}
+
+.toast--info .toast__glyph {
+  color: var(--tint);
+}
+
+.toast__msg {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-top: 1px;
+  font-size: var(--t-sub);
+  line-height: 1.45;
+  color: var(--text);
+  /* A dispatch result names a file. Wrap the path instead of clipping it. */
+  overflow-wrap: anywhere;
+}
+
+.toast__action {
+  flex: none;
+  align-self: center;
+  padding: var(--s1) var(--s3);
+  border-radius: var(--r-pill);
+  background: var(--tint-dim);
+  color: var(--tint);
+  font-size: var(--t-footnote);
+  font-weight: 590;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.toast__action:hover {
+  background: var(--tint);
+  color: var(--on-dark);
+}
+
+.toast__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-quaternary);
+  cursor: pointer;
+}
+
+.toast__close:hover {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+}
+
+/* `progress` has no icon of its own: a breathing dot reads as "still working" without
+ * implying an outcome the server has not reported yet. */
+.toast__pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  animation: toast-pulse 1.1s var(--ease) infinite;
+}
+
+@keyframes toast-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Hold the dot at full strength rather than at the 30% keyframe it would freeze on. */
+  .toast__pulse {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Below 860px `.sidenav` becomes a fixed bottom tab bar (base.css), so the toast has to
+ * clear it -- 64px is that bar's computed height, plus whatever the notch adds. */
+@media (max-width: 860px) {
+  .toast-host {
+    bottom: calc(var(--s4) + 64px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 640px) {
+  .toast-host {
+    right: var(--s4);
+    left: var(--s4);
+    justify-content: stretch;
+  }
+  .toast {
+    width: 100%;
+  }
 }
 
 /* -- misc -------------------------------------------------------------- */
@@ -1473,6 +1749,9 @@
   }
   .sheet,
   .sheet-backdrop {
+    display: none;
+  }
+  .toast-host {
     display: none;
   }
   .table-wrap {

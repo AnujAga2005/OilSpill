@@ -25,9 +25,9 @@ from __future__ import annotations
 
 import math
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 import numpy as np
 
@@ -40,6 +40,7 @@ from spilltrace_drift import forcing as forcing_mod
 from spilltrace_drift import scoring as scoring_mod
 from spilltrace_ml import dataset as dataset_mod
 from spilltrace_ml import geometry as geometry_mod
+from spilltrace_ml import lookalike as lookalike_mod
 from spilltrace_ml import preview as preview_mod
 from spilltrace_ml.model import UNet
 
@@ -53,6 +54,16 @@ Progress = Callable[[str], None]
 # straight lines in the probability field.
 INFERENCE_TILE = 128
 INFERENCE_OVERLAP = 16
+
+# The look-alike screen, fitted by scripts/run_lookalike_eval.py. The case reads it if
+# it exists and says so if it does not; an unfitted screen scores every region 0.5 and
+# calls it "uncertain", which is the only honest output for a model nobody has fitted.
+SCREEN_PATH = C.MODELS_DIR / "lookalike_screen.json"
+
+# The evaluation proposes up to 64 dark regions per scene because it wants every region
+# it can label. A case wants the patches an analyst would plausibly look at, and each
+# one costs a full-frame feature pass, so the pipeline asks for fewer.
+SCREEN_MAX_REGIONS = 24
 
 
 class CaseError(RuntimeError):
@@ -388,8 +399,306 @@ def _baseline_config():
 
 
 # ---------------------------------------------------------------------------
-# The full case
+# Look-alike screening
 # ---------------------------------------------------------------------------
+
+
+def _load_screen() -> tuple[lookalike_mod.Screen, str]:
+    """The fitted screen, or an unfitted one plus the reason it is unfitted."""
+    if not SCREEN_PATH.exists():
+        return (
+            lookalike_mod.Screen(),
+            f"no screen at {SCREEN_PATH.relative_to(C.REPO_ROOT).as_posix()}, so every "
+            "patch scores 0.5 and is returned as uncertain; "
+            "scripts/run_lookalike_eval.py fits one",
+        )
+    try:
+        return lookalike_mod.Screen.load(SCREEN_PATH), ""
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        return lookalike_mod.Screen(), f"{SCREEN_PATH.name} could not be read: {error}"
+
+
+def _screen_config(screen: lookalike_mod.Screen) -> lookalike_mod.ScreenConfig:
+    """The screen's own settings, with only the proposal cap lowered for a live case.
+
+    Everything that changes a *feature* is left exactly as fitted -- the annulus, the
+    guard band, the smoothing, the darkness threshold. Only how many regions are kept
+    changes, which alters how many patches get reported and nothing about what any one
+    of them measures.
+    """
+    return replace(screen.cfg, max_regions=SCREEN_MAX_REGIONS)
+
+
+def _measured(features: dict[str, Any]) -> dict[str, Any]:
+    """The seven model inputs and the reported-but-unused context fields."""
+    keys = list(lookalike_mod.FEATURE_NAMES) + list(lookalike_mod.CONTEXT_FIELDS)
+    return {key: features[key] for key in keys if key in features}
+
+
+def _plural(count: int, word: str) -> str:
+    if count == 1:
+        return f"{count} {word}"
+    suffix = "es" if word.endswith(("ch", "sh", "s", "x", "z")) else "s"
+    return f"{count} {word}{suffix}"
+
+
+def nominal_spacing_m(transform: Affine, height: int) -> float:
+    """One pixel's ground size in metres, taken at the middle row of the scene.
+
+    Pixel area varies down a scene in geographic coordinates, so a single number is an
+    approximation; it is used only to turn pixel counts into square kilometres for
+    display, never inside a feature.
+    """
+    area = geometry_mod.row_pixel_area_m2(transform, np.array([height / 2.0]))
+    return float(math.sqrt(max(1e-9, float(area[0]))))
+
+
+def screen_region(
+    region: np.ndarray,
+    *,
+    planes: np.ndarray,
+    exclude: np.ndarray,
+    spacing_m: float,
+    screen: lookalike_mod.Screen,
+    cfg: lookalike_mod.ScreenConfig,
+) -> dict[str, Any]:
+    """Screen one dark region and return a block fit to publish beside it."""
+    features = lookalike_mod.region_features(
+        planes[0],
+        region,
+        exclude=exclude,
+        second_plane=planes[1] if planes.shape[0] > 1 else None,
+        spacing_m=spacing_m,
+        plane_unit="dB",
+        cfg=cfg,
+    )
+    if features is None:
+        return {
+            "label": "unscreened",
+            "oilLikelihood": None,
+            "headline": (
+                "not enough clear water around this region to measure it against, so no "
+                "verdict is offered"
+            ),
+            "reasons": [],
+            "contributions": [],
+            "measured": {},
+        }
+    out = lookalike_mod.verdict(features, screen, cfg=cfg)
+    out["measured"] = _measured(features)
+    return out
+
+
+def slick_screener(
+    *,
+    planes: np.ndarray,
+    detected: np.ndarray,
+    valid: np.ndarray,
+    spacing_m: float,
+    screen: lookalike_mod.Screen,
+    cfg: lookalike_mod.ScreenConfig,
+    stamp: np.ndarray,
+) -> Callable[[dict[str, Any], np.ndarray], dict[str, Any]]:
+    """A callback for :func:`geometry.analyse` that screens every published slick.
+
+    ``stamp`` is filled in as a side effect: published component *n* is written into it
+    as the value ``n``, so the scene-wide pass that follows can say which slick a dark
+    patch overlaps without deriving the components a second time and risking deriving
+    them differently.
+
+    One domain shift is worth stating plainly, and the block states it: the screen was
+    fitted on regions a darkness *threshold* proposed, and this applies it to a region
+    the *network* segmented. The two agree on most slicks, not on all of them.
+    """
+    order: list[str] = []
+
+    def annotate(record: dict[str, Any], component: np.ndarray) -> dict[str, Any]:
+        order.append(str(record.get("id")))
+        stamp[component] = len(order)
+        block = screen_region(
+            component,
+            planes=planes,
+            exclude=(detected & ~component) | ~valid,
+            spacing_m=spacing_m,
+            screen=screen,
+            cfg=cfg,
+        )
+        block["appliedTo"] = (
+            "a component the segmentation network produced, screened by a model fitted "
+            "on regions a darkness threshold proposed"
+        )
+        return {"screening": block}
+
+    return annotate
+
+
+def _component_tally(components: Sequence[dict[str, Any]]) -> dict[str, int]:
+    """Count the verdicts on what the network published.
+
+    This has to appear beside the patch counts. The proposals are cut out of the scene by a
+    darkness threshold and the components by the network, so on a scene holding one large
+    slick with faint margins the screen can reject every proposal and still accept every
+    component -- the threshold reaches into the half-shades and dilutes the darkness the
+    screen measures. A reader shown only the first number would conclude the scene had no
+    oil in it, which is the opposite of what the case says.
+    """
+    tally = {"screened": 0, "accepted": 0, "uncertain": 0, "rejected": 0, "unscreened": 0}
+    for entry in components:
+        verdict = entry.get("screening") if isinstance(entry, dict) else None
+        if not isinstance(verdict, dict):
+            continue
+        label = str(verdict.get("label"))
+        if label not in tally:
+            continue
+        tally["screened"] += 1
+        tally[label] += 1
+    return tally
+
+
+def screen_scene(
+    *,
+    planes: np.ndarray,
+    valid: np.ndarray,
+    transform: Affine,
+    stamp: np.ndarray,
+    slick_ids: Sequence[str],
+    spacing_m: float,
+    screen: lookalike_mod.Screen,
+    cfg: lookalike_mod.ScreenConfig,
+    unfitted: str = "",
+    components: Sequence[dict[str, Any]] = (),
+) -> dict[str, Any]:
+    """Propose every dark patch in the scene and screen each one.
+
+    This is the measurement the project could not make before. A detection count on its
+    own has no denominator: "how many dark patches were there, and how many did we
+    decline to call oil" is the question a false-positive rate answers, and it is asked
+    here on exactly the kind of input the screen was fitted on -- darkness proposals over
+    calibrated decibels -- rather than on the network's output.
+    """
+    proposals, count = lookalike_mod.propose(planes[0], valid, cfg)
+    patches: list[dict[str, Any]] = []
+    tally: dict[str, int] = {"accepted": 0, "uncertain": 0, "rejected": 0, "unscreened": 0}
+    overlapping_count = 0
+    rejected_on_slick = 0
+
+    for index in range(1, count + 1):
+        region = proposals == index
+        block = screen_region(
+            region,
+            planes=planes,
+            exclude=((proposals > 0) & ~region) | ~valid,
+            spacing_m=spacing_m,
+            screen=screen,
+            cfg=cfg,
+        )
+        label = str(block["label"])
+        tally[label] = tally.get(label, 0) + 1
+
+        rows, cols = np.nonzero(region)
+        lon, lat = transform.apply(float(cols.mean()), float(rows.mean()))
+        hit = stamp[region]
+        touched = hit[hit > 0]
+        slick: str | None = None
+        fraction = 0.0
+        if touched.size:
+            overlapping_count += 1
+            if label == "rejected":
+                rejected_on_slick += 1
+            top = int(np.bincount(touched).argmax())
+            if 0 < top <= len(slick_ids):
+                slick = str(slick_ids[top - 1])
+            fraction = float(touched.size) / float(max(1, hit.size))
+        pixels = int(region.sum())
+        patches.append(
+            {
+                "id": f"patch-{index:02d}",
+                "pixels": pixels,
+                "areaKm2": round(pixels * spacing_m**2 / 1e6, 6),
+                "centroid": [round(float(lon), 6), round(float(lat), 6)],
+                "overlapsSlick": slick,
+                "overlapFraction": round(fraction, 4),
+                "label": label,
+                "oilLikelihood": block.get("oilLikelihood"),
+                "headline": block.get("headline"),
+                "reasons": block.get("reasons") or [],
+                "measured": block.get("measured") or {},
+            }
+        )
+
+    limits = [
+        "the screen separates oil-like from not-oil-like; it cannot name the phenomenon, "
+        "so a rejected patch is never called algae, low wind or a wake",
+        "a patch that falls between the two thresholds is returned as uncertain and kept: "
+        "suppressing a detection the screen is unsure of would trade a measured false "
+        "positive for an unmeasured missed spill",
+        "these patches are darkness proposals, not detections. A rejected patch that "
+        "overlaps no published slick was never in this case to begin with -- it is "
+        "evidence about what the screen would have thrown out, not a correction to the "
+        f"{_plural(len(slick_ids), 'slick')} above",
+    ]
+    if unfitted:
+        limits.insert(0, unfitted)
+
+    # The headline has to carry the overlap. "24 dark patches rejected as look-alikes" printed
+    # next to a published slick reads as a contradiction, and on a scene where every proposal
+    # sits on that slick the honest reading is narrower: the screen is rejecting the way a
+    # darkness threshold cut the water up, not the detection.
+    headline = (
+        f"{_plural(count, 'dark patch')} proposed, "
+        f"{tally['rejected']} rejected as more consistent with a look-alike than oil"
+    )
+    if tally["rejected"] and rejected_on_slick == tally["rejected"]:
+        headline += (
+            "; every one of them lies inside a published slick, so what is rejected here is "
+            "how the darkness threshold cut that slick up, not the detection"
+        )
+    elif rejected_on_slick:
+        headline += (
+            f"; {rejected_on_slick} of those lie inside a published slick and "
+            f"{tally['rejected'] - rejected_on_slick} elsewhere in the scene"
+        )
+
+    return {
+        "question": (
+            "which dark patches in this scene are consistent with an oil film, and which "
+            "look like oil in radar but are more consistent with something else?"
+        ),
+        "headline": headline,
+        "fitted": bool(screen.fitted),
+        "calibration": screen.calibration,
+        "trainedOn": screen.trained_on,
+        "thresholds": {
+            "rejectAtOrBelow": cfg.reject_at_or_below,
+            "acceptAtOrAbove": cfg.accept_at_or_above,
+        },
+        "proposer": {
+            "rule": (
+                f"pixels at or below mean - {cfg.darkness_k:g} standard deviations of the "
+                "scene's own valid water, smoothed first, cleaned up morphologically, then "
+                f"anything under {cfg.min_area_px} px discarded"
+            ),
+            "maxRegions": cfg.max_regions,
+            "config": cfg.to_dict(),
+        },
+        "counts": {
+            "proposed": int(count),
+            "overlappingPublishedSlick": overlapping_count,
+            **tally,
+        },
+        "components": {
+            **_component_tally(components),
+            "note": (
+                "the same screen applied to what the segmentation network published. The "
+                "patch counts above are darkness proposals over the whole scene, cut by a "
+                "threshold rather than by the network, so the two sets of verdicts can "
+                "disagree about the same water"
+            ),
+        },
+        "features": lookalike_mod.describe_features(),
+        "patches": patches,
+        "limits": limits,
+    }
 
 
 def build_case(
@@ -441,6 +750,17 @@ def build_case(
     say("measuring slick geometry")
     started = time.perf_counter()
     geometry_cfg = geometry_mod.GeometryConfig()
+    screen, unfitted = _load_screen()
+    screen_cfg = _screen_config(screen)
+    spacing_m = nominal_spacing_m(transform, scene.height)
+    valid = ~np.asarray(scene.invalid, dtype=bool)
+    # Denoised once and used three times: it is the footprint the published polygons
+    # describe, it is what the screening excludes from a region's background water, and it
+    # is what the drift particles are seeded from further down.
+    seed_mask = geometry_mod.denoise(mask.astype(bool), geometry_cfg)
+    # Published component n is stamped as the value n, so the scene-wide screening pass
+    # can attribute a dark patch to a slick without re-deriving the components.
+    stamp = np.zeros(mask.shape, dtype=np.int16)
     geometry = geometry_mod.analyse(
         mask,
         transform,
@@ -448,6 +768,15 @@ def build_case(
         cfg=geometry_cfg,
         epsg=scene.epsg,
         source=detection["source"],
+        annotate=slick_screener(
+            planes=scene.channels,
+            detected=seed_mask,
+            valid=valid,
+            spacing_m=spacing_m,
+            screen=screen,
+            cfg=screen_cfg,
+            stamp=stamp,
+        ),
     )
     published = int(geometry["summary"]["componentsPublished"])
     timer.record("geometry", started, f"{published} slick(s)")
@@ -455,6 +784,29 @@ def build_case(
         raise CaseError(
             f"no slick survived filtering on scene {scene.name}; nothing to drift or attribute"
         )
+
+    say("screening dark patches for look-alikes")
+    started = time.perf_counter()
+    screening = screen_scene(
+        planes=scene.channels,
+        valid=valid,
+        transform=transform,
+        stamp=stamp,
+        slick_ids=[str(entry.get("id")) for entry in geometry["slicks"]],
+        spacing_m=spacing_m,
+        screen=screen,
+        cfg=screen_cfg,
+        unfitted=unfitted,
+        components=geometry["slicks"],
+    )
+    timer.record(
+        "screening",
+        started,
+        f"{screening['counts']['proposed']} dark patch(es), "
+        f"{screening['counts']['rejected']} rejected; "
+        f"{screening['components']['accepted']} of {screening['components']['screened']} "
+        "published slick(s) consistent with oil",
+    )
 
     say("resolving drift forcing")
     started = time.perf_counter()
@@ -472,7 +824,6 @@ def build_case(
         started = time.perf_counter()
         # Seed from the *denoised* mask, so the particles start from the same footprint
         # the published polygon describes rather than from speckle the geometry dropped.
-        seed_mask = geometry_mod.denoise(mask.astype(bool), geometry_cfg)
         seed_lon, seed_lat, seeding = drift_engine.seed_from_mask(
             seed_mask,
             transform,
@@ -532,6 +883,7 @@ def build_case(
         scene=scene,
         detection=detection,
         geometry=geometry,
+        screening=screening,
         decision=decision,
         backward=backward,
         forward=forward,
@@ -643,6 +995,7 @@ def assemble(
     feed: dict[str, Any],
     ranking: dict[str, Any],
     previews: dict[str, Any] | None,
+    screening: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Shape the stage outputs into the frontend contract, adding nothing new."""
     primary = _largest_slick(geometry)
@@ -689,6 +1042,11 @@ def assemble(
             "aisSchemaReference": (feed.get("schema") or {}).get("reference"),
             "driftMode": decision.get("mode"),
             "driftLabel": decision.get("label"),
+            # Wind and currents come from different products and either can be real on
+            # its own, so ``driftMode`` (the currents) does not answer this. One of
+            # "era5", "synthetic", "none" or "disabled" -- the wind that was actually
+            # integrated, so "none" means there was no wind term at all.
+            "windMode": decision.get("windMode"),
             "detectionSource": detection["source"],
             "detectionLabel": detection["label"],
             "status": C.LABEL_STATUS,
@@ -715,11 +1073,16 @@ def assemble(
             "geometryValid": primary.get("geometryValid"),
             "ringGeometry": primary.get("ringGeometry"),
             "qualityFlags": primary.get("qualityFlags") or [],
+            # The look-alike verdict for the slick the headline is about, so a screen can
+            # show "consistent with an oil film" beside the area without walking the
+            # geometry. The other components carry their own under `geometry.slicks`.
+            "screening": primary.get("screening"),
             "slickCount": int(geometry["summary"]["componentsPublished"]),
             "totalAreaKm2": geometry["summary"].get("totalAreaKm2"),
             "areaMethod": geometry.get("areaMethod"),
         },
         "geometry": geometry,
+        "screening": screening,
         "forcing": decision,
         "trajectories": {
             # The centroid of the particle cloud at each step, which is the line the map
@@ -748,4 +1111,6 @@ LIMITS = [
     "Rankings are triage aids. Nothing here establishes responsibility for a discharge.",
     "Segmentation accuracy is measured on held-out patches from the supplied dataset "
     "only, grouped by parent acquisition; it is not a field-validated detection rate.",
+    "Look-alike screening separates oil-like from not-oil-like. It does not identify the "
+    "phenomenon, so no rejected patch is called algae, low wind or a wake.",
 ]

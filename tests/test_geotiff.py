@@ -385,7 +385,9 @@ def test_decoded_radar_values_are_finite_and_in_a_physical_range():
 
     assert valid.size > 0
     assert np.isfinite(valid).all()
-    # The audit measured -78..+18 dB across all 1200 scenes.
+    # The audit measured -84..+22 dB over its 16 fully decoded scenes; the bounds
+    # below are looser than that on purpose, since they are a codec sanity check
+    # rather than a claim about the dataset's range.
     assert valid.min() > -120.0
     assert valid.max() < 40.0
     # VV backscatter over water sits well below 0 dB.

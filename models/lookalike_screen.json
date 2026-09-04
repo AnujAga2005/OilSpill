@@ -1,0 +1,126 @@
+{
+  "features": [
+    {
+      "name": "darknessZ",
+      "label": "darkness against local water",
+      "unit": "background standard deviations",
+      "oilDirection": 1,
+      "rationale": "oil damps the short capillary waves the radar sees, so a film sits several standard deviations below the water around it; a low-wind patch is shallower because the water is only slightly smoother, not covered",
+      "weight": 2.31423,
+      "trainingMean": 1.46926,
+      "trainingStd": 0.54426
+    },
+    {
+      "name": "darknessP10Z",
+      "label": "darkness of the darkest tenth",
+      "unit": "background standard deviations",
+      "oilDirection": 1,
+      "rationale": "a mean can be dragged down by a few very dark pixels, so the tenth percentile asks whether the whole region is dark or only part of it",
+      "weight": 1.06789,
+      "trainingMean": 2.58555,
+      "trainingStd": 0.85314
+    },
+    {
+      "name": "textureRatio",
+      "label": "interior roughness",
+      "unit": "ratio to background",
+      "oilDirection": -1,
+      "rationale": "a damped surface is smoother than the sea around it, so its pixel spread is narrower; wind shadows and blooms stay as speckled as open water",
+      "weight": -0.47627,
+      "trainingMean": 0.88266,
+      "trainingStd": 0.25545
+    },
+    {
+      "name": "edgeSharpness",
+      "label": "edge definition",
+      "unit": "ratio to background gradient",
+      "oilDirection": 1,
+      "rationale": "a film has a physical boundary and the backscatter steps across it; a low-wind zone fades, so its edge gradient is no stronger than the ambient texture",
+      "weight": -0.66163,
+      "trainingMean": 1.39878,
+      "trainingStd": 0.21856
+    },
+    {
+      "name": "compactness",
+      "label": "compactness",
+      "unit": "4piA/P^2, 1.0 is a circle",
+      "oilDirection": -1,
+      "rationale": "spills are drawn out by wind and current into ragged forms; a compact blob is more consistent with a wind cell or a bloom patch",
+      "weight": -0.37238,
+      "trainingMean": 0.18974,
+      "trainingStd": 0.10394
+    },
+    {
+      "name": "solidity",
+      "label": "solidity",
+      "unit": "area / convex hull area",
+      "oilDirection": -1,
+      "rationale": "a slick feathers at its edges and leaves gaps inside its hull; a smooth convex region is a weaker candidate",
+      "weight": 0.67476,
+      "trainingMean": 0.56083,
+      "trainingStd": 0.12316
+    },
+    {
+      "name": "elongation",
+      "label": "elongation",
+      "unit": "length / width",
+      "oilDirection": 1,
+      "rationale": "a discharge from a moving vessel is linear, and wind stretches any film along its axis, so elongation argues for oil -- though a ship wake is linear too, which is why this feature is never decisive on its own",
+      "weight": 0.5224,
+      "trainingMean": 2.0187,
+      "trainingStd": 1.16137
+    }
+  ],
+  "intercept": -1.68299,
+  "calibration": "fitted on 11623 dark regions (930 over labelled oil, 10693 not)",
+  "trainedOn": {
+    "domain": "Sentinel-1 VV decibels, the scenes supplied with this project",
+    "productsInDataset": 270,
+    "scenes": 270,
+    "products": 270,
+    "regions": 11623,
+    "oilRegions": 930,
+    "lookAlikeRegions": 10693,
+    "droppedAmbiguous": 336,
+    "droppedNoBackground": 0,
+    "spacingM": 9.3441,
+    "labelRule": "a dark region counts as oil when the supplied reference mask covers >= 50% of it and as not-oil when it covers <= 5%; the rest are dropped rather than guessed at",
+    "meanMaskRecallOfProposer": 0.9227,
+    "proposerNote": "the proposer is the same code that runs on the look-alike set and is given no reference mask; its recall of the labelled oil is reported so a high screening score cannot hide a proposer that simply missed the slick"
+  },
+  "classMeans": {
+    "oil": {
+      "darknessZ": 2.79382,
+      "darknessP10Z": 4.64774,
+      "textureRatio": 1.37954,
+      "edgeSharpness": 1.79233,
+      "compactness": 0.2038,
+      "solidity": 0.61604,
+      "elongation": 3.62539
+    },
+    "lookAlike": {
+      "darknessZ": 1.35406,
+      "darknessP10Z": 2.4062,
+      "textureRatio": 0.83944,
+      "edgeSharpness": 1.36455,
+      "compactness": 0.18851,
+      "solidity": 0.55603,
+      "elongation": 1.87897
+    }
+  },
+  "config": {
+    "smoothSigmaPx": 1.5,
+    "darknessK": 1.0,
+    "minAreaPx": 400,
+    "openRadiusPx": 2,
+    "closeRadiusPx": 3,
+    "maxRegions": 64,
+    "guardPx": 3,
+    "annulusPx": 20,
+    "boundaryPx": 2,
+    "minBackgroundPx": 200,
+    "rejectAtOrBelow": 0.35,
+    "acceptAtOrAbove": 0.65
+  },
+  "note": "weights apply to standardised features; the standardisation constants are carried with them so the file is self-contained"
+}

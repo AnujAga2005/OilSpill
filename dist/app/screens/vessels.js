@@ -94,7 +94,7 @@ export function render(ctx) {
           iconPath: ICONS.download,
           onClick: () => {
             X.downloadCsv(X.exportName(caseDoc, "candidates", "csv"), X.candidatesCsv(caseDoc));
-            ctx.announce("Candidate table downloaded as CSV.");
+            ctx.announce("Candidate table downloaded as CSV.", { kind: "success" });
           },
         }),
       },

@@ -6,7 +6,7 @@
  * one grey box is how a dashboard ends up lying about what it knows.
  */
 
-import { h, icon, frag } from "./dom.js";
+import { h, icon, frag, trapFocus } from "./dom.js";
 import { ICONS } from "./icons.js";
 import * as F from "./format.js";
 
@@ -450,10 +450,18 @@ export function provenanceBadges(caseDoc, { compact = false } = {}) {
     badges.push(badge(compact ? "Synthetic AIS" : p.aisLabel, "synthetic", { title: p.aisLabel }));
   }
   if (p.driftLabel) {
+    // Currents and wind are separate products and either can be real alone, so the
+    // badge tone follows whichever half is real rather than the currents alone. The
+    // full label always names both.
+    const realWind = p.windMode === "era5";
+    const realCurrents = p.driftMode === "cmems";
+    const shortLabel = realCurrents
+      ? (realWind ? "CMEMS + ERA5" : "CMEMS drift")
+      : (realWind ? "ERA5 wind drift" : "Synthetic drift");
     badges.push(
       badge(
-        compact ? (p.driftMode === "cmems" ? "CMEMS drift" : "Synthetic drift") : p.driftLabel,
-        p.driftMode === "cmems" ? "drift" : "synthetic",
+        compact ? shortLabel : p.driftLabel,
+        realCurrents || realWind ? "drift" : "synthetic",
         { title: p.driftLabel },
       ),
     );
@@ -474,6 +482,125 @@ export function runFooter(caseDoc) {
     h("span", null, `Computed ${F.utc(caseDoc.generatedUtc, { seconds: true })}`),
     caseDoc.requestKey ? h("span", { class: "mono" }, `request ${caseDoc.requestKey}`) : null,
     h("span", null, caseDoc.status || ""),
+  );
+}
+
+// -- modal ------------------------------------------------------------------
+
+/**
+ * A modal sheet with a cancel and a confirm. Resolves `true` when confirmed and
+ * `false` when dismissed, so the caller reads its own inputs from refs it captured
+ * while building `body`.
+ *
+ * This exists because `window.prompt` was doing the job, and `window.prompt` is the
+ * wrong tool for anything consequential: it cannot say what the button will actually
+ * do, it cannot show a validation message, some browsers suppress it outright, and it
+ * blocks the event loop. Dispatching an incident report needs all three of those.
+ *
+ * `validate` is called on confirm and on submit; returning a string keeps the sheet
+ * open and shows that string, so a typo in an address never becomes a request.
+ *
+ * @param {object} options
+ * @param {string} options.title
+ * @param {string} [options.lede] - one line under the title
+ * @param {string} [options.confirm] - confirm button label
+ * @param {string} [options.cancel] - cancel button label
+ * @param {() => (string|null)} [options.validate] - error message, or null to proceed
+ * @param {...any} body - flowable content between the head and the buttons
+ * @returns {Promise<boolean>}
+ */
+export function dialog({ title, lede, confirm = "Continue", cancel = "Cancel", validate } = {}, ...body) {
+  return new Promise((resolve) => {
+    const id = `dlg-${Math.random().toString(36).slice(2, 8)}`;
+    let error = null;
+    let release = () => {};
+    let settled = false;
+
+    function close(value) {
+      if (settled) return;
+      settled = true;
+      release();
+      backdrop.remove();
+      sheet.remove();
+      resolve(value);
+    }
+
+    function attempt() {
+      const message = validate ? validate() : null;
+      if (message) {
+        error.textContent = message;
+        error.hidden = false;
+        return;
+      }
+      close(true);
+    }
+
+    const backdrop = h("div", { class: "sheet-backdrop", onClick: () => close(false) });
+    const sheet = h(
+      "form",
+      {
+        class: "modal",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-labelledby": id,
+        // `validate` is the authority. Native constraint validation would silently
+        // refuse to fire `submit` for a field it dislikes -- leaving the last error
+        // message on screen, unchanged, with no way to tell what happened -- and it
+        // cannot judge a comma-separated list anyway.
+        novalidate: true,
+        onSubmit: (event) => {
+          event.preventDefault();
+          attempt();
+        },
+        onInput: () => {
+          error.hidden = true;
+        },
+      },
+      h(
+        "div",
+        { class: "modal__head" },
+        h("h2", { class: "modal__title", id }, title),
+        lede ? h("p", { class: "modal__lede" }, lede) : null,
+      ),
+      h("div", { class: "modal__body" }, ...body),
+      h("p", {
+        class: "modal__error",
+        role: "alert",
+        hidden: true,
+        ref: (node) => {
+          error = node;
+        },
+      }),
+      h(
+        "div",
+        { class: "modal__foot" },
+        button(cancel, { kind: "quiet", small: true, onClick: () => close(false) }),
+        button(confirm, { kind: "primary", small: true, type: "submit" }),
+      ),
+    );
+
+    document.body.append(backdrop, sheet);
+    release = trapFocus(sheet, () => close(false));
+  });
+}
+
+/** A labelled text field for use inside `dialog`. `ref` hands back the input. */
+export function field({ label, hint, value = "", placeholder, type = "text", ref } = {}) {
+  const id = `fld-${Math.random().toString(36).slice(2, 8)}`;
+  return h(
+    "div",
+    { class: "field" },
+    h("label", { class: "field__label", for: id }, label),
+    h("input", {
+      class: "input",
+      id,
+      type,
+      value,
+      placeholder,
+      autocomplete: "off",
+      ref,
+    }),
+    hint ? h("p", { class: "field__hint" }, hint) : null,
   );
 }
 

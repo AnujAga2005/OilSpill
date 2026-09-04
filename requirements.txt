@@ -1,23 +1,35 @@
 # SpillTrace runtime dependencies.
 #
-# Three packages. Everything else in this project is the Python standard library, including
+# Five packages. Everything else in this project is the Python standard library, including
 # the HTTP server, the PNG encoder, the CSV and GeoJSON writers and the .nc reader. The
 # frontend has no dependencies at all -- no bundler, no framework, no npm install.
 #
 #   .venv/bin/python -m pip install -r requirements.txt
 #
+# Run pip *through the venv's own interpreter*, as above, not via a bare `pip`. A `pip`
+# from a different Python installs wheels built for that Python's ABI, and the import then
+# fails with something like "cannot import name '_imaging' from 'PIL'".
+#
 # Pinned as lower bounds, at the versions this project was built and tested against:
-# Python 3.11.15, numpy 2.4.4, opencv-python 4.13.0, pytest 9.0.1.
+# Python 3.11.15, numpy 2.4.4, opencv-python 4.13.0, pytest 9.0.1, reportlab 4.2.5.
 
 numpy>=2.0
 opencv-python>=4.10
+
+# PDF incident reports only, in services/api/spilltrace_api/reports.py, imported lazily so
+# that a missing or broken install degrades to HTTP 503 on one endpoint instead of taking
+# down the server and the test suite. Pillow is listed explicitly because reportlab's
+# lib/utils.py does an unguarded `from PIL import Image` -- reportlab without a working
+# Pillow does not import at all, so treating it as optional would be a lie.
 reportlab>=4.0
+pillow>=10.0
 
 # Tests only.
 pytest>=8.0
 
-# Deliberately absent: Pillow (the PNG writer is hand-rolled in
-# services/ml/spilltrace_ml/preview.py), scipy and scikit-image (the morphology, connected
-# components and contour tracing are in services/ml/spilltrace_ml/geometry.py), shapely (the
-# geometry is spherical and lives in the same module), pandas and matplotlib (the CSV writing
-# is stdlib csv and every chart is drawn as SVG in the browser).
+# Deliberately absent: scipy and scikit-image (the morphology, connected components and
+# contour tracing are in services/ml/spilltrace_ml/geometry.py), shapely (the geometry is
+# spherical and lives in the same module), pandas and matplotlib (the CSV writing is stdlib
+# csv and every chart is drawn as SVG in the browser), and every mail/SMS SDK (dispatch is
+# stdlib smtplib). Pillow is a transitive requirement of reportlab and is *not* used for
+# imagery: the PNG writer is still hand-rolled in services/ml/spilltrace_ml/preview.py.

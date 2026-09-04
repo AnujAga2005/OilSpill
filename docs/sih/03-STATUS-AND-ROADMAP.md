@@ -7,13 +7,13 @@ estimated or rounded up. If a figure appears on stage it should come from this p
 
 ## 3.1 One paragraph summary
 
-SpillTrace is a working nine-stage pipeline with a six-screen analyst dashboard. It takes a real
+SpillTrace is a working ten-stage pipeline with a six-screen analyst dashboard. It takes a real
 Sentinel-1 SAR scene, segments the oil with a U-Net trained on this repository's 1,200 real
 image/mask pairs, measures the slick on a sphere, runs a Lagrangian particle simulation backwards
 to a probability envelope and forwards to a forecast, generates a clearly-labelled synthetic AIS
 fleet for that envelope, and ranks vessels on a transparent 100-point scale with every component
-and its evidence exposed. It runs offline on one laptop with three Python dependencies and no
-frontend dependencies at all. 532 automated tests pass.
+and its evidence exposed. It runs offline on one laptop with two pipeline dependencies and no
+frontend dependencies at all. 772 automated tests pass.
 
 **Requirements (a), (b) and (c) of the problem statement are substantively satisfied**, clause by
 clause, in §3.7. One clause is not: the PS mentions EO (optical) imagery alongside SAR and we do
@@ -24,7 +24,7 @@ statement. And one number needs a re-run before it can be quoted as final: see
 
 ---
 
-## 3.2 The nine stages
+## 3.2 The ten stages
 
 These are the literal stage names the pipeline reports as it runs:
 
@@ -33,15 +33,17 @@ These are the literal stage names the pipeline reports as it runs:
 | 1 | `decode` | read the GeoTIFF, extract both polarisation bands and the geotransform |
 | 2 | `detect` | U-Net inference → per-pixel oil probability → thresholded mask |
 | 3 | `geometry` | connected components, contour tracing, spherical area/perimeter/orientation |
-| 4 | `forcing` | build the current + wind field for this place and time |
-| 5 | `backward` | **hindcast** — particles integrated backwards to an origin envelope and release window |
-| 6 | `forward` | **forecast** — particles integrated forwards to a drift prediction |
-| 7 | `ais` | synthesise the vessel traffic that passed through the envelope during the window |
-| 8 | `scoring` | score and rank every vessel on the 100-point scale |
-| 9 | `previews` | render the PNG layers the dashboard displays |
+| 4 | `screening` | test every dark patch against the look-alike screen; keep, reject or mark uncertain |
+| 5 | `forcing` | build the current + wind field for this place and time |
+| 6 | `backward` | **hindcast** — particles integrated backwards to an origin envelope and release window |
+| 7 | `forward` | **forecast** — particles integrated forwards to a drift prediction |
+| 8 | `ais` | synthesise the vessel traffic that passed through the envelope during the window |
+| 9 | `scoring` | score and rank every vessel on the 100-point scale |
+| 10 | `previews` | render the PNG layers the dashboard displays |
 
-A full run on scene `00053` takes **about 19 seconds** end to end — 9.7 s of that is decoding the
-2048 × 2048 GeoTIFF and 5.7 s is inference; the six stages after `geometry` cost about 1 s
+A full run on scene `00053` takes **about 24 seconds** end to end — 9.6 s of that is decoding the
+2048 × 2048 GeoTIFF, 5.9 s is inference, 3.9 s is geometry and 3.6 s is the look-alike screen; the
+six stages after `screening` cost about 1 s
 between them. The run is **deterministic** — run it twice and every figure is byte-identical,
 because every random process is seeded. Only the timing block and the generation timestamp
 change. Those figures are read off the `timing` block of `data/processed/cases/demo.json`, so
@@ -66,7 +68,7 @@ services/
 apps/web/                  the dashboard — 6 screens, vanilla ES modules, zero dependencies
 scripts/                   run_audit, run_preprocess, run_train, run_scene_eval,
                            run_api, build_web
-tests/                     532 tests
+tests/                     772 tests
 dist/                      the offline static bundle
 docs/sih/                  these six documents
 RUNBOOK.md                 how to run everything
@@ -74,7 +76,10 @@ KNOWN-ISSUES.md            open defects, honestly stated — read before quoting
 DATA_AUDIT.md              the generated dataset audit
 ```
 
-**Dependency count: three.** `numpy`, `opencv-python`, `pytest`. Everything else — HTTP server,
+**Dependency count: two, for the pipeline.** `numpy` and `opencv-python`. Two more are peripheral —
+`reportlab` (plus the Pillow it drags in) is imported *inside* the single function that renders the
+PDF incident report, so without it you lose that one endpoint and nothing else, and `pytest` is
+tests only. Everything else — HTTP server,
 PNG encoder, NetCDF reader, GeoTIFF reader, CSV and GeoJSON writers, morphology, connected
 components, contour tracing, spherical geometry — is standard library or written here. **The
 frontend has zero dependencies:** no React, no bundler, no `npm install`. Python 3.11.15.
@@ -261,7 +266,12 @@ weakness you concealed will discount everything else you said.
 1. Every supplied scene contains labelled oil, so these figures measure *delineation quality on
    scenes already known to contain a slick*. They are **not a false-alarm rate on clean sea.**
 2. The dataset contains **no labelled look-alikes** (algal blooms, low-wind zones, rain cells,
-   ship wakes), so the model's ability to reject them is **untested and unquantified**.
+   ship wakes). The model's ability to reject them is therefore **not learned from this dataset** —
+   but it is no longer unmeasured. A separate seven-feature screen was fitted and then scored
+   against 2 290 published look-alike patches it never trained on: **AUC 0.9573** held out
+   in-domain, **69.4 %** of 84 758 cross-domain dark regions rejected, and — the number that
+   matters — the U-Net **alone** alarms on **100 %** of those patches under one radiometric mapping
+   and **89.7 %** under the other. See KNOWN-ISSUES.md §4 and `lookalike_metrics.json`.
 3. Patch metrics do not include errors that only appear at scene scale — hence the scene
    evaluation.
 4. The reference masks are the supplied labels; their own accuracy is unknown and is treated as
@@ -285,7 +295,7 @@ Checked against the code, clause by clause.
 | (c) Reconstruct traffic in the origin window | ✅ | tracks in space and time |
 | (c) **Irrelevant traffic filtered out** | ✅ | `attribution.filtering` publishes the funnel — 10 vessels → 9 in window → 2 relevant, 8 excluded under two distinct reasons; excluded rows dimmed, not deleted, so the filter can be audited |
 | (c) Score on proximity / trajectory / behavioural anomalies | ✅ | six components, below |
-| Automated pipeline | ✅ | nine stages, job queue, 19 s |
+| Automated pipeline | ✅ | ten stages, job queue, 24 s |
 | **Hindcasting** ML model | ✅ | backward drift |
 | Backward **and** forward mapping | ✅ | both |
 | Ranks candidates by spatio-temporal correlation | ✅ | 100-point scale |
@@ -388,7 +398,7 @@ Plus the ranking caveat, in full:
 .venv/bin/python -m pytest
 ```
 
-**532 tests, about 40 seconds, all passing.**
+**772 tests, about 42 seconds, all passing, nothing skipped.**
 
 Everything is seeded and reproducible:
 
@@ -405,9 +415,9 @@ reads as a team that was paying attention.
 
 ## 3.10 What is left — the roadmap
 
-Ordered by marks gained per hour spent. **Tier 0 is done** — it is kept below as a record of what
-was delivered and how to point at it. Everything from Tier 1 onwards is still open, and item 5 is
-now the single largest credibility gain available.
+Ordered by marks gained per hour spent. **Tier 0 is done**, and **Tier 1 items 8 and 9 are done**
+— both are kept below as a record of what was delivered and how to point at it. Items 5, 6 and 7
+are still open, and item 5 is now the single largest credibility gain available.
 
 ### Tier 0 — done, and each one quotes the PS back at them ✓
 
@@ -472,29 +482,149 @@ questions with the numbers already looked up.
 
 ### Tier 1 — before the finals
 
-**5. Real currents and wind for the actual acquisition date.** *(~1 day, mostly downloading.)*
-The largest single credibility gain available. The NetCDF reader already works; we simply have a
-file covering the wrong dates. Get a current field from CMEMS (or **INCOIS** for Indian waters)
-and wind from ERA5 covering the scene's timestamp, and the "synthetic forcing" label flips to
-real by itself. **This is a download, not a rewrite.**
+Items **5, 8 and 9 are done**. They are left in number order rather than moved to a "done"
+section, because the other documents cite these numbers. Items 6 and 7 are open.
 
-**6. Verify the Zenodo dataset identity, then add one Indian scene.** *(~2 days.)* If our data
-is NTRO's own recommended dataset, put that on a slide — it neutralises "why the Persian Gulf?"
-instantly. Then adding a **Gulf of Kutch**, **Mumbai coast** or **Ennore/Chennai 2017** scene from
-the Copernicus Data Space becomes a generalisation bonus rather than a fix. Ennore has real,
-citable damage figures.
+**5. Real currents and wind for the actual acquisition date.** ✓ *(code done; one optional
+download left to the operator.)* This item was written as "**This is a download, not a rewrite**"
+and that was wrong — the audit that followed found two defects that made the download useless on
+its own, and both are now fixed:
 
-**7. Look-alike discrimination.** *(~1 week.)* Classify each dark patch as oil / algae /
-low-wind / wake. This is the hardest genuine question we will face and we currently have no
-answer. Even a modest classifier over shape, texture and darkness statistics, presented as
-"3 dark patches rejected as low-wind artefacts," is a serious differentiator.
+- **There was no wind reader at all.** The CMEMS reader existed; ERA5 did not. Downloading a wind
+  file would have changed nothing, because nothing could open it. There is now an ERA5 reader
+  handling the things that file actually does: `u10`/`v10`, a time axis called either
+  `valid_time` or `time`, 0–360 longitudes, descending latitudes, and an `expver` axis where one
+  slice is entirely no-data.
+- **The current window ignored the acquisition time.** `resolve_forcing` cut its window from
+  timestep 0 while the overlap report quoted the gap to the *nearest* timestep, so a covering
+  multi-day product would have been read on the wrong day and said nothing about it.
 
-**8. Close the loop — alerting.** *(~2 days. MERN-shaped.)* The theme is Disaster Management and
-our pipeline currently ends at a screen. Add dispatch to a responder: email/SMS/WhatsApp with
-position, area, drift forecast and top candidate. Judges always ask "and then what happens?"
+**Wind and currents are now separate products, and either can be real on its own.** That is not a
+technicality: oil moves at ~3 % of the wind, which at this scene's 0.0939 m/s current anchor makes
+the wind term the same size as the current. So there are four labels, not two, and the interface
+names both halves — `Synthetic scenario data`, `Synthetic currents with ERA5 wind`, `CMEMS data`,
+`CMEMS currents with ERA5 wind`. The Forcing card reports the wind's source, its mean speed over
+the footprint, how many hourly frames were read, and what fraction of the drift horizon the file
+covered; with no wind file it says the spread is a *lower bound*, because real oil also moves with
+the wind. Wind is interpolated hourly in time and currents are not, and the card says so rather
+than pretending the two products have the same cadence.
 
-**9. PDF incident report** *(~1 day)* with a case number, timestamp and full provenance.
-Government workflows run on documents.
+What is left is genuinely a download, and it is optional: ERA5 needs a free Copernicus account,
+so no wind file ships with the repository. The exact request — variables, the three days, the
+padded footprint, NetCDF4 — is in **RUNBOOK.md §6a**, and CMEMS in §6b. Covered by 28 new tests in
+`tests/test_forcing_products.py`, which drive both readers through a fake NetCDF handle because
+nothing in the repository can *write* NetCDF-4.
+
+**6. Dataset identity — ✓ verified. One Indian scene — still open.** *(~1 day of the two spent.)*
+
+**The identity half is done, and the answer corrected a mistake of ours.** Our data is Part I of
+*"Sentinel-1 SAR oil spill image dataset for train, validate, and test deep learning models"* —
+Trujillo-Acatitla, Tuxpan-Vargas, Ovando-Vázquez & Monterrubio-Martínez (IPICYT, Mexico), Zenodo,
+CC BY 4.0, DOI **10.5281/zenodo.8346860**, concept DOI `10.5281/zenodo.8346859` — the dataset the
+problem statement names. It is documented by a peer-reviewed paper: *"Marine oil spill detection and
+segmentation in SAR data with two steps Deep Learning framework,"* **Marine Pollution Bulletin 204:
+116549** (2024), `doi:10.1016/j.marpolbul.2024.116549`. Matched on eight independent fingerprints:
+file count, the `NNNNN.tif` naming, raster dimensions, band naming, dtype, the embedded BEAM-DIMAP
+processing chain, mask value encoding, and the acquisition date span. Put the DOI on a slide.
+
+**Stop saying "Persian Gulf data."** We were wrong about our own dataset. It is global: 1,200 scenes
+across **24 named seas**, 95°W to 130°E, 8°S to 61°N. Gulf of Mexico 388, Eastern Mediterranean 172,
+**Persian Gulf 88 — about 7%**, and only because our demo case happens to sit there. The region
+table in `DATA_AUDIT.md` is generated from each scene's own corner coordinates.
+
+**The real gap is narrower and sharper: no Indian water at all.** Not one of the 1,200 scenes falls
+in 65–95°E, 5–25°N. So "have you validated on Indian seas?" gets a straight no, and one scene fixes
+that. Free, no account beyond a signup, roughly two hours:
+
+1. Register at **dataspace.copernicus.eu** and open the Browser.
+2. Search **Sentinel-1**, product type **GRD**, mode **IW**, polarisation **VV+VH** over one of:
+   **Gulf of Kutch** (~68.5–70.5°E, 22.2–23.2°N — dense tanker traffic into Kandla and Vadinar),
+   **Mumbai coast** (~72.5–73.2°E, 18.8–19.3°N), or **Ennore/Chennai** (~80.2–80.5°E, 13.1–13.4°N),
+   whose January 2017 collision has citable damage figures.
+3. Download the `.SAFE` product and run SNAP's standard chain to match ours exactly — the processing
+   chain our files carry is `Orb_NR_Cal_Spk_TC_dB`: Apply-Orbit-File → ThermalNoiseRemoval →
+   Calibration (σ⁰) → Speckle-Filter → Terrain-Correction (EPSG:4326) → LinearToFromdB. Export
+   GeoTIFF with **VH as band 0 and VV as band 1**, the order `audit.py` detects by band name.
+4. Drop it in `Oil/` under any name, run `scripts/run_audit.py`, then analyse it through the app.
+   No mask is needed — a scene without one is a prediction-only case, which is exactly the real
+   operational situation.
+
+Expect it to look *worse* than our test scenes, and say so: no reference mask, a different sea
+state, and a possible incidence-angle difference. **A weaker honest number on Indian water beats a
+strong number on water nobody asked about.**
+
+**Two companion parts are the cheaper win, and they close stated limitations rather than adding
+scenery.** Part III (`10.5281/zenodo.13761290`) is a held-out test split — 150 images + 150 masks
+each for look-alike / no-oil / oil, 900 files, 9.86 GB — an external test set immune to the
+grouping bug in KNOWN-ISSUES.md §1, so it retires "your numbers are upper bounds" without the
+retrain. Part II (`10.5281/zenodo.8253899`) is 685 no-oil + 685 **look-alike** images with masks:
+the only route to a detector that *learns* the oil/look-alike distinction instead of being screened
+after the fact. **Fetch Part III first** — it is the smaller download and it answers the harder
+question.
+
+**7. Look-alike discrimination.** ✓ *(measured; the discrimination itself is partial.)* This was
+the hardest genuine question we faced and the one place we had no answer at all. There is now a
+number, and it is worth knowing before a judge finds it.
+
+`services/ml/spilltrace_ml/lookalike.py` screens every dark region the detector proposes on seven
+features — darkness against the local background, its 10th-percentile tail, a texture ratio, edge
+sharpness, compactness, solidity, elongation. All seven are ratios of same-unit quantities, so the
+screen survives a change of radiometric scale, which is the only reason it can be scored on a
+foreign archive at all. Fitted on 11 623 dark regions from the 270 supplied products (930 over
+labelled oil, 10 693 not); regions between 5 % and 50 % mask overlap are dropped rather than
+guessed at.
+
+| | Screen | U-Net alone |
+|---|---|---|
+| Held out, same domain (5-fold, grouped by parent product) | **AUC 0.9573** — keeps 90.2 % of oil, rejects 89.4 % of dark non-oil | — |
+| 2 290 published look-alike patches, never trained on | **69.4 %** of 84 758 dark regions rejected; 73.2 % of patches still raise something | **89.7 %** of patches alarm under one radiometric mapping, **100 %** under the other |
+
+Say the right thing about this on stage: **the screen is a real improvement and the problem is not
+solved.** The U-Net on its own alarms on essentially every look-alike patch it is shown. Two
+detector numbers are reported rather than one because the archive is 8-bit JPEG — it cannot be
+turned back into calibrated decibels, so a single figure would overstate what the data supports.
+The screen also never names *which* look-alike it thinks it is seeing, because nothing in either
+dataset labels the phenomenon; that needs Part II of the source dataset (item 6). Reproduce with
+`scripts/run_lookalike_eval.py` after `scripts/fetch_dartis2019.py --subset nc,nw`; full detail
+and all seven stated limitations are in KNOWN-ISSUES.md §4.
+
+**8. Close the loop — alerting.** ✓ *(done.)* The theme is Disaster Management and the pipeline
+used to end at a screen. `POST /api/cases/<id>/dispatch` now builds the incident PDF and either
+sends it over SMTP or writes an `.eml` beside the PDF, as a background job the dashboard polls.
+Two properties are worth stating out loud when a judge asks, because they are the difference
+between a demo and something you would let near a real inbox:
+
+- **It cannot be used as an open relay.** The endpoint has no authentication in front of it, so
+  real sending requires `SPILLTRACE_ALERT_RECIPIENTS` — an allowlist of addresses or `@domains`.
+  With it unset, nothing is ever sent to anyone.
+- **Dry run is the default.** With no SMTP host configured a clone writes a `.eml` file and says
+  so, in the dialog *before* you commit and in the confirmation after. The button reads
+  "Write .eml", not "Send report", when that is what will happen.
+
+Demonstrate it with `.venv/bin/python scripts/make_report.py --dispatch ops@example.gov`, which
+prints the dispatch mode and the path of whatever it produced. SMS and WhatsApp are deliberately
+not built: both need a paid account and a registered sender, and neither adds anything the email
+does not already prove.
+
+**9. PDF incident report** ✓ *(done.)* Nine sections — case information, incident location, the
+detection, the drift hindcast and estimated origin, spill age, vessel triage, provenance, stated
+limitations, and an operational disclaimer with a blank sign-off block for a wet signature. The
+case number is `ST-<YYYYMMDD>-<scene>-<caseId>` and every page is footed with it plus "Research
+proof of concept — not evidence — human review required".
+
+Three things in it are worth pointing at:
+
+- **The score decomposition is a table, not a number.** One row per scoring component with the
+  measured reason it scored that, straight out of `vessels[0].componentDetail`.
+- **The limitations are printed verbatim** from `case["limits"]`, and the disclaimer states the
+  *actual* AIS and drift mode rather than hedging that they "may be" synthetic.
+- **Nothing in it accuses anybody.** There is a test that asserts the words "guilty", "culprit",
+  "responsible party" and "confirmed responsible" appear nowhere in the rendered document, and
+  that "priority candidate for investigation" does.
+
+reportlab is the project's one optional dependency and it hard-requires a working Pillow, so it
+is imported lazily: a broken install answers 503 on that one route instead of taking down the
+server and the test suite. `.env.example` documents every variable involved.
 
 ### Tier 2 — if time allows
 

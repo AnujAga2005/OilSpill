@@ -39,8 +39,14 @@ for _package in ("common", "ml", "drift", "api"):
 # These imports must happen after the service package paths are installed.  Otherwise
 # importing this module directly (rather than through the helper script) fails before
 # the server has a chance to configure its local package layout.
-from .dispatch import DispatchError, dispatch_case_email  # noqa: E402
-from .reports import generate_incident_report  # noqa: E402
+from .dispatch import (  # noqa: E402
+    DispatchError,
+    allowed_recipients,
+    dispatch_case_email,
+    dispatch_mode,
+    parse_recipients,
+)
+from .reports import ReportUnavailable, build_case_number, generate_incident_report  # noqa: E402
 from spilltrace_api import case as case_mod  # noqa: E402
 from spilltrace_api import jobs as jobs_mod  # noqa: E402
 from spilltrace_api import store as store_mod  # noqa: E402
@@ -109,6 +115,7 @@ STORE = store_mod.CaseStore()
 
 _PATCH_METRICS = C.PROCESSED_DIR / "metrics.json"
 _SCENE_METRICS = C.PROCESSED_DIR / "scene_metrics.json"
+_LOOKALIKE_METRICS = C.PROCESSED_DIR / "lookalike_metrics.json"
 _AUDIT = C.PROCESSED_DIR / "audit.json"
 
 
@@ -175,6 +182,71 @@ def _detection_metrics() -> dict[str, Any]:
             "basis": None,
             "note": "not measured yet; run scripts/run_scene_eval.py",
         }
+    out["lookAlike"] = _lookalike_metrics()
+    return out
+
+
+def _lookalike_metrics() -> dict[str, Any]:
+    """The look-alike screen's own numbers, which answer a different question.
+
+    Every IoU on this product is measured on scenes that contain oil, so it says how well
+    the shape of a known slick is recovered -- not how often dark water that is not oil
+    raises an alarm. That second number is the one an operator is actually asking for, and
+    it comes from here: a screen fitted on this project's decibel scenes and then measured
+    against a published look-alike archive it never trained on.
+    """
+    doc = _read_json(_LOOKALIKE_METRICS)
+    if not doc:
+        return {
+            "available": False,
+            "note": "not measured yet; run scripts/run_lookalike_eval.py",
+        }
+    return {
+        "available": True,
+        "question": doc.get("question"),
+        "screen": doc.get("screen"),
+        "features": doc.get("features"),
+        "contextFields": doc.get("contextFields"),
+        "sameDomain": doc.get("sameDomain"),
+        "crossDomain": doc.get("crossDomain"),
+        "limitations": doc.get("limitations"),
+        "generatedUtc": doc.get("generatedUtc"),
+        "elapsedSeconds": doc.get("elapsedSeconds"),
+    }
+
+
+def _screening_brief(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """The look-alike verdict counts for one case, without the per-patch detail.
+
+    The full block, with every patch and every feature it was measured on, is on the case
+    document. What a brief needs is the count that was rejected and the sentence saying the
+    screen does not name which look-alike it thinks each one is.
+    """
+    block = payload.get("screening")
+    if not isinstance(block, dict):
+        return None
+    return {key: block.get(key) for key in ("headline", "fitted", "counts", "components", "thresholds", "limits")}
+
+
+def _public_result(result: Any) -> Any:
+    """Strip the host's filesystem layout out of a dispatch result.
+
+    `dispatch_case_email` returns absolute paths because its callers -- this server and
+    `scripts/make_report.py` -- need to open the files. Over HTTP they are somebody
+    else's machine layout, and no endpoint here is authenticated, so the response
+    carries the repository-relative path and nothing above the checkout.
+    """
+    if not isinstance(result, dict):
+        return result
+    out = dict(result)
+    for key in ("reportPath", "emailPath"):
+        value = out.get(key)
+        if not isinstance(value, str) or not value:
+            continue
+        try:
+            out[key] = str(Path(value).resolve().relative_to(C.REPO_ROOT))
+        except ValueError:
+            out[key] = Path(value).name
     return out
 
 
@@ -365,6 +437,8 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
                 "reference": C.LABEL_REFERENCE,
                 "driftSynthetic": C.LABEL_DRIFT_SYNTHETIC,
                 "driftCmems": C.LABEL_DRIFT_CMEMS,
+                "driftHybrid": C.LABEL_DRIFT_HYBRID,
+                "driftReal": C.LABEL_DRIFT_REAL,
                 "candidate": C.LABEL_CANDIDATE,
                 "status": C.LABEL_STATUS,
             },
@@ -582,13 +656,21 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             recipients = None
         subject = body.get("subject")
         message = body.get("message")
-        case_number = body.get("caseNumber")
+
+        # The case number reaches a filename, so reject a bad one here — with a
+        # 400 the caller can read — rather than inside a background job.
+        try:
+            case_number = build_case_number(STORE.load(case_id) or {}, body.get("caseNumber"))
+        except ValueError as exc:
+            self._fail(400, str(exc))
+            return
 
         # Validate recipient syntax before creating a job so obvious client errors are
-        # returned immediately rather than becoming a failed background job.
+        # returned immediately rather than becoming a failed background job. An empty
+        # request falls back to the configured allowlist, which is also what the
+        # dispatcher does.
         try:
-            from .dispatch import _recipients
-            _recipients(recipients)
+            parse_recipients(recipients if recipients else allowed_recipients())
         except DispatchError as exc:
             self._fail(400, str(exc))
             return
@@ -624,9 +706,13 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
         if payload is None:
             return
         if query.get("format") == "pdf":
-            path = generate_incident_report(payload)
+            # 503, not 500: the server is fine, the optional PDF dependency is not.
             try:
+                path = generate_incident_report(payload)
                 body = path.read_bytes()
+            except ReportUnavailable as exc:
+                self._fail(503, str(exc))
+                return
             except OSError as exc:
                 self._fail(500, f"could not read generated incident report: {exc}")
                 return
@@ -658,6 +744,7 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "provenance": payload.get("provenance"),
             "detection": detection,
             "slick": payload.get("slick"),
+            "screening": _screening_brief(payload),
             "forcing": payload.get("forcing"),
             "releaseWindow": (payload.get("ais") or {}).get("releaseWindow"),
             "spillAge": payload.get("spillAge"),
@@ -672,6 +759,7 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "timing": payload.get("timing"),
             "pdfUrl": f"/api/cases/{case_id}/report?format=pdf",
             "dispatchUrl": f"/api/cases/{case_id}/dispatch",
+            "dispatch": dispatch_mode(),
         })
 
     def _job(self, job_id: str | None) -> None:
@@ -679,7 +767,13 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
         if job is None:
             self._fail(404, f"job {job_id!r} not found")
             return
-        self._json(200, job.to_dict())
+        # A dispatch result is four short strings and two booleans, so it rides along on
+        # the poll rather than forcing a second request. A detect or drift result is the
+        # whole case document, which is what `/result` is for.
+        payload = job.to_dict(include_result=job.kind == "dispatch")
+        if "result" in payload:
+            payload["result"] = _public_result(payload["result"])
+        self._json(200, payload)
 
     def _job_result(self, job_id: str | None) -> None:
         job = RUNNER.get(job_id or "")
@@ -690,10 +784,7 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             self._json(202 if job.state in ("queued", "running") else 409, job.to_dict())
             return
         if job.kind == "dispatch":
-            self._json(200, {"jobId": job.id, "kind": job.kind, "result": job.result})
-            return
-        if job.kind == "dispatch":
-            self._json(200, {"jobId": job.id, "kind": job.kind, "result": job.result})
+            self._json(200, {"jobId": job.id, "kind": job.kind, "result": _public_result(job.result)})
             return
         raw = STORE.load_raw(job.scene)
         if raw is None:
@@ -788,8 +879,19 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
                 self._fail(404, "apps/web/index.html is missing", path=path)
                 return
         body = target.read_bytes()
-        cache = "no-cache" if target.suffix == ".html" else "public, max-age=300"
-        self._send(200, body, MIME.get(target.suffix, "application/octet-stream"), {"Cache-Control": cache})
+        # This server is the development server: `apps/web` is served straight off disk,
+        # so a cache that outlives an edit means looking at code that is no longer there.
+        # Source revalidates on every request; the rasters and fonts under the same root
+        # are content that does not change, and keep the long cache.
+        source = target.suffix in (".html", ".js", ".css", ".json", ".map")
+        cache = "no-cache" if source else "public, max-age=300"
+        headers = {"Cache-Control": cache}
+        if source:
+            headers["ETag"] = f'W/"{target.stat().st_mtime_ns:x}-{len(body):x}"'
+            if self.headers.get("If-None-Match") == headers["ETag"]:
+                self._send(304, b"", MIME.get(target.suffix, "text/plain"), headers)
+                return
+        self._send(200, body, MIME.get(target.suffix, "application/octet-stream"), headers)
 
     def log_message(self, fmt: str, *args: Any) -> None:  # noqa: A003
         print(f"  {self.log_date_time_string()}  {fmt % args}", flush=True)

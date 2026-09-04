@@ -4,9 +4,9 @@ Phase 1 of the SpillTrace build (SIH Problem Statement 26143).
 
 Every value below was read from the supplied files. Nothing is assumed: filenames, dimensions, band order, acquisition times, coordinates and the CMEMS overlap verdict are all derived from file contents at audit time.
 
-- Generated: `2026-08-28T06:01:44Z`
+- Generated: `2026-09-04T10:08:14Z`
 - Pipeline version: `spilltrace-0.1.0`
-- Runtime: 104.84 s
+- Runtime: 209.17 s
 - Image directory: `Oil`
 - Mask directory: `Mask_oil`
 
@@ -94,27 +94,29 @@ Handling: no mask carries usable georeferencing, so every geometry calculation r
 
 | Region (approximate label) | Scenes |
 | --- | --- |
-| Gulf of Mexico | 392 |
+| Gulf of Mexico | 388 |
 | Eastern Mediterranean | 172 |
 | Persian Gulf | 88 |
 | North Sea | 69 |
 | Western Mediterranean | 62 |
-| North Atlantic Ocean | 60 |
 | Red Sea | 57 |
 | Gulf of Guinea | 55 |
 | Nile Delta shelf | 53 |
-| South Atlantic Ocean | 39 |
+| Gulf of Cadiz | 40 |
+| Angolan shelf | 39 |
 | Caribbean Sea | 29 |
 | Java Sea | 26 |
 | Central Mediterranean | 21 |
-| North Indian Ocean | 20 |
+| Aegean Sea | 20 |
+| Adriatic Sea | 18 |
 | Strait of Malacca | 15 |
 | Suez Canal approaches | 9 |
-| South Indian Ocean | 9 |
+| South China Sea | 9 |
+| Straits of Florida | 9 |
 | Black Sea | 7 |
 | Bay of Biscay | 6 |
-| North Pacific Ocean | 5 |
 | East China Sea | 4 |
+| Irish Sea | 2 |
 | Sea of Japan | 2 |
 
 Region names come from an offline bounding-box lookup and are display labels only. All geometry, drift and scoring use the raster transform, never these names.
@@ -171,14 +173,14 @@ The oil class is heavily minority, which the loss function has to account for; t
 
 Value ranges come from fully decoded scenes only. Decoding every scene would cost roughly two hours of pure-Python LZW, so the audit samples deterministically and reports the sample size.
 
-Scenes decoded for this section (12): `00000`, `00119`, `00250`, `00368`, `00474`, `00582`, `00694`, `00805`, `00909`, `01010`, `01118`, `01230`
+Scenes decoded for this section (16): `00000`, `00089`, `00189`, `00278`, `00368`, `00449`, `00527`, `00612`, `00694`, `00780`, `00857`, `00934`, `01010`, `01086`, `01176`, `01257`
 
 Raw statistics, every decoded sample including no-data padding:
 
 | Band | Name | Min (dB) | Max (dB) | Mean (dB) | p0.5 | p99.5 | Exact zeros | Non-finite |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | `Sigma0_VH_db` | -78.54 | 5.65 | -32.64 | -48.59 | 0 | 1124540 | 0 |
-| 1 | `Sigma0_VV_db` | -72.45 | 18.36 | -18.38 | -28.86 | 0 | 1124540 | 0 |
+| 0 | `Sigma0_VH_db` | -84.29 | 8.04 | -33.85 | -48.59 | 0 | 1851111 | 0 |
+| 1 | `Sigma0_VV_db` | -72.45 | 22.07 | -20.46 | -37.43 | 0 | 1851111 | 0 |
 
 Values are calibrated backscatter in decibels (DIMAP `PHYSICAL_UNIT` = `intensity_db`), not raw DN. The DIMAP no-data value is `0.0`; the pipeline treats exact zeros and non-finite samples as invalid and records them in an explicit invalid mask rather than feeding them to the model.
 
@@ -186,10 +188,10 @@ Values are calibrated backscatter in decibels (DIMAP `PHYSICAL_UNIT` = `intensit
 
 The raw table above is contaminated by the no-data border: because zero sits above the real backscatter distribution, it drags the upper percentile to `0.00` and hides the range the model actually has to cover. These are the same statistics with exact-`0.0` and non-finite samples removed, and they are what the normalisation clip limits are derived from.
 
-| Band | Name | Min (dB) | Max (dB) | Mean (dB) | Std (dB) | p0.5 | Median | p99.5 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | `Sigma0_VH_db` | -78.54 | 5.65 | -33.38 | 3.29 | -48.59 | unknown | -20.39 |
-| 1 | `Sigma0_VV_db` | -72.45 | 18.36 | -18.85 | 1.67 | -29.2 | unknown | -10.97 |
+| Band | Name | Min (dB) | Max (dB) | Mean (dB) | Std (dB) | p0.5 | p99.5 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | `Sigma0_VH_db` | -84.29 | 8.04 | -34.75 | 3.35 | -48.59 | -13.76 |
+| 1 | `Sigma0_VV_db` | -72.45 | 22.07 | -21.03 | 2.04 | -37.43 | -7.09 |
 
 The two channels sit in visibly different ranges, so normalisation is per channel rather than shared.
 
@@ -199,28 +201,36 @@ The two channels sit in visibly different ranges, so normalisation is per channe
 | --- | --- | --- | --- | --- |
 | `00000` | 0 | -32.46 | -34.28 | 1.82 |
 | `00000` | 1 | -26.81 | -20.76 | -6.05 |
-| `00119` | 0 | -31.82 | -31.43 | -0.4 |
-| `00119` | 1 | -25.27 | -18.66 | -6.61 |
-| `00250` | 0 | -33.67 | -32.6 | -1.07 |
-| `00250` | 1 | -21.83 | -17.88 | -3.94 |
+| `00089` | 0 | -32.64 | -32.08 | -0.57 |
+| `00089` | 1 | -27.35 | -20.98 | -6.37 |
+| `00189` | 0 | -32.17 | -31.49 | -0.68 |
+| `00189` | 1 | -22.92 | -18.47 | -4.45 |
+| `00278` | 0 | -35.22 | -35.84 | 0.61 |
+| `00278` | 1 | -27.73 | -23.03 | -4.7 |
 | `00368` | 0 | -38.82 | -37.48 | -1.35 |
 | `00368` | 1 | -25.52 | -21.59 | -3.93 |
-| `00474` | 0 | -33.34 | -32.57 | -0.77 |
-| `00474` | 1 | -21.41 | -16.53 | -4.88 |
-| `00582` | 0 | -35.26 | -34.9 | -0.36 |
-| `00582` | 1 | -26.03 | -18.96 | -7.07 |
+| `00449` | 0 | -37.98 | -37.3 | -0.69 |
+| `00449` | 1 | -31.55 | -24.18 | -7.36 |
+| `00527` | 0 | -33.02 | -32.17 | -0.86 |
+| `00527` | 1 | -23.99 | -19 | -4.99 |
+| `00612` | 0 | -31.85 | -32.47 | 0.62 |
+| `00612` | 1 | -23.65 | -18.57 | -5.07 |
 | `00694` | 0 | -32.78 | -32.83 | 0.06 |
 | `00694` | 1 | -26.4 | -22.63 | -3.77 |
-| `00805` | 0 | -31.99 | -30.95 | -1.04 |
-| `00805` | 1 | -24.13 | -18.46 | -5.67 |
-| `00909` | 0 | -33.3 | -32.8 | -0.5 |
-| `00909` | 1 | -23.61 | -17.16 | -6.45 |
+| `00780` | 0 | -35.99 | -35.96 | -0.03 |
+| `00780` | 1 | -28.44 | -20.77 | -7.67 |
+| `00857` | 0 | -32.98 | -32.65 | -0.34 |
+| `00857` | 1 | -19.07 | -15.96 | -3.1 |
+| `00934` | 0 | -39.04 | -38.11 | -0.93 |
+| `00934` | 1 | -31.51 | -24.37 | -7.14 |
 | `01010` | 0 | -36.94 | -35.77 | -1.17 |
 | `01010` | 1 | -24.77 | -19.35 | -5.41 |
-| `01118` | 0 | -33.71 | -33.29 | -0.42 |
-| `01118` | 1 | -20.17 | -16.68 | -3.49 |
-| `01230` | 0 | -32.18 | -31.51 | -0.66 |
-| `01230` | 1 | -20.94 | -16.66 | -4.28 |
+| `01086` | 0 | -34.36 | -34.12 | -0.25 |
+| `01086` | 1 | -24.6 | -19.3 | -5.3 |
+| `01176` | 0 | -38.26 | -37.7 | -0.56 |
+| `01176` | 1 | -32.26 | -24.2 | -8.07 |
+| `01257` | 0 | -37.54 | -35.35 | -2.19 |
+| `01257` | 1 | -24.95 | -19.44 | -5.51 |
 
 Negative separation means labelled oil is darker than its surroundings, which is the expected damping signature. Only valid samples are compared, so no-data padding cannot manufacture a difference. This is a sanity check that image and mask are spatially aligned - a misaligned pair would show near-zero separation.
 
@@ -244,7 +254,7 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `00022` | Central Mediterranean | 2015-03-12T05:12:51.445Z | yes | no | 4120.8 | 194 | 0.087 |
 | `00415` | Eastern Mediterranean | 2015-04-02T15:49:25.993Z | yes | no | 4099.3 | 180 | 0.119 |
-| `00635` | North Atlantic Ocean | 2015-07-15T18:05:57.825Z | yes | no | 3995.2 | 190 | 0.04 |
+| `00635` | Irish Sea | 2015-07-15T18:05:57.825Z | yes | no | 3995.2 | 190 | 0.04 |
 | `00391` | Eastern Mediterranean | 2015-07-31T15:49:33.609Z | yes | no | 3979.3 | 156 | 0.181 |
 | `00223` | Central Mediterranean | 2015-08-04T16:55:41.752Z | yes | no | 3975.3 | 192 | 0.214 |
 | `00176` | Central Mediterranean | 2015-08-28T16:55:36.200Z | yes | no | 3951.3 | 172 | 0.173 |
@@ -254,11 +264,11 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00295` | Central Mediterranean | 2015-10-27T16:55:34.030Z | yes | no | 3891.3 | 210 | 0.085 |
 | `00629` | Bay of Biscay | 2015-10-31T18:04:25.378Z | yes | no | 3887.2 | 196 | 0.04 |
 | `00134` | Eastern Mediterranean | 2015-11-22T03:59:30.968Z | yes | no | 3865.8 | 196 | 0.115 |
-| `00530` | North Atlantic Ocean | 2015-12-25T05:11:10.165Z | yes | no | 3832.8 | 210 | 0.116 |
+| `00530` | Adriatic Sea | 2015-12-25T05:11:10.165Z | yes | no | 3832.8 | 210 | 0.116 |
 | `00237` | Nile Delta shelf | 2016-02-13T15:57:18.446Z | yes | no | 3782.3 | 186 | 0.205 |
 | `00265` | Nile Delta shelf | 2016-04-25T15:57:10.381Z | yes | no | 3710.3 | 196 | 0.136 |
 | `01334` | Gulf of Mexico | 2016-05-03T00:01:53.666Z | yes | no | 3703.0 | 183 | 0.245 |
-| `00696` | North Indian Ocean | 2016-05-11T04:22:57.544Z | yes | no | 3694.8 | 181 | 0.175 |
+| `00696` | Aegean Sea | 2016-05-11T04:22:57.544Z | yes | no | 3694.8 | 181 | 0.175 |
 | `00303` | Eastern Mediterranean | 2016-06-02T15:40:54.904Z | yes | no | 3672.3 | 196 | 0.141 |
 | `00087` | Caribbean Sea | 2016-06-07T22:17:47.861Z | yes | no | 3667.1 | 151 | 0.657 |
 | `00009` | Nile Delta shelf | 2016-07-07T04:00:14.019Z | yes | no | 3637.8 | 196 | 0.163 |
@@ -274,9 +284,9 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00253` | Eastern Mediterranean | 2016-10-29T15:49:33.104Z | yes | no | 3523.3 | 175 | 0.164 |
 | `00319` | Black Sea | 2016-11-19T15:27:24.866Z | yes | no | 3502.4 | 196 | 0.074 |
 | `00007` | Nile Delta shelf | 2017-01-15T04:00:19.083Z | yes | no | 3445.8 | 196 | 0.205 |
-| `00145` | South Atlantic Ocean | 2017-01-16T04:52:04.860Z | yes | no | 3444.8 | 196 | 0.149 |
+| `00145` | Angolan shelf | 2017-01-16T04:52:04.860Z | yes | no | 3444.8 | 196 | 0.149 |
 | `00011` | Eastern Mediterranean | 2017-02-08T04:00:10.774Z | yes | no | 3421.8 | 196 | 0.142 |
-| `00853` | North Atlantic Ocean | 2017-02-14T06:27:23.740Z | yes | no | 3415.7 | 196 | 0.068 |
+| `00853` | Gulf of Cadiz | 2017-02-14T06:27:23.740Z | yes | no | 3415.7 | 196 | 0.068 |
 | `00615` | Gulf of Mexico | 2017-02-15T00:01:48.344Z | yes | no | 3415.0 | 202 | 0.226 |
 | `00363` | Gulf of Guinea | 2017-02-21T04:51:37.147Z | yes | no | 3408.8 | 180 | 0.401 |
 | `00421` | Persian Gulf | 2017-03-08T14:24:44.182Z | yes | no | 3393.4 | 195 | 0.093 |
@@ -284,17 +294,17 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00377` | Gulf of Mexico | 2017-04-02T00:15:34.213Z | yes | no | 3369.0 | 196 | 0.169 |
 | `00593` | Gulf of Mexico | 2017-04-28T00:01:42.079Z | yes | no | 3343.0 | 185 | 0.239 |
 | `00450` | Eastern Mediterranean | 2017-05-03T03:59:23.772Z | yes | no | 3337.8 | 188 | 0.181 |
-| `01262` | North Pacific Ocean | 2017-05-04T11:18:54.947Z | yes | no | 3336.5 | 197 | 0.183 |
+| `01262` | Straits of Florida | 2017-05-04T11:18:54.947Z | yes | no | 3336.5 | 197 | 0.183 |
 | `00164` | Nile Delta shelf | 2017-05-09T15:49:08.414Z | yes | no | 3331.3 | 210 | 0.097 |
 | `00062` | Persian Gulf | 2017-05-10T02:15:21.143Z | yes | no | 3330.9 | 151 | 0.029 |
-| `00146` | South Atlantic Ocean | 2017-05-16T04:52:32.255Z | yes | no | 3324.8 | 196 | 0.267 |
-| `00240` | South Atlantic Ocean | 2017-05-28T04:52:07.279Z | yes | no | 3312.8 | 225 | 0.152 |
-| `00267` | South Atlantic Ocean | 2017-05-28T04:52:34.796Z | yes | no | 3312.8 | 196 | 0.255 |
+| `00146` | Angolan shelf | 2017-05-16T04:52:32.255Z | yes | no | 3324.8 | 196 | 0.267 |
+| `00240` | Angolan shelf | 2017-05-28T04:52:07.279Z | yes | no | 3312.8 | 225 | 0.152 |
+| `00267` | Angolan shelf | 2017-05-28T04:52:34.796Z | yes | no | 3312.8 | 196 | 0.255 |
 | `00252` | Gulf of Mexico | 2017-06-06T00:25:35.869Z | yes | no | 3304.0 | 210 | 0.315 |
 | `00114` | North Sea | 2017-06-16T17:19:13.289Z | yes | no | 3293.3 | 196 | 0.091 |
 | `00475` | Gulf of Mexico | 2017-06-27T00:01:45.131Z | yes | no | 3283.0 | 183 | 0.245 |
 | `00458` | Strait of Malacca | 2017-07-04T11:17:08.461Z | yes | no | 3275.5 | 208 | 0.418 |
-| `00113` | South Atlantic Ocean | 2017-07-08T05:00:23.946Z | yes | no | 3271.8 | 210 | 0.109 |
+| `00113` | Angolan shelf | 2017-07-08T05:00:23.946Z | yes | no | 3271.8 | 210 | 0.109 |
 | `00103` | North Sea | 2017-07-08T17:35:32.702Z | yes | no | 3271.3 | 196 | 0.085 |
 | `00496` | Gulf of Mexico | 2017-07-09T00:01:47.212Z | yes | no | 3271.0 | 183 | 0.234 |
 | `00365` | Suez Canal approaches | 2017-07-09T03:52:20.663Z | yes | no | 3270.8 | 156 | 0.184 |
@@ -310,8 +320,8 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00551` | Gulf of Mexico | 2017-08-14T00:01:48.089Z | yes | no | 3235.0 | 185 | 0.239 |
 | `00368` | Nile Delta shelf | 2017-08-14T03:52:16.505Z | yes | no | 3234.8 | 177 | 0.221 |
 | `00188` | Persian Gulf | 2017-08-17T02:39:18.143Z | yes | no | 3231.9 | 210 | 0.091 |
-| `00797` | North Atlantic Ocean | 2017-08-18T06:35:52.005Z | yes | no | 3230.7 | 196 | 0.085 |
-| `00218` | South Atlantic Ocean | 2017-08-20T04:52:11.832Z | yes | no | 3228.8 | 196 | 0.143 |
+| `00797` | Gulf of Cadiz | 2017-08-18T06:35:52.005Z | yes | no | 3230.7 | 196 | 0.085 |
+| `00218` | Angolan shelf | 2017-08-20T04:52:11.832Z | yes | no | 3228.8 | 196 | 0.143 |
 | `00131` | North Sea | 2017-08-25T17:35:10.475Z | yes | no | 3223.3 | 210 | 0.096 |
 | `00366` | Nile Delta shelf | 2017-08-26T03:52:21.453Z | yes | no | 3222.8 | 142 | 0.252 |
 | `00130` | North Sea | 2017-08-27T17:19:14.059Z | yes | no | 3221.3 | 210 | 0.113 |
@@ -319,12 +329,12 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00490` | Eastern Mediterranean | 2017-09-01T15:41:25.113Z | yes | no | 3216.3 | 195 | 0.174 |
 | `00099` | North Sea | 2017-09-01T17:27:03.248Z | yes | no | 3216.3 | 196 | 0.089 |
 | `00402` | Gulf of Mexico | 2017-09-05T00:15:42.025Z | yes | no | 3213.0 | 196 | 0.159 |
-| `00398` | North Atlantic Ocean | 2017-09-05T18:26:31.941Z | yes | no | 3212.2 | 157 | 0.046 |
+| `00398` | Gulf of Cadiz | 2017-09-05T18:26:31.941Z | yes | no | 3212.2 | 157 | 0.046 |
 | `00484` | Gulf of Mexico | 2017-09-07T00:01:48.723Z | yes | no | 3211.0 | 185 | 0.239 |
-| `00152` | South Atlantic Ocean | 2017-09-13T04:52:13.833Z | yes | no | 3204.8 | 196 | 0.149 |
+| `00152` | Angolan shelf | 2017-09-13T04:52:13.833Z | yes | no | 3204.8 | 196 | 0.149 |
 | `00372` | Gulf of Mexico | 2017-09-17T00:15:42.810Z | yes | no | 3201.0 | 196 | 0.169 |
 | `00293` | Gulf of Mexico | 2017-09-24T00:09:48.375Z | yes | no | 3194.0 | 210 | 0.115 |
-| `00180` | South Atlantic Ocean | 2017-09-25T04:52:14.854Z | yes | no | 3192.8 | 196 | 0.146 |
+| `00180` | Angolan shelf | 2017-09-25T04:52:14.854Z | yes | no | 3192.8 | 196 | 0.146 |
 | `00275` | Gulf of Mexico | 2017-10-01T00:01:25.695Z | yes | no | 3187.0 | 196 | 0.078 |
 | `00737` | Persian Gulf | 2017-10-06T02:23:15.218Z | yes | no | 3181.9 | 170 | 0.185 |
 | `00778` | Central Mediterranean | 2017-10-09T17:04:07.229Z | yes | no | 3178.3 | 206 | 0.2 |
@@ -338,7 +348,7 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00438` | Eastern Mediterranean | 2017-10-18T03:59:50.482Z | yes | no | 3169.8 | 196 | 0.11 |
 | `00111` | North Sea | 2017-10-31T17:27:21.504Z | yes | no | 3156.3 | 210 | 0.11 |
 | `00451` | Gulf of Mexico | 2017-11-02T23:35:54.590Z | yes | no | 3154.0 | 196 | 0.191 |
-| `00224` | South Atlantic Ocean | 2017-11-12T04:52:13.332Z | yes | no | 3144.8 | 196 | 0.156 |
+| `00224` | Angolan shelf | 2017-11-12T04:52:13.332Z | yes | no | 3144.8 | 196 | 0.156 |
 | `00171` | Gulf of Mexico | 2017-11-16T00:17:13.356Z | yes | no | 3141.0 | 210 | 0.343 |
 | `00522` | Gulf of Mexico | 2017-11-18T00:01:50.797Z | yes | no | 3139.0 | 194 | 0.233 |
 | `00255` | Gulf of Mexico | 2017-12-03T00:25:39.786Z | yes | no | 3124.0 | 210 | 0.317 |
@@ -364,8 +374,8 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00704` | Eastern Mediterranean | 2018-03-13T03:44:14.693Z | yes | no | 3023.8 | 90 | 0.158 |
 | `01267` | Caribbean Sea | 2018-03-17T22:17:32.727Z | yes | no | 3019.1 | 151 | 0.657 |
 | `00427` | Gulf of Guinea | 2018-03-24T04:51:42.366Z | yes | no | 3012.8 | 158 | 0.403 |
-| `00847` | North Atlantic Ocean | 2018-04-02T16:58:25.509Z | yes | no | 3003.3 | 193 | 0.087 |
-| `00874` | North Atlantic Ocean | 2018-04-03T06:35:28.490Z | yes | no | 3002.7 | 146 | 0.047 |
+| `00847` | Adriatic Sea | 2018-04-02T16:58:25.509Z | yes | no | 3003.3 | 193 | 0.087 |
+| `00874` | Gulf of Cadiz | 2018-04-03T06:35:28.490Z | yes | no | 3002.7 | 146 | 0.047 |
 | `00734` | North Sea | 2018-04-10T17:33:07.313Z | yes | no | 2995.3 | 196 | 0.063 |
 | `00548` | North Sea | 2018-04-15T17:41:43.028Z | yes | no | 2990.3 | 189 | 0.104 |
 | `00444` | North Sea | 2018-04-15T17:43:14.049Z | yes | no | 2990.3 | 196 | 0.096 |
@@ -378,7 +388,7 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00559` | Gulf of Mexico | 2018-05-08T00:25:39.611Z | yes | no | 2968.0 | 196 | 0.319 |
 | `00828` | Western Mediterranean | 2018-05-19T17:54:20.116Z | yes | no | 2956.3 | 177 | 0.108 |
 | `00660` | Eastern Mediterranean | 2018-05-22T03:59:55.525Z | yes | no | 2953.8 | 196 | 0.128 |
-| `00441` | South Atlantic Ocean | 2018-05-23T04:52:13.844Z | yes | no | 2952.8 | 210 | 0.145 |
+| `00441` | Angolan shelf | 2018-05-23T04:52:13.844Z | yes | no | 2952.8 | 210 | 0.145 |
 | `00764` | Eastern Mediterranean | 2018-05-24T03:43:33.959Z | yes | no | 2951.8 | 196 | 0.191 |
 | `00603` | Gulf of Mexico | 2018-05-29T00:01:22.159Z | yes | no | 2947.0 | 210 | 0.057 |
 | `00781` | Gulf of Mexico | 2018-05-29T00:01:50.021Z | yes | no | 2947.0 | 183 | 0.245 |
@@ -391,10 +401,10 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `01222` | Gulf of Mexico | 2018-07-04T00:01:52.065Z | yes | no | 2911.0 | 183 | 0.245 |
 | `01176` | Gulf of Mexico | 2018-07-16T00:01:52.978Z | yes | no | 2899.0 | 185 | 0.239 |
 | `01035` | Gulf of Mexico | 2018-07-19T00:25:01.529Z | yes | no | 2896.0 | 196 | 0.197 |
-| `01023` | North Indian Ocean | 2018-07-24T04:23:23.250Z | yes | no | 2890.8 | 167 | 0.105 |
+| `01023` | Aegean Sea | 2018-07-24T04:23:23.250Z | yes | no | 2890.8 | 167 | 0.105 |
 | `00978` | Central Mediterranean | 2018-07-29T17:12:13.423Z | yes | no | 2885.3 | 217 | 0.066 |
 | `00000` | North Sea | 2018-08-03T17:25:57.581Z | yes | no | 2880.3 | 210 | 0.094 |
-| `00801` | North Atlantic Ocean | 2018-08-07T18:26:44.469Z | yes | no | 2876.2 | 210 | 0.057 |
+| `00801` | Gulf of Cadiz | 2018-08-07T18:26:44.469Z | yes | no | 2876.2 | 210 | 0.057 |
 | `00569` | North Sea | 2018-08-13T17:43:11.575Z | yes | no | 2870.3 | 196 | 0.092 |
 | `01114` | Gulf of Mexico | 2018-08-19T00:15:49.211Z | yes | no | 2865.0 | 195 | 0.185 |
 | `01191` | Gulf of Mexico | 2018-08-21T00:01:55.267Z | yes | no | 2863.0 | 212 | 0.23 |
@@ -420,10 +430,10 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `01277` | Caribbean Sea | 2018-12-06T22:17:41.520Z | yes | no | 2755.1 | 151 | 0.657 |
 | `01201` | Gulf of Mexico | 2018-12-07T00:01:56.471Z | yes | no | 2755.0 | 194 | 0.233 |
 | `01209` | Gulf of Mexico | 2018-12-19T00:01:55.201Z | yes | no | 2743.0 | 185 | 0.239 |
-| `00719` | South Atlantic Ocean | 2018-12-25T04:52:21.091Z | yes | no | 2736.8 | 196 | 0.115 |
+| `00719` | Angolan shelf | 2018-12-25T04:52:21.091Z | yes | no | 2736.8 | 196 | 0.115 |
 | `01120` | Gulf of Mexico | 2018-12-29T00:15:48.771Z | yes | no | 2733.0 | 196 | 0.172 |
 | `01207` | Gulf of Mexico | 2018-12-31T00:01:55.309Z | yes | no | 2731.0 | 191 | 0.237 |
-| `00753` | South Indian Ocean | 2019-01-08T22:40:29.702Z | yes | no | 2722.1 | 196 | 0.253 |
+| `00753` | South China Sea | 2019-01-08T22:40:29.702Z | yes | no | 2722.1 | 196 | 0.253 |
 | `01204` | Gulf of Mexico | 2019-01-12T00:01:54.254Z | yes | no | 2719.0 | 194 | 0.242 |
 | `00435` | Caribbean Sea | 2019-02-04T09:52:13.202Z | yes | no | 2695.6 | 151 | 0.657 |
 | `00685` | Gulf of Guinea | 2019-02-11T04:51:57.074Z | yes | no | 2688.8 | 140 | 0.376 |
@@ -431,8 +441,8 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00921` | Gulf of Mexico | 2019-03-13T00:01:54.139Z | yes | no | 2659.0 | 183 | 0.234 |
 | `01215` | Gulf of Mexico | 2019-03-25T00:01:56.212Z | yes | no | 2647.0 | 193 | 0.217 |
 | `00845` | Eastern Mediterranean | 2019-04-07T15:33:20.541Z | yes | no | 2633.4 | 135 | 0.169 |
-| `00710` | South Atlantic Ocean | 2019-04-12T04:52:15.914Z | yes | no | 2628.8 | 196 | 0.199 |
-| `00472` | South Atlantic Ocean | 2019-04-29T05:00:31.480Z | yes | no | 2611.8 | 196 | 0.107 |
+| `00710` | Angolan shelf | 2019-04-12T04:52:15.914Z | yes | no | 2628.8 | 196 | 0.199 |
+| `00472` | Angolan shelf | 2019-04-29T05:00:31.480Z | yes | no | 2611.8 | 196 | 0.107 |
 | `01190` | Gulf of Mexico | 2019-04-30T00:01:50.931Z | yes | no | 2611.0 | 143 | 0.21 |
 | `01066` | Eastern Mediterranean | 2019-06-04T15:50:01.328Z | yes | no | 2575.3 | 181 | 0.119 |
 | `01197` | Gulf of Mexico | 2019-06-05T00:01:56.019Z | yes | no | 2575.0 | 154 | 0.135 |
@@ -456,7 +466,7 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00962` | Gulf of Mexico | 2019-08-26T00:17:57.221Z | yes | no | 2493.0 | 196 | 0.377 |
 | `00869` | Eastern Mediterranean | 2019-08-28T03:51:40.799Z | yes | no | 2490.8 | 210 | 0.091 |
 | `00864` | Nile Delta shelf | 2019-08-28T03:52:28.698Z | yes | no | 2490.8 | 210 | 0.143 |
-| `00925` | Gulf of Mexico | 2019-08-31T23:27:46.113Z | yes | no | 2487.0 | 193 | 0.602 |
+| `00925` | Straits of Florida | 2019-08-31T23:27:46.113Z | yes | no | 2487.0 | 193 | 0.602 |
 | `00947` | Gulf of Mexico | 2019-09-07T00:17:25.238Z | yes | no | 2481.0 | 196 | 0.292 |
 | `01171` | Eastern Mediterranean | 2019-09-08T15:49:37.601Z | yes | no | 2479.3 | 194 | 0.098 |
 | `01079` | Eastern Mediterranean | 2019-09-08T15:50:20.242Z | yes | no | 2479.3 | 196 | 0.092 |
@@ -477,9 +487,9 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `01278` | Caribbean Sea | 2019-10-26T22:17:45.624Z | yes | no | 2431.1 | 168 | 0.772 |
 | `00965` | Gulf of Mexico | 2019-10-30T00:25:54.217Z | yes | no | 2428.0 | 196 | 0.316 |
 | `00203` | Eastern Mediterranean | 2017-08-01T03:59:24.142Z | yes | no | 3247.8 | 196 | 0.251 |
-| `01328` | South Atlantic Ocean | 2017-08-17T17:32:56.924Z | yes | no | 3231.3 | 131 | 0.349 |
-| `00461` | North Atlantic Ocean | 2017-08-18T18:25:43.993Z | yes | no | 3230.2 | 210 | 0.052 |
-| `01162` | North Atlantic Ocean | 2017-08-19T06:26:46.097Z | yes | no | 3229.7 | 196 | 0.058 |
+| `01328` | Angolan shelf | 2017-08-17T17:32:56.924Z | yes | no | 3231.3 | 131 | 0.349 |
+| `00461` | Gulf of Cadiz | 2017-08-18T18:25:43.993Z | yes | no | 3230.2 | 210 | 0.052 |
+| `01162` | Gulf of Cadiz | 2017-08-19T06:26:46.097Z | yes | no | 3229.7 | 196 | 0.058 |
 | `00227` | Nile Delta shelf | 2017-09-13T03:51:39.990Z | yes | no | 3204.8 | 135 | 0.264 |
 | `00792` | Central Mediterranean | 2017-09-14T17:11:03.557Z | yes | no | 3203.3 | 202 | 0.064 |
 | `00791` | Central Mediterranean | 2017-09-26T17:11:09.105Z | yes | no | 3191.3 | 210 | 0.081 |
@@ -490,7 +500,7 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `01261` | Gulf of Mexico | 2017-12-01T12:00:34.539Z | yes | no | 3125.5 | 210 | 0.176 |
 | `00082` | Gulf of Mexico | 2017-12-04T00:15:17.573Z | yes | no | 3123.0 | 210 | 0.129 |
 | `00167` | Eastern Mediterranean | 2017-12-11T03:59:22.739Z | yes | no | 3115.8 | 210 | 0.242 |
-| `01325` | South Atlantic Ocean | 2017-12-27T17:33:03.053Z | yes | no | 3099.3 | 132 | 0.267 |
+| `01325` | Angolan shelf | 2017-12-27T17:33:03.053Z | yes | no | 3099.3 | 132 | 0.267 |
 | `00210` | Suez Canal approaches | 2017-12-30T03:51:40.900Z | yes | no | 3096.8 | 182 | 0.177 |
 | `00452` | East China Sea | 2018-01-20T09:29:06.568Z | yes | no | 3075.6 | 196 | 0.725 |
 | `00821` | Western Mediterranean | 2018-01-31T06:00:46.510Z | yes | no | 3064.7 | 190 | 0.098 |
@@ -502,12 +512,12 @@ Acquisitions tested: **270**; usable (space *and* time): **0**; spatial match on
 | `00387` | Eastern Mediterranean | 2018-03-11T15:48:58.435Z | yes | no | 3025.3 | 196 | 0.107 |
 | `01268` | Gulf of Mexico | 2018-03-31T12:00:31.563Z | yes | no | 3005.5 | 210 | 0.171 |
 | `00156` | Gulf of Mexico | 2018-04-03T00:15:17.768Z | yes | no | 3003.0 | 196 | 0.159 |
-| `00893` | North Atlantic Ocean | 2018-04-04T06:26:41.850Z | yes | no | 3001.7 | 210 | 0.049 |
-| `00888` | North Atlantic Ocean | 2018-04-08T16:57:42.201Z | yes | no | 2997.3 | 198 | 0.091 |
+| `00893` | Gulf of Cadiz | 2018-04-04T06:26:41.850Z | yes | no | 3001.7 | 210 | 0.049 |
+| `00888` | Adriatic Sea | 2018-04-08T16:57:42.201Z | yes | no | 2997.3 | 198 | 0.091 |
 | `00809` | Western Mediterranean | 2018-06-01T17:46:09.349Z | yes | no | 2943.3 | 191 | 0.097 |
 | `00506` | Eastern Mediterranean | 2018-06-15T15:49:15.777Z | yes | no | 2929.3 | 180 | 0.103 |
 | `00878` | Central Mediterranean | 2018-06-17T17:11:06.063Z | yes | no | 2927.3 | 203 | 0.062 |
-| `00840` | North Indian Ocean | 2018-07-06T04:22:44.822Z | yes | no | 2908.8 | 194 | 0.143 |
+| `00840` | Aegean Sea | 2018-07-06T04:22:44.822Z | yes | no | 2908.8 | 194 | 0.143 |
 | `01269` | Gulf of Mexico | 2018-07-17T12:00:37.518Z | yes | no | 2897.5 | 210 | 0.171 |
 | `00456` | Gulf of Mexico | 2018-07-20T00:15:24.992Z | yes | no | 2895.0 | 210 | 0.176 |
 | `00837` | Eastern Mediterranean | 2018-07-21T15:49:07.902Z | yes | no | 2893.3 | 196 | 0.114 |
@@ -543,8 +553,9 @@ First warnings in detail:
 - **Splits are grouped by parent acquisition.** The 1200 scenes come from 270 distinct Sentinel-1 products, so splitting by filename would leak crops of the same acquisition across train, validation and test. Splits use the parent product identifier as the grouping key.
 - **Mask geometry borrows the image transform.** No mask carries usable georeferencing - most have no geo tags at all, and the few that do store a pixel-space matrix with no CRS. Every geometry calculation therefore reads the transform and CRS from the paired image after confirming both rasters have identical dimensions.
 - **Band order is resolved by name, per scene.** VV and VH are located through the embedded DIMAP band names instead of a hard-coded index.
-- **Normalisation is per band, from training-split statistics.** The two channels occupy different decibel ranges (valid-sample p0.5-p99.5: `Sigma0_VH_db` -48.6 to -20.4 dB; `Sigma0_VV_db` -29.2 to -11 dB), so a shared scaling would suppress one of them. Clip limits come from those percentiles rather than a fixed guess, and they are computed with no-data excluded so the padding cannot collapse the range.
+- **Normalisation is per band, from training-split statistics.** The two channels occupy different decibel ranges (valid-sample p0.5-p99.5: `Sigma0_VH_db` -48.6 to -13.8 dB; `Sigma0_VV_db` -37.4 to -7.1 dB), so a shared scaling would suppress one of them. Clip limits come from those percentiles rather than a fixed guess, and they are computed with no-data excluded so the padding cannot collapse the range.
 - **Exact zeros and non-finite samples become an explicit invalid mask.** The DIMAP declares `0.0` as no-data, so those pixels are excluded from normalisation statistics, from the loss and from reported metrics.
+- **Both polarisations are kept, and the mask alignment is verified rather than assumed.** Labelled oil is darker than its surroundings (`Sigma0_VH_db` -0.41 dB; `Sigma0_VV_db` -5.56 dB mean separation), and `Sigma0_VV_db` carries most of the contrast. Both channels are still fed to the model because the weaker one helps reject look-alikes, but a near-zero separation in the stronger channel would have meant image and mask were misaligned.
 - **Drift uses deterministic synthetic forcing, clearly labelled.** The supplied CMEMS product matches the scene footprints in space but not in time, so it cannot drive the drift model. Observed CMEMS speeds over the scene footprints (0.029 to 0.788 m/s) are used only as a plausibility anchor for the magnitude of the synthetic field. The UI reports spatial overlap as valid and time overlap as invalid, and labels the forcing `Drift forcing: Synthetic scenario data`.
 - **The CMEMS land pattern is still used.** Cells where `uo`/`vo` are fill values mark land or no-data, and the drift engine flags particles that enter them.
 - **The 48 GB of raw imagery stays out of the browser.** Scenes are decoded server-side and the frontend receives only downsampled PNG previews and compact JSON, per the non-functional requirements.

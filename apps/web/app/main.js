@@ -286,7 +286,7 @@ function pageHeader(screen, state, ctx) {
         disabled: !state.caseDoc,
         onClick: () => {
           X.downloadJson(X.exportName(state.caseDoc, "case", "json"), state.caseDoc);
-          announce("Case document downloaded.");
+          announce("Case document downloaded.", { kind: "success" });
         },
       }),
       state.caseDoc && api.apiMode() === "live"
@@ -302,8 +302,10 @@ function pageHeader(screen, state, ctx) {
         ? U.button("Email Report", {
             kind: "quiet",
             small: true,
+            iconPath: ICONS.mail,
             onClick: () => dispatchIncidentEmail(state.caseId, announce),
-            title: "Generate the incident PDF and dispatch it by email",
+            title: "Build the incident PDF and hand it to the dispatcher — the next step "
+              + "states whether it will be sent or written as a .eml",
           })
         : null,
       U.button("Print", {
@@ -347,28 +349,99 @@ function caseSelector(state) {
   );
 }
 
+/**
+ * Ask for recipients, then build the incident report and hand it to the dispatcher.
+ *
+ * The wording is decided by the server, not guessed here. `GET .../report` reports
+ * whether an SMTP host and a recipient allowlist are configured, and with either one
+ * missing the endpoint writes a `.eml` next to the PDF and sends nothing. A button that
+ * said "email sent" in that state would be a lie, so the sheet states which of the two
+ * will happen before the reader commits, and the completion message repeats whichever
+ * the server actually did.
+ */
 async function dispatchIncidentEmail(caseId, announceFn) {
-  const recipients = window.prompt("Recipient email address(es), separated by commas:");
-  if (!recipients || !recipients.trim()) return;
+  let dispatch = null;
   try {
-    const response = await api.dispatchEmail(caseId, { recipients: recipients.trim() });
-    announceFn(`Incident email queued as job ${response.jobId}.`);
-    // Reuse the existing job endpoint rather than keeping SMTP work in the browser.
-    let state = response;
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const job = await fetch(response.pollUrl).then((r) => r.json());
-      state = job;
-      if (job.state === "done" || job.state === "failed" || job.state === "cancelled") break;
-    }
-    if (state.state === "done") {
-      announceFn(state.result?.dryRun ? "Incident email dry-run completed; .eml created." : "Incident email sent.");
-    } else if (state.state === "failed") {
-      announceFn(`Incident email failed: ${state.error || "unknown error"}`);
-    }
-  } catch (error) {
-    announceFn(`Incident email could not be queued: ${error?.message || error}`);
+    dispatch = (await api.report(caseId))?.dispatch || null;
+  } catch {
+    // Not fatal: the dispatch endpoint is the authority, and it re-checks anyway.
   }
+
+  const willSend = dispatch?.mode === "send";
+  let input = null;
+  const confirmed = await U.dialog(
+    {
+      title: willSend ? "Email incident report" : "Prepare incident report",
+      lede: willSend
+        ? "The server will build the PDF and send it over SMTP."
+        : dispatchExplanation(dispatch),
+      confirm: willSend ? "Send report" : "Write .eml",
+      validate: () => {
+        const value = (input?.value || "").trim();
+        if (!value) return "Enter at least one recipient address.";
+        const parts = value.split(/[,;]/).map((p) => p.trim()).filter(Boolean);
+        const bad = parts.find((p) => !/^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(p));
+        if (bad) return `${bad} is not an email address.`;
+        return null;
+      },
+    },
+    U.field({
+      label: "Recipients",
+      type: "email",
+      placeholder: "ops@example.gov, duty@example.gov",
+      hint: "Comma-separated. The server refuses any address outside its allowlist.",
+      ref: (node) => {
+        input = node;
+      },
+    }),
+    U.notice(
+      "The report names a priority candidate for investigation. It does not establish " +
+        "responsibility and requires verification against licensed AIS.",
+      { kind: "synthetic" },
+    ),
+  );
+  if (!confirmed) return;
+
+  const recipients = input.value.trim();
+  try {
+    const submitted = await api.dispatchEmail(caseId, { recipients });
+    announceFn(`Incident report queued as job ${submitted.jobId}.`, { kind: "progress" });
+    const job = await api.awaitJob(submitted, (update) => {
+      if (update.state === "running") {
+        announceFn("Building the incident PDF…", { kind: "progress" });
+      }
+    });
+    const result = job.result || {};
+    // The server rewrites both paths to be repository-relative before they leave the
+    // process, so quoting one here cannot disclose the host's directory layout.
+    const written = result.emailPath || result.reportPath;
+    announceFn(
+      result.dryRun
+        ? `Dry run complete — ${result.reason || "sending disabled"}. Written to ${
+            written || "the server log"}. Open it in Mail to see the message that would be sent.`
+        : `Incident report sent to ${recipients}.`,
+      {
+        kind: "success",
+        action: { label: "Open PDF", href: api.reportPdfUrl(caseId) },
+      },
+    );
+  } catch (error) {
+    announceFn(`Incident report not dispatched: ${error?.message || error}`, { kind: "error" });
+  }
+}
+
+/** Why a dispatch will be a dry run, in the words of whichever piece is missing. */
+function dispatchExplanation(dispatch) {
+  if (!dispatch) return "Sending may be disabled on this server; a .eml file is written instead.";
+  if (!dispatch.smtpConfigured) {
+    return "No SMTP host is configured, so the server writes a .eml file beside the PDF " +
+      "and sends nothing.";
+  }
+  if (!dispatch.recipientsConfigured) {
+    return "SPILLTRACE_ALERT_RECIPIENTS is unset, so nothing may be sent; the server " +
+      "writes a .eml file beside the PDF.";
+  }
+  return "SPILLTRACE_EMAIL_DRY_RUN is set, so the server writes a .eml file and sends nothing.";
 }
 
 function topbarMeta(state) {
@@ -486,7 +559,9 @@ async function loadCase(id, { force = false } = {}) {
   // `caseStatus` rather than the default `caseDocStatus`, so screens and the shell read the
   // same key.
   const doc = await store.load("caseDoc", () => api.loadCase(id), { statusKey: "caseStatus" });
-  if (doc) announce(`Case ${doc.scene?.name || id} loaded.`);
+  // Spoken, not shown: the topbar and the hero already name the case for anyone who can
+  // see them, and this fires on every boot and every switch.
+  if (doc) announce(`Case ${doc.scene?.name || id} loaded.`, { silent: true });
   return doc;
 }
 
@@ -525,7 +600,7 @@ async function runAnalysis(kind, options = {}) {
     router.setParams({ case: id });
     await loadCase(id, { force: true });
     await store.load("cases", api.cases);
-    announce("Analysis finished.");
+    announce("Analysis finished.", { kind: "success" });
     return job;
   } catch (error) {
     if (error?.name === "AbortError") {
@@ -537,7 +612,7 @@ async function runAnalysis(kind, options = {}) {
       job: { state: "failed", kind, error: String(error?.message || error), log: [] },
       jobAbort: null,
     });
-    announce("Analysis failed.");
+    announce(`Analysis failed: ${error?.message || error}`, { kind: "error" });
     return null;
   }
 }
