@@ -588,6 +588,19 @@ dataset labels the phenomenon; that needs Part II of the source dataset (item 6)
 `scripts/run_lookalike_eval.py` after `scripts/fetch_dartis2019.py --subset nc,nw`; full detail
 and all seven stated limitations are in KNOWN-ISSUES.md §4.
 
+**The pooled 69.4 % is the least useful way to state this result**, and Screen 6 no longer stops
+there. The archive's no-oil patches carry the source paper's K-Means cluster in the filename, so
+the look-alikes arrive pre-grouped into **17 families** — 5 coastal, 12 open water. Broken out,
+the screen rejects **96.2 %** of the dark regions in the family it handles best (`nw-05`) and
+**31.5 %** in the family it handles worst (`nw-11`). Both tables now render in the *Look-alike
+screening* card: coastal versus open water, then all 17 families sorted best to worst.
+
+Say it as a range, not an average — it is a stronger claim and it is the true one. And keep the
+distinction the card itself makes: the families are the axis we are **measured along**, not
+something the screen predicts. A K-Means cluster is a grouping, not a diagnosis; the paper never
+says which cluster is an algal bloom and which is a low-wind patch. *"We classify look-alikes into
+classes"* is the one sentence about this work that a judge can puncture in a single question.
+
 **8. Close the loop — alerting.** ✓ *(done.)* The theme is Disaster Management and the pipeline
 used to end at a screen. `POST /api/cases/<id>/dispatch` now builds the incident PDF and either
 sends it over SMTP or writes an `.eml` beside the PDF, as a background job the dashboard polls.
