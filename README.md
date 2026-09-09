@@ -69,7 +69,7 @@ statement names as the format authority, so it can be diffed against a real dail
 curl -s http://localhost:8765/api/cases/demo/ais.csv | head -3
 ```
 
-Tests — **772, about 42 seconds:**
+Tests — **776, about 42 seconds:**
 
 ```bash
 .venv/bin/python -m pytest
@@ -172,5 +172,7 @@ These appear in the product and should never be dropped:
 - `Status: Research PoC — human review required`
 - `Priority candidate for investigation` — never "responsible", never "guilty".
 
-Read [KNOWN-ISSUES.md](KNOWN-ISSUES.md) for open defects, including a **train/test leakage bug
-that makes the shipped accuracy figures an upper bound.**
+Read [KNOWN-ISSUES.md](KNOWN-ISSUES.md) before quoting any accuracy figure. The train/test
+leakage bug it documents is **fixed and the pipeline has been re-run** — the current figures are
+measured on a split where no acquisition appears on both sides, and they are lower than the ones
+that preceded them.

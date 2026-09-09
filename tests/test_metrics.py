@@ -10,11 +10,16 @@ the sweep actually justifies.
 
 from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from spilltrace_ml import metrics as M
 from spilltrace_ml.dataset import LABEL_BACKGROUND, LABEL_INVALID, LABEL_OIL
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def labels(rows: list[str]) -> np.ndarray:
@@ -326,3 +331,50 @@ class TestLossValues:
         _, grad, _ = M.combined_loss(np.array([[-2.0, 2.0]]), target)
         assert grad[0, 0] < 0  # raise the logit where oil is
         assert grad[0, 1] > 0  # lower it where water is
+
+
+# ---------------------------------------------------------------------------
+# The scene sweep has to contain the point it reports at
+# ---------------------------------------------------------------------------
+
+def load_scene_eval():
+    spec = importlib.util.spec_from_file_location(
+        "spilltrace_run_scene_eval", ROOT / "scripts" / "run_scene_eval.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestSceneThresholdGrid:
+    """`run_scene_eval.py` reports test scores *at the patch threshold* for comparability
+    with `metrics.json`, and that threshold is chosen on validation by `run_train.py` --
+    it is not a constant. When a run selected 0.65 the fixed sweep grid had no such bucket
+    and the script died on a `KeyError` after every one of the 71 scenes had already been
+    scored, which is the most expensive possible moment to fail.
+    """
+
+    def test_the_selected_patch_threshold_is_always_in_the_grid(self):
+        module = load_scene_eval()
+        for threshold in (0.5, 0.55, 0.6, 0.65, 0.7, 0.85, 0.95, 0.99):
+            grid = module.threshold_grid(threshold)
+            assert threshold in grid, f"{threshold} missing from {grid}"
+
+    def test_a_threshold_already_on_the_grid_is_not_duplicated(self):
+        module = load_scene_eval()
+        grid = module.threshold_grid(0.6)
+        assert grid == sorted(set(grid))
+        assert grid == sorted(module.BASE_THRESHOLDS)
+
+    def test_the_progress_threshold_survives_an_off_grid_selection(self):
+        """The per-scene progress line reads one fixed bucket; if the grid is ever rebuilt
+        without it, every scene print raises instead of the aggregate at the end."""
+        module = load_scene_eval()
+        for threshold in (0.51, 0.65, 0.77):
+            assert module.PROGRESS_THRESHOLD in module.threshold_grid(threshold)
+
+    def test_the_grid_is_sorted_so_the_reported_sweep_reads_in_order(self):
+        module = load_scene_eval()
+        grid = module.threshold_grid(0.65)
+        assert grid == sorted(grid)
+        assert grid[0] == 0.5

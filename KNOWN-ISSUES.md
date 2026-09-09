@@ -4,87 +4,109 @@ Open defects, honestly stated. Read this before quoting any number from the proj
 
 ---
 
-## 1. The shipped metrics were computed on a leaky split ⚠
+## 1. The shipped metrics were computed on a leaky split — **fixed**
 
-**Severity: high. It affects every accuracy figure in the repository and in `docs/sih/`.**
+**This was the highest-severity defect in the project: it affected every accuracy figure in the
+repository and in `docs/sih/`. The artefacts have been regenerated and the figures now on disk are
+the clean ones.**
 
-### What is wrong
+### What was wrong
 
 Splits are supposed to be grouped by parent Sentinel-1 acquisition. The 1,200 files in the
 dataset come from only 270 satellite passes, so several files are crops of the *same* image. If
 two crops of one pass land on opposite sides of the train/test line, the model is tested on water
 it has already been trained on and the score is inflated.
 
-The splitter itself does this correctly. The code that fed it did not.
+The splitter itself did this correctly. The code that fed it did not.
 `annotate_from_audit()` in `services/ml/spilltrace_ml/cache.py` read the acquisition key from the
 audit report as `groupKey`, but the audit writes `group_key`. Every key came back `None`, and the
 grouping quietly fell back to the scene stem — one group per crop.
 
-### What that did to the numbers
+### What it did to the numbers
 
-Cross-referencing `data/processed/splits.json` against the real `group_key` in
-`data/processed/audit.json`:
+Under the leaky split, 240 scenes formed 240 groups but only **70** distinct acquisitions; **39**
+acquisitions spanned more than one split, **23** spanned train *and* test, and **34 of 36** test
+scenes shared an acquisition with a training scene.
 
-| | |
-|---|---|
-| Scenes used | 240 |
-| Groups the split believed it had | 240 (one per crop) |
-| Real distinct acquisitions among them | **70** |
-| Acquisitions spanning more than one split | **39** |
-| — of those, spanning train *and* test | **23** |
-| **Test scenes sharing an acquisition with a training scene** | **34 of 36** |
+Regenerated with the key reaching the splitter:
 
-So the reported test scores — patch IoU 0.771, pooled scene IoU 0.782, mean per-scene IoU 0.641 —
-are measured almost entirely on acquisitions the model saw during training. **Treat them as an
-upper bound.** The comparison against the classical baseline (0.771 vs 0.582) is somewhat more
-robust, because the baseline was calibrated and scored on the same leaky split, but it is not
-clean either.
+| | Leaky | Clean |
+|---|---|---|
+| Patch IoU (test) | 0.771 | **0.769** |
+| Classical baseline IoU | 0.582 | **0.676** |
+| Model − baseline | +0.189 | **+0.093** |
+| Pooled scene IoU | 0.782 | **0.584** |
+| Mean per-scene IoU | 0.641 | **0.693** |
+| Worst single scene IoU | 0.131 | **0.046** |
 
-### What is already fixed
+**The model barely moved. The baseline moved a lot.** That is the shape a leak leaves behind: the
+U-Net was already generalising, but the classical detector's decibel offset had been *calibrated*
+on scenes it was then scored against, so removing the overlap cost it 0.09 IoU and cost the U-Net
+0.002. The honest gain over the baseline is therefore **+0.093, not +0.189** — still a real gain,
+half the size of the one previously claimed.
 
-- `services/ml/spilltrace_ml/cache.py` now accepts both spellings, so the key reaches the
-  splitter.
+Note also that **pooled and mean-per-scene swapped places**. On the leaky split pooled (0.782) was
+higher than mean-per-scene (0.641); on the clean split pooled (0.584) is *lower* than mean-per-scene
+(0.693), because a handful of large test scenes the model handles badly now dominate the pooled
+pixel count. Any statement of the form "the mean is the harsher figure" is no longer true here —
+which figure is harsher is a property of the split, not a law.
+
+### Why the selection is now structurally safe
+
+The decode budget is `max_scenes = 240` (`services/common/spilltrace_common/config.py`) and
+`choose_scenes()` spends it round-robin across parent acquisitions, breadth before depth. Since 240
+is *below* the 270-acquisition count, the round-robin never reaches a second crop of any
+acquisition: the 240 selected scenes come from 240 distinct acquisitions, one crop each. At this
+budget leakage is not merely absent, it is unreachable. Raising `max_scenes` above 270 would begin
+taking second crops, at which point the group key — not the budget — is what prevents the leak.
+
+### What is fixed
+
+- `services/ml/spilltrace_ml/cache.py` accepts both spellings, so the key reaches the splitter.
 - `tests/test_dataset.py::TestAuditGroupKeysReachTheSplitter` covers the wiring end to end —
   audit report on disk in, single split per acquisition out. `cache.py` previously had no test
   coverage at all, which is why a passing suite did not catch this.
+- `data/processed/splits.json`, `data/processed/cache/*.npz`, `models/unet_vv_vh.npz`,
+  `data/processed/metrics.json` and `data/processed/scene_metrics.json` have all been regenerated.
+  Their `rule` and `splitGrouping` fields claim acquisition-level grouping and that claim is now
+  true.
 
-### What is not fixed
+### How to regenerate
 
-**The artefacts have not been regenerated.** `data/processed/splits.json`,
-`data/processed/cache/*.npz`, `models/unet_vv_vh.npz`, `data/processed/metrics.json`,
-`data/processed/scene_metrics.json` and the stored cases all still come from the leaky run. Their
-own `rule` and `splitGrouping` fields claim acquisition-level grouping, and for those files that
-claim is false.
-
-### How to regenerate (requires the full dataset)
-
-Needs `Oil/` and `Mask_oil/` present — they are not in the repository, see the README. Expect
-roughly an hour end to end; training alone took 1,575 s on the original run.
+Needs `Oil/` and `Mask_oil/` present. Expect roughly 50 minutes end to end; training alone took
+1,068 s and the whole-scene evaluation about 18 minutes at ~15 s per scene.
 
 ```bash
 .venv/bin/python scripts/run_audit.py && .venv/bin/python scripts/run_preprocess.py && .venv/bin/python scripts/run_train.py && .venv/bin/python scripts/run_scene_eval.py && .venv/bin/python scripts/build_web.py
 ```
 
-Afterwards, confirm the fix took effect — this should print far fewer groups than scenes, and no
-acquisition in more than one split:
+Afterwards, confirm the fix took effect. Note that `splits.json` keys its `groups` map by
+*parent product ID* once the fix is live — it is keyed by scene name only in the broken output —
+so the check reads the split assignment off `splits["scenes"]` instead, which has the same shape
+either way. The last number is the one that matters and it must be `0`:
 
 ```bash
-.venv/bin/python -c "import json,collections; s=json.load(open('data/processed/splits.json')); a=json.load(open('data/processed/audit.json')); gk={x['name']:x.get('group_key') for x in a['scenes']}; o=collections.defaultdict(set); [o[gk.get(n)].add(v) for n,v in s['groups'].items()]; print('groups:',len(s['groups']),'| real acquisitions:',len(o),'| spanning >1 split:',sum(1 for v in o.values() if len(v)>1))"
+.venv/bin/python -c "import json,collections; s=json.load(open('data/processed/splits.json')); a=json.load(open('data/processed/audit.json')); gk={x['name']:x.get('group_key') for x in a['scenes']}; assign={n:k for k,v in s['scenes'].items() for n in v}; o=collections.defaultdict(set); [o[gk.get(n)].add(v) for n,v in assign.items()]; print('scenes:',len(assign),'| real acquisitions:',len(o),'| unkeyed:',sum(1 for n in assign if not gk.get(n)),'| spanning >1 split:',sum(1 for v in o.values() if len(v)>1))"
 ```
 
-Then update every figure in `docs/sih/03-STATUS-AND-ROADMAP.md`, and move the leakage discussion
-in docs 3, 4 and 5 into the past tense.
+Current output:
 
-### What to say on stage until then
+```
+scenes: 240 | real acquisitions: 240 | unkeyed: 0 | spanning >1 split: 0
+```
 
-Do **not** say "no data leakage". Say:
+### What to say on stage
 
-> "Splits are grouped by parent acquisition — and we'll be straight with you, we found a wiring
-> bug where that grouping wasn't reaching the splitter. The numbers on screen predate the re-run,
-> so treat them as an upper bound. It's fixed and there's a regression test."
+You may now say the splits are grouped by parent acquisition, because they are. Do not present it
+as though it were never otherwise — volunteering the history is stronger than being caught by it,
+and the correction is a better story than the original number:
 
-Volunteering this is a stronger position than being caught by it. See
-`docs/sih/05-EXPLAINING-TO-JUDGES.md` §A.
+> "Splits are grouped by parent acquisition. We'll be straight with you: they weren't at first —
+> a wiring bug meant the grouping never reached the splitter. We found it, fixed it, wrote the
+> regression test, and re-ran everything. Our advantage over the classical baseline halved when we
+> did, from +0.189 to +0.093 IoU. That second number is the real one."
+
+See `docs/sih/05-EXPLAINING-TO-JUDGES.md` §A.
 
 ---
 

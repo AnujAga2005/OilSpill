@@ -375,13 +375,13 @@ asserts that on every run.
 .venv/bin/python -m pytest
 ```
 
-772 tests, about 42 seconds. Add `-v` for names, or point it at one file:
+776 tests, about 42 seconds. Add `-v` for names, or point it at one file:
 
 ```bash
 .venv/bin/python -m pytest tests/test_api.py -v
 ```
 
-With `reportlab` and Pillow both installed — which is the state of this machine — **all 772 pass
+With `reportlab` and Pillow both installed — which is the state of this machine — **all 776 pass
 and nothing skips**. Without them, the dozen or so tests that render a real PDF report as
 **skipped** instead, and turn themselves back on the moment the import works. Everything the
 report *says* — every drift figure, every score component, the limitations, the absence of

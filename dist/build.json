@@ -1,19 +1,19 @@
 {
   "pipelineVersion": "spilltrace-0.1.0",
-  "generatedUtc": "2026-09-09T10:25:26Z",
+  "generatedUtc": "2026-09-09T13:20:38Z",
   "note": "A verified copy of apps/web. No bundler, no minifier and no content hashing: the interface is plain ES modules and runs from source. Cache behaviour comes from the server's Cache-Control headers, not from filenames.",
   "totals": {
-    "files": 45,
-    "bytes": 3633910
+    "files": 53,
+    "bytes": 3842544
   },
   "byExtension": {
     ".json": {
       "files": 7,
-      "bytes": 1925671
+      "bytes": 1945843
     },
     ".png": {
-      "files": 14,
-      "bytes": 1326680
+      "files": 22,
+      "bytes": 1515142
     },
     ".js": {
       "files": 19,
@@ -135,9 +135,19 @@
       "sha256": "f1c13c7a14c8ccd0f117cf3f0c74cb1c0897b5bf83e7408ca60c1ee550cc38d1"
     },
     {
+      "path": "demo/eval/test_0013_iou000.png",
+      "bytes": 23581,
+      "sha256": "c268d4c1a8392aa8554b7417e00c60204d7e46a52c70e4547fff895f9aba7767"
+    },
+    {
       "path": "demo/eval/test_0117_iou100.png",
       "bytes": 25531,
       "sha256": "94062b3c0cd42e36ebb1714dc1741a44e27f4c1d69ecd97a33f24c2a9fa48526"
+    },
+    {
+      "path": "demo/eval/test_0241_iou050.png",
+      "bytes": 25508,
+      "sha256": "d1a0523b75669dd2c6cc383f3d86e3785d936a6c7d9ba53c0965006239c7c91e"
     },
     {
       "path": "demo/eval/test_0276_iou094.png",
@@ -150,6 +160,11 @@
       "sha256": "7a8afd3b3240281b8726d733215f59bb52d3f841f3544b41b2d067c5f56bf1f3"
     },
     {
+      "path": "demo/eval/test_0320_iou069.png",
+      "bytes": 24217,
+      "sha256": "4ca6081889e31d67787962385955894f17576864fc1ac0fb0aacbdaedc3ac4ce"
+    },
+    {
       "path": "demo/eval/test_0352_iou000.png",
       "bytes": 23926,
       "sha256": "7e50beb66f2d472a5b6c44534edd3cf65c44f90ee738130c8fac6bfb0fe9ee69"
@@ -160,9 +175,34 @@
       "sha256": "6052f320226fdf3f10455cd958598ba9ee68c80948d01e4c3192386f0e3e5af6"
     },
     {
+      "path": "demo/eval/test_0426_iou090.png",
+      "bytes": 22735,
+      "sha256": "a6168e657c00cd4d655e3fd475bd3e4b00a2e405f94e11b2264b5a60e30a6182"
+    },
+    {
+      "path": "demo/eval/test_0431_iou077.png",
+      "bytes": 22669,
+      "sha256": "3151247779ea012b33162d23db868e4939a241f93e5934bff37d309452f395ad"
+    },
+    {
       "path": "demo/eval/test_0446_iou076.png",
       "bytes": 25260,
       "sha256": "bde72c9321863fc5077037002cc8ad64002dbc4dd2647910e0ecf91541f3f24e"
+    },
+    {
+      "path": "demo/eval/test_0470_iou084.png",
+      "bytes": 23057,
+      "sha256": "a78d739f79c1e3c26de9b0d72f25d4122672ace541021ff62d6b122b61b02614"
+    },
+    {
+      "path": "demo/eval/test_0507_iou099.png",
+      "bytes": 23974,
+      "sha256": "9b7c80018b38c8921827040e57444826224277ec3cf7630aa15a162724b9070b"
+    },
+    {
+      "path": "demo/eval/test_0530_iou095.png",
+      "bytes": 22721,
+      "sha256": "23fafacd2e7c85e5b942ae496f522c9637bc9c7461c930c97f5acd0230854eec"
     },
     {
       "path": "demo/eval/test_0554_iou082.png",
@@ -176,8 +216,8 @@
     },
     {
       "path": "demo/health.json",
-      "bytes": 1246,
-      "sha256": "2e873bf0a143afb9af3dd27d9a44fc62def69269e4d42723d5754634d1d13c50"
+      "bytes": 1248,
+      "sha256": "721f5c2763d17a8dfb4d37a62fe99d66b20f465cb514fa6f3eba5b33584e881e"
     },
     {
       "path": "demo/images-demo.json",
@@ -186,8 +226,8 @@
     },
     {
       "path": "demo/metrics.json",
-      "bytes": 178248,
-      "sha256": "13f9f9ef3a37f376457eab3b6f149a95e16129b0d562b15d75f45f6e079f3d76"
+      "bytes": 188488,
+      "sha256": "78a4db517d47973466daeecb2cb13a3c20071e820f4f51fdcd7e3929d685147b"
     },
     {
       "path": "demo/previews/00053_comparison.png",
@@ -221,13 +261,13 @@
     },
     {
       "path": "demo/report-demo.json",
-      "bytes": 537411,
-      "sha256": "cce3e0964916a73f9c87dcf00f0d5f158bc6bb56f82ab129613176265afe196e"
+      "bytes": 547651,
+      "sha256": "d032a4183a6b5ea24a1fd6df897740a51f5bd7c1acfeaa3ad19500881c7bd7bd"
     },
     {
       "path": "demo/scenes.json",
-      "bytes": 175922,
-      "sha256": "f13c40b0f5153a65d5aa70b9aed84f0960598fae6259aa39d564821c26a537e6"
+      "bytes": 175612,
+      "sha256": "1b31c7a52939fa18c75129646810a27161622f30af0cb221adaf6b83551166df"
     },
     {
       "path": "index.html",
