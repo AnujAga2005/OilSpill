@@ -1,15 +1,15 @@
 {
   "pipelineVersion": "spilltrace-0.1.0",
-  "generatedUtc": "2026-09-04T11:26:28Z",
+  "generatedUtc": "2026-09-09T10:25:26Z",
   "note": "A verified copy of apps/web. No bundler, no minifier and no content hashing: the interface is plain ES modules and runs from source. Cache behaviour comes from the server's Cache-Control headers, not from filenames.",
   "totals": {
     "files": 45,
-    "bytes": 3630586
+    "bytes": 3633910
   },
   "byExtension": {
     ".json": {
       "files": 7,
-      "bytes": 1925724
+      "bytes": 1925671
     },
     ".png": {
       "files": 14,
@@ -17,7 +17,7 @@
     },
     ".js": {
       "files": 19,
-      "bytes": 310870
+      "bytes": 314247
     },
     ".css": {
       "files": 4,
@@ -96,8 +96,8 @@
     },
     {
       "path": "app/screens/methodology.js",
-      "bytes": 41892,
-      "sha256": "bb24a72d5a8cb7948286643047ba4d7dd70f59b52eacb0b06d3fe0a05931fba5"
+      "bytes": 45269,
+      "sha256": "38e0a068f92c7ee2a01cef6da9b8d893691f8ea1e7370528702aa1b83e3d5f96"
     },
     {
       "path": "app/screens/satellite.js",
@@ -177,7 +177,7 @@
     {
       "path": "demo/health.json",
       "bytes": 1246,
-      "sha256": "051d380c7058f995a1aba59787a04150b58ee621e2702179442aaa0f2717c9a3"
+      "sha256": "2e873bf0a143afb9af3dd27d9a44fc62def69269e4d42723d5754634d1d13c50"
     },
     {
       "path": "demo/images-demo.json",
@@ -221,8 +221,8 @@
     },
     {
       "path": "demo/report-demo.json",
-      "bytes": 537464,
-      "sha256": "fa450505341e66f193ac5aa06be48cd98b0c2e270b42f5b3bf1f3e11c6506629"
+      "bytes": 537411,
+      "sha256": "cce3e0964916a73f9c87dcf00f0d5f158bc6bb56f82ab129613176265afe196e"
     },
     {
       "path": "demo/scenes.json",

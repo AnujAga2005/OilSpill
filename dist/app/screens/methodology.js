@@ -975,6 +975,7 @@ function lookAlikeCard(m) {
                 )
               : null,
             cross.bySubset ? subsetTable(cross.bySubset) : null,
+            cross.byCluster ? clusterTable(cross.byCluster) : null,
           )
         : U.notice(
             "The published look-alike archive is not on disk in this checkout, so the " +
@@ -1026,6 +1027,94 @@ function subsetTable(bySubset) {
             h("td", { class: "right" }, F.int(bucket.accepted)),
             h("td", { class: "right" }, F.pct(bucket.rejectionRate)),
           ),
+        ),
+      ),
+    ),
+  );
+}
+
+/** Coastal or open water, read off a subset or family prefix. */
+const LOOKALIKE_SETTING = { nc: "coastal", nw: "open water", oc: "coastal", ow: "open water" };
+
+/**
+ * Rejection rate per published look-alike family.
+ *
+ * The archive's no-oil patches carry the source paper's K-Means cluster in their filename,
+ * so the look-alikes arrive already grouped by the kind of thing they are. One pooled
+ * rejection rate hides the only interesting part of the result: the screen clears some
+ * families almost entirely and is close to useless on others, and an operator is better
+ * served knowing which is which than knowing the average of the two.
+ *
+ * The families are left unnamed on purpose. The paper clusters look-alikes that resemble
+ * each other; it never says which cluster is an algal bloom and which is a low-wind patch,
+ * and neither dataset labels the phenomenon. A cluster is a grouping, not a diagnosis.
+ */
+function clusterTable(byCluster) {
+  const entries = Object.entries(byCluster)
+    .filter(([, bucket]) => !F.isMissing(bucket.rejectionRate))
+    .sort((a, b) => b[1].rejectionRate - a[1].rejectionRate);
+  if (!entries.length) return null;
+
+  const best = entries[0][1];
+  const worst = entries[entries.length - 1][1];
+
+  return h(
+    "div",
+    { class: "stack stack--tight" },
+    h(
+      "div",
+      { class: "small muted" },
+      `Per look-alike family — ${F.int(entries.length)} published K-Means clusters`,
+    ),
+    U.notice(
+      `The screen rejects ${F.pct(best.rejectionRate)} of the dark regions in the family it ` +
+        `handles best and ${F.pct(worst.rejectionRate)} in the family it handles worst. The ` +
+        "families are groupings, not diagnoses: the source paper never names the phenomenon, " +
+        "so this screen does not either — it answers oil-like or not, nothing more.",
+      { strongPrefix: "Not one number." },
+    ),
+    h(
+      "div",
+      { class: "table-wrap" },
+      h(
+        "table",
+        { class: "table" },
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", null, "Family"),
+            h("th", { class: "right" }, "Regions"),
+            h("th", { class: "right" }, "Rejected"),
+            h("th", { class: "right" }, "Uncertain"),
+            h("th", { class: "right" }, "Accepted"),
+            h("th", { class: "right" }, "Rejection rate"),
+          ),
+        ),
+        h(
+          "tbody",
+          null,
+          entries.map(([key, bucket]) => {
+            const [subset, family] = key.split("-");
+            const setting = LOOKALIKE_SETTING[subset];
+            return h(
+              "tr",
+              null,
+              h(
+                "td",
+                null,
+                h("span", { class: "mono" }, key),
+                setting ? h("span", { class: "muted" }, ` — ${setting} ${family}`) : null,
+              ),
+              h("td", { class: "right" }, F.int(bucket.regions)),
+              h("td", { class: "right" }, F.int(bucket.rejected)),
+              h("td", { class: "right" }, F.int(bucket.uncertain)),
+              h("td", { class: "right" }, F.int(bucket.accepted)),
+              h("td", { class: "right" }, F.pct(bucket.rejectionRate)),
+            );
+          }),
         ),
       ),
     ),
