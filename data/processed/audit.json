@@ -1,7 +1,7 @@
 {
-  "generatedUtc": "2026-09-04T10:08:14Z",
+  "generatedUtc": "2026-09-09T11:18:09Z",
   "pipelineVersion": "spilltrace-0.1.0",
-  "elapsedSeconds": 209.17,
+  "elapsedSeconds": 161.27,
   "imageDir": "Oil",
   "maskDir": "Mask_oil",
   "counts": {

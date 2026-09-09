@@ -47,7 +47,7 @@ now, you can compute where it started and when — and then ask which ships were
 **3. The chain.** Ten stages, satellite pixel to ranked candidate. Show, do not describe.
 
 **4. The proof.** Real data, real model, and a measured comparison against the non-AI method.
-0.771 IoU against 0.582.
+0.769 IoU against 0.676, on a split where no acquisition appears on both sides.
 
 **5. The honesty.** Here is what is synthetic, here is our worst-performing scene, here is the
 question we cannot yet answer, and here is why we still never name a vessel as guilty.
@@ -69,7 +69,7 @@ Keep it this short. The demo is the presentation.
 | 2 | **The gap** | One number about spill frequency or damage, and NTRO's "remain un-attributable" quote. 15 seconds. |
 | 3 | **The chain** | The ten-stage diagram from document 1 §1.4. **This is your most important slide.** Point at it once, then never return. |
 | 4 | **PS compliance** | Left column: verbatim (a)/(b)/(c). Right column: the screen that does it and the number it produces. **Built for you: [document 6](06-PS-COMPLIANCE.md).** Show five of its thirteen rows; hand the full table over as a printout. Judges score against a rubric — hand it to them filled in. |
-| 5 | **The proof** | 1,200 real pairs · 270 acquisitions · grouped by acquisition (see the leakage note in doc 3 §3.5 — quote it, don't claim "no leakage") · **0.771 IoU vs 0.582 classical baseline**. |
+| 5 | **The proof** | 1,200 real pairs · 270 acquisitions · grouped by acquisition, **zero acquisitions spanning two splits** (doc 3 §3.5 — and tell the story of the leak we fixed, it is a better line than the number) · **0.769 IoU vs 0.676 classical baseline**. |
 | 6 | **What's real, what's synthetic** | The table from document 3 §3.4, verbatim. Put it *before* the demo, not after. |
 | 7 | **Architecture** | Ten stages, two pipeline dependencies, zero frontend dependencies, runs offline. One line: *Node handles people and process, Python handles physics and pixels.* |
 | 8 | **Roadmap** | Tier 0 is done — say so in one line and move on. Then the Tier-1 items from doc 3 §3.10 with honest effort estimates, real forcing data first. |
@@ -216,10 +216,10 @@ of judgement — in about eighty seconds.
 
 ### 5:40 — Method, and stop here
 
-> "And this screen is everything we can't tell you. Patch-scale IoU is 0.771, but patches are
+> "And this screen is everything we can't tell you. Patch-scale IoU is 0.769, but patches are
 > sampled near known oil, so that number flatters us. On full 2048-pixel scenes the honest
-> figures are 0.78 pooled and **0.64 averaged per scene**, and our single worst scene is far
-> worse than that — it's on this screen. The dataset contains no labelled algal blooms or
+> figures are **0.58 pooled and 0.69 averaged per scene**, and our single worst scene is 0.046 —
+> a near-total miss, and it's on this screen. The dataset contains no labelled algal blooms or
 > low-wind zones, so we went and got 2,290 published look-alike patches and scored ourselves on
 > them: **our U-Net alone alarms on all of them.** A dedicated screen removes about seven in ten
 > of those dark regions, which is an improvement and not a solution. All of that ships in the
@@ -246,12 +246,14 @@ sentence and the three numbers.**
 
 | Number | Why this one |
 |---|---|
-| **1,200 real Sentinel-1 image/mask pairs, 270 acquisitions, grouped by acquisition** | real data, and a splitting rule you can defend — with the leakage caveat volunteered, not hidden |
-| **0.771 IoU vs 0.582 for the classical dark-spot baseline** | the ML earns its place, measured not asserted |
-| **772 automated tests; the whole pipeline runs offline on one scene in 24 seconds** | it is engineering, not a notebook |
+| **1,200 real Sentinel-1 image/mask pairs, 270 acquisitions, grouped by acquisition** | real data, and a splitting rule you can defend — with the leak we found and fixed volunteered, not hidden |
+| **0.769 IoU vs 0.676 for the classical dark-spot baseline** | the ML earns its place, measured not asserted |
+| **776 automated tests; the whole pipeline runs offline on one scene in 24 seconds** | it is engineering, not a notebook |
 
-Have **0.64 mean per-scene IoU** ready as the fourth number the moment anyone probes. Offering
-it unprompted is even better.
+Have **0.584 pooled scene IoU** ready as the fourth number the moment anyone probes — it is the
+lower of the two whole-scene figures, so offering it unprompted cannot be turned against you.
+(Mean per-scene is 0.693. On this split pooled is the harsher number, which is the reverse of the
+usual case: the scenes we fail on are large ones.)
 
 ---
 
@@ -262,7 +264,7 @@ model architecture. So convert your capabilities into response outcomes:
 
 | Instead of | Say |
 |---|---|
-| "0.771 IoU" | "we delineate the slick accurately enough to size the response" |
+| "0.769 IoU" | "we delineate the slick accurately enough to size the response" |
 | "backward drift simulation" | "we tell the investigator where and when to look, within hours of the image" |
 | "forward drift" | "we tell the cleanup crew where it's going and which coastline is at risk" |
 | "ranked candidates" | "we turn thousands of vessel movements into a shortlist of six an officer can actually work" |

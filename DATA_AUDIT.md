@@ -4,9 +4,9 @@ Phase 1 of the SpillTrace build (SIH Problem Statement 26143).
 
 Every value below was read from the supplied files. Nothing is assumed: filenames, dimensions, band order, acquisition times, coordinates and the CMEMS overlap verdict are all derived from file contents at audit time.
 
-- Generated: `2026-09-04T10:08:14Z`
+- Generated: `2026-09-09T11:18:09Z`
 - Pipeline version: `spilltrace-0.1.0`
-- Runtime: 209.17 s
+- Runtime: 161.27 s
 - Image directory: `Oil`
 - Mask directory: `Mask_oil`
 

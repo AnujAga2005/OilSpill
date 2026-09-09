@@ -33,7 +33,23 @@ from spilltrace_api import case as case_mod  # noqa: E402
 from spilltrace_common import config as C  # noqa: E402
 from spilltrace_ml import dataset as ds  # noqa: E402
 
-THRESHOLDS = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
+BASE_THRESHOLDS = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
+
+#: Threshold used only for the per-scene progress line, so a long run is readable while it
+#: is still going. It is not the reported operating point -- that is chosen on validation.
+PROGRESS_THRESHOLD = 0.6
+
+
+def threshold_grid(patch_threshold: float) -> list[float]:
+    """The sweep grid, with the checkpoint's own operating point folded in.
+
+    ``run_train.py`` selects the patch threshold on validation and it need not land on the
+    fixed grid above -- one run picked 0.65. Scene metrics are reported *at* that threshold
+    for comparability with ``metrics.json``, so if it is absent from the grid the aggregate
+    has nothing to read and the run dies after every scene has already been evaluated.
+    Adding it costs nothing: the probability field is computed once and thresholded N times.
+    """
+    return sorted({*BASE_THRESHOLDS, PROGRESS_THRESHOLD, round(patch_threshold, 6)})
 
 
 def confusion(prediction: np.ndarray, truth: np.ndarray, valid: np.ndarray) -> dict[str, int]:
@@ -83,7 +99,7 @@ def aggregate(per_scene: list[dict], threshold: float) -> dict[str, object]:
     }
 
 
-def evaluate_split(names: list[str], model, stats, split: str) -> list[dict]:
+def evaluate_split(names: list[str], model, stats, split: str, grid: list[float]) -> list[dict]:
     out: list[dict] = []
     for index, name in enumerate(names, start=1):
         started = time.perf_counter()
@@ -104,7 +120,7 @@ def evaluate_split(names: list[str], model, stats, split: str) -> list[dict]:
             "validFraction": round(float(valid.mean()), 6),
             "thresholds": {},
         }
-        for threshold in THRESHOLDS:
+        for threshold in grid:
             counts = confusion(probability >= threshold, truth, valid)
             entry["thresholds"][f"{threshold:g}"] = {
                 "counts": counts,
@@ -114,9 +130,10 @@ def evaluate_split(names: list[str], model, stats, split: str) -> list[dict]:
                 ),
             }
         out.append(entry)
-        best = entry["thresholds"]["0.6"]["scores"]
+        best = entry["thresholds"][f"{PROGRESS_THRESHOLD:g}"]["scores"]
         print(
-            f"  [{split} {index}/{len(names)}] {name}: IoU@0.6 {best['iou']:.4f} "
+            f"  [{split} {index}/{len(names)}] {name}: "
+            f"IoU@{PROGRESS_THRESHOLD:g} {best['iou']:.4f} "
             f"dice {best['dice']:.4f} ({time.perf_counter() - started:.1f} s)",
             flush=True,
         )
@@ -131,6 +148,7 @@ def main() -> int:
     model, extra = loaded
     stats = extra.get("normStats") or case_mod._norm_stats()
     patch_threshold = float(extra.get("threshold", 0.5))
+    grid = threshold_grid(patch_threshold)
 
     splits = json.loads((C.PROCESSED_DIR / "splits.json").read_text())
     limit = int(sys.argv[1]) if len(sys.argv) > 1 else None
@@ -141,9 +159,9 @@ def main() -> int:
         if limit:
             names = names[:limit]
         print(f"{split}: {len(names)} whole scenes")
-        results[split] = evaluate_split(names, model, stats, split)
+        results[split] = evaluate_split(names, model, stats, split, grid)
 
-    val_grid = [aggregate(results["val"], t) for t in THRESHOLDS]
+    val_grid = [aggregate(results["val"], t) for t in grid]
     # Selected on validation only. Mean-over-scenes is the criterion because an operator
     # cares about the typical scene, not about the one with the most oil pixels in it.
     chosen = max(val_grid, key=lambda entry: entry["meanSceneIou"])
@@ -165,12 +183,12 @@ def main() -> int:
             "chosen on the validation scenes by mean per-scene IoU, then applied unchanged "
             "to the test scenes"
         ),
-        "thresholdGrid": THRESHOLDS,
+        "thresholdGrid": grid,
         "validation": {"grid": val_grid, "atSelected": aggregate(results["val"], selected)},
         "test": {
             "atPatchThreshold": aggregate(results["test"], patch_threshold),
             "atSceneThreshold": aggregate(results["test"], selected),
-            "grid": [aggregate(results["test"], t) for t in THRESHOLDS],
+            "grid": [aggregate(results["test"], t) for t in grid],
         },
         "perScene": results["val"] + results["test"],
         "limitations": [

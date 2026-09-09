@@ -5,29 +5,29 @@
   ],
   "unit": "decibels (sigma0, intensity_db)",
   "source": "training split patches only, invalid pixels excluded",
-  "patchesUsed": 3804,
+  "patchesUsed": 3710,
   "mean": [
-    -21.552122,
-    -32.576877
+    -21.678234,
+    -34.163687
   ],
   "std": [
-    4.32087,
-    3.593822
+    4.467716,
+    4.164943
   ],
   "clipPercentiles": [
     0.5,
     99.5
   ],
   "clipLow": [
-    -35.5437,
-    -47.9954
+    -32.9964,
+    -40.3077
   ],
   "clipHigh": [
-    -13.6577,
-    -24.621
+    -11.5441,
+    -20.0221
   ],
   "pixelsPerChannel": [
-    62269336,
-    62269336
+    60767812,
+    60767812
   ]
 }

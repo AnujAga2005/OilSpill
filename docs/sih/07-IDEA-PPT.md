@@ -23,7 +23,7 @@ slides 2–6** — fill it on all five, and the footer says *@SIH Idea submissio
 you leave alone.
 
 **The strategy in one sentence.** The template is written for teams describing something they
-intend to build. We have a running product with 772 passing tests, so every slide should carry a
+intend to build. We have a running product with 776 passing tests, so every slide should carry a
 measured number rather than an intention, and slide 3 should carry a screenshot of software that
 runs. At the idea stage almost everything submitted is a plan; that is the cheapest advantage we
 have and it costs nothing to use.
@@ -65,14 +65,14 @@ below ~16 pt.**
 - **10 automated stages:** detect slick → screen out look-alikes → measure geometry → **run drift
   backward** to origin + release window → **run it forward** to a forecast → reconstruct vessel
   traffic → filter irrelevant traffic → score and rank → dispatch report.
-- **Working prototype, not a concept:** 6 screens, **772 automated tests passing**, runs offline.
+- **Working prototype, not a concept:** 6 screens, **776 automated tests passing**, runs offline.
 
 ### How it addresses the problem
 
 One line per PS clause, each with a number. A reader scanning for compliance must find it in two
 seconds.
 
-- **(a) Detect, characterise, age —** pooled scene **IoU 0.782** over 36 held-out scenes;
+- **(a) Detect, characterise, age —** mean per-scene **IoU 0.693** over 35 held-out scenes;
   **9 regions, 223.19 km²** measured on a sphere; spill age reported **with a resolvability test**
   instead of a fabricated midpoint.
 - **(b) Ocean *and* met data, origin point *and* time, future flow —** current **0.072 m/s** plus
@@ -85,9 +85,9 @@ seconds.
 
 Exactly three. Each is something a competing deck almost certainly cannot say.
 
-- **A classical baseline we built to compete against ourselves —** dark-spot threshold **0.582 IoU**
-  vs our U-Net **0.771**, a **+0.189** gain. A model score with nothing to compare it to is
-  unfalsifiable.
+- **A classical baseline we built to compete against ourselves —** dark-spot threshold **0.676 IoU**
+  vs our U-Net **0.769**, a **+0.093** gain on a leak-free split. A model score with nothing to
+  compare it to is unfalsifiable.
 - **The spatio-temporal match is genuinely temporal —** each AIS ping is compared to where the oil
   was **at that ping's own timestamp**, not to a static circle. A vessel merely "present sometime
   in the window" scores **zero**.
@@ -136,7 +136,7 @@ and this is the box that answers it literally.
 
 One screenshot. Use **Screen 5 · Vessel attribution** with the traffic-filtering funnel and score
 breakdown visible — the densest single view of PS clause (c), and the screen no other team will
-have. Caption it: **6 screens · 772 tests passing · runs offline.**
+have. Caption it: **6 screens · 776 tests passing · runs offline.**
 
 Use the `demo` case, not `00053`. `00053` has no probability map stored, so its confidence field
 correctly shows an em dash — right behaviour, wrong screenshot.
@@ -164,7 +164,7 @@ concealed discounts everything else on the slide.
 | Risk | Strategy |
 |---|---|
 | **Look-alikes** — low wind, algal blooms, rain cells all look like oil in SAR | 7-feature screen, all scale-invariant ratios. **AUC 0.9573** in-domain. On 2,290 published look-alike patches never trained on, grouped into **17 families**: rejects **96%** of dark regions in the easiest, **32%** in the hardest. Real gain, not solved. |
-| **Metrics could be optimistic** | Splits **grouped by parent acquisition**. An earlier split leaked; documented, and current figures stated as **upper bounds** until the re-run lands. |
+| **Metrics could be optimistic** | Splits **grouped by parent acquisition** — 240 scenes, 240 distinct acquisitions, **zero spanning two splits**. An earlier split leaked; we found it, re-ran everything, and our margin over the baseline **halved from +0.189 to +0.093**. These are the post-fix numbers. |
 | **Licensed AIS unavailable to a student team** | Synthetic AIS in the **exact 17-column MarineCadastre schema**, diff-able against a real extract. Swapping in real feeds is a reader change, not a rewrite. |
 | **Attribution has legal consequences** | A test asserts "guilty", "culprit", "responsible party" appear **nowhere** in the PDF — and that "priority candidate for investigation" does. |
 | **No Indian-water validation yet** | 0 of 1,200 scenes fall in 65–95 °E, 5–25 °N. One Sentinel-1 scene over the **Gulf of Kutch** closes it. |
@@ -256,6 +256,6 @@ is ~7% and only because our demo case sits there.
 7. **Exported as PDF**, PDF reopened and checked, PDF uploaded — not the .pptx.
 
 **The final read-through question:** does the deck contain a number a judge could look up and
-verify? Ours has 0.771 vs 0.582, IoU 0.782, 223.19 km², 987 reports filtered to 2, 24.0 seconds,
-772 tests. A deck with verifiable numbers reads as a report on a working system. A deck without
+verify? Ours has 0.769 vs 0.676, mean per-scene IoU 0.693, 223.19 km², 987 reports filtered to 2, 24.0 seconds,
+776 tests. A deck with verifiable numbers reads as a report on a working system. A deck without
 them reads as a plan.

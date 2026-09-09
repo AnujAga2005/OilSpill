@@ -64,7 +64,7 @@ prepared.
    turns a strength into a wobble.
 2. **Volunteer the limitation before they find it.** You cannot be caught out on something you
    said first. This is the whole strategy.
-3. **Numbers, not adjectives.** Not "quite accurate" — "0.771 IoU at patch scale, 0.64 mean per
+3. **Numbers, not adjectives.** Not "quite accurate" — "0.769 IoU at patch scale, 0.58 pooled per
    scene."
 4. **Route to the owner.** "That's the drift model — my teammate built it, let them take it" reads
    as depth. Guessing on a teammate's behalf reads as a team that doesn't know its own code.
@@ -122,17 +122,19 @@ mask encoding, date span). See document 1, §1.3.*
 **"How do you know your model isn't just memorising?"**
 > "Our 1,200 files come from only 270 satellite acquisitions — multiple crops per pass. If crops
 > from one acquisition landed in both train and test, the model would be tested on water it had
-> already seen. So the splitter groups by parent acquisition, not by file. And we'll be straight
-> with you: we found a wiring bug where the acquisition key wasn't actually reaching the splitter,
-> so the run behind these numbers grouped by crop — 34 of our 36 test scenes share an acquisition
-> with a training scene. It's fixed, there's a regression test, and the numbers on screen are an
-> upper bound until we re-run. That's why we quote per-scene IoU of 0.64 rather than the patch
-> figure."
+> already seen. So the splitter groups by parent acquisition, not by file: 240 scenes, 240 distinct
+> acquisitions, zero appearing in more than one split.
+>
+> And we'll be straight with you, because this is the more interesting half. It wasn't true at
+> first. A wiring bug meant the acquisition key never reached the splitter and the first run grouped
+> by crop — 34 of 36 test scenes shared an acquisition with a training scene. We found it, fixed it,
+> wrote the regression test, and re-ran the whole pipeline. Our margin over the classical baseline
+> **halved**, from +0.189 to +0.093 IoU. The numbers we're showing you are the ones from after that."
 
 Say this before anyone asks. A judge who finds a leak you didn't disclose stops believing every
-other number you gave them; a judge you hand it to concludes you audit your own work. If the
-pipeline has been re-run by the time you present, quote the new figures and describe the bug in
-the past tense — see [KNOWN-ISSUES.md](../../KNOWN-ISSUES.md).
+other number you gave them; a judge you hand it to concludes you audit your own work — and here the
+correction is a better story than the original number would have been. See
+[KNOWN-ISSUES.md](../../KNOWN-ISSUES.md) §1.
 
 ### B. The model
 
@@ -145,19 +147,20 @@ the past tense — see [KNOWN-ISSUES.md](../../KNOWN-ISSUES.md).
 **"You wrote the backprop by hand in NumPy? Why?"**
 > "Package installs were blocked in the build environment, so we implemented the forward and
 > backward passes ourselves. It turned into an advantage in two ways: nothing in the model is a
-> black box we imported, and it trains in 26 minutes on a laptop CPU with no GPU. The limitation is
+> black box we imported, and it trains in 18 minutes on a laptop CPU with no GPU. The limitation is
 > real too — it caps how deep we can practically go, which is why a PyTorch retrain on a GPU is on
 > our roadmap and would improve the whole-scene number."
 
 **"How accurate is it?"** — *the most important question in the room*
-> "Two numbers, and the difference between them matters. At patch scale, 0.771 IoU. But patches are
+> "Two numbers, and the difference between them matters. At patch scale, 0.769 IoU. But patches are
 > 128 pixels sampled near labelled oil, so the model never sees the 99% of open water where false
 > alarms live — that number flatters us and it flatters every team that quotes it.
 >
-> On full 2048-pixel held-out scenes, the honest figures are 0.78 pooled IoU and **0.64 averaged
-> per scene**. The mean is the harsher one — pooled lets big easy slicks dominate; the mean scores
-> a small hard scene the same as a big easy one. Our worst single scene is **0.13**, and the full
-> per-scene distribution is on the Method screen."
+> On full 2048-pixel held-out scenes, the honest figures are **0.58 pooled IoU and 0.69 averaged
+> per scene**. Pooled is the harsher one here — it weights every pixel equally, so the large scenes
+> we handle badly dominate it. Our worst single scene is **0.046**, essentially a total miss, and
+> the full per-scene distribution is on the Method screen — seven of our 35 test scenes are below
+> 0.5."
 
 Never answer this question with only the patch number. Volunteering the honest one is the single
 highest-value thing you do all session.
@@ -165,11 +168,16 @@ highest-value thing you do all session.
 **"Is 0.77 good?"**
 > "Relative to what matters more than the absolute. We built the classical non-AI method as a
 > baseline — despeckle the VV channel, threshold the dark pixels, morphological cleanup, minimum
-> area. It scores 0.582 on the same test data. We beat it by 0.189 IoU. That comparison is why we
-> can say the machine learning earns its place rather than just asserting it."
+> area. It scores 0.676 on the same test data. We beat it by 0.093 IoU. That comparison is why we
+> can say the machine learning earns its place rather than just asserting it.
+>
+> And that margin used to be twice as wide. Our first split had a leak, and when we fixed it the
+> baseline gained 0.09 while our model lost 0.002 — because the baseline's threshold is calibrated
+> on the training scenes, so the overlap had been feeding it answers. +0.093 is the real number."
 
 **"What about false positives?"**
-> "Precision 0.83, recall 0.93 — so we slightly over-call. For disaster response that's the right
+> "Precision 0.83, recall 0.91 at patch scale — so we slightly over-call. For disaster response
+> that's the right
 > direction: missing a real spill costs more than sending an analyst to check a false one.
 >
 > But the honest framing is bigger than that. Every scene in our dataset contains labelled oil, so
@@ -177,7 +185,7 @@ highest-value thing you do all session.
 > false-alarm rate on clean sea.** We don't have that number and we say so in the shipped output."
 
 **"How did you pick the threshold?"**
-> "Swept on the validation scenes and then applied unchanged to test. 0.6 at patch scale, 0.8 at
+> "Swept on the validation scenes and then applied unchanged to test. 0.65 at patch scale, 0.7 at
 > whole-scene scale — a bigger scene needs a stricter cutoff because there's vastly more water to
 > raise a false alarm in. The sweep curve is on the Method screen. Choosing the threshold on test
 > data would have inflated our numbers and we didn't."
@@ -360,7 +368,7 @@ rather than imagining it is the whole chain.
 > `npm install`. Clone it and it runs offline."
 
 **"Is it tested?"**
-> "772 automated tests, about 42 seconds, all passing, nothing skipped. And the whole pipeline is
+> "776 automated tests, about 42 seconds, all passing, nothing skipped. And the whole pipeline is
 > seeded — run the
 > same case twice and every figure is byte-identical; only the timestamps change. That matters for
 > an evidentiary product: a result you can't reproduce is a result you can't defend."
@@ -437,13 +445,14 @@ Do not invent a cost figure on stage.
 > generator and the scorer live. Having the terminal font already enlarged saves you looking
 > flustered.
 
-**"Your best score is 0.64 mean per scene. That's not great."**
-> "Agreed, and I'd rather quote it than hide it. Two things about that number. It's an average
-> across 36 held-out scenes, so a small hard scene weighs the same as a big easy one — pooled IoU
-> is 0.78, and our worst single scene is 0.13. And it's from a 2-million-parameter model with a
-> hand-written backward pass trained for 26 minutes on a laptop CPU. A PyTorch retrain on a GPU
-> with a pretrained encoder and proper augmentation has real headroom. What I can defend is the
-> comparison: the same evaluation gives the classical method 0.582."
+**"Your best score is 0.58 pooled per scene. That's not great."**
+> "Agreed, and I'd rather quote it than hide it. Two things about that number. Pooled weights every
+> pixel equally, so the few large scenes we handle badly dominate it — averaged per scene we get
+> 0.69, our median scene is 0.77, and our worst is 0.046. All three are on the Method screen. And
+> it's from a 2-million-parameter model with a hand-written backward pass trained for 18 minutes on
+> a laptop CPU. A PyTorch retrain on a GPU with a pretrained encoder and proper augmentation has
+> real headroom. What I can defend is the comparison: the same evaluation gives the classical method
+> 0.676 at patch scale against our 0.769."
 
 **"What if I told you your model would fail completely on Indian coastal waters?"**
 > "You might be right and I can't currently disprove it. Indian coastal water brings things this
@@ -503,7 +512,7 @@ The one thing to say on each screen if you have only one sentence:
 | **Slick** | "Area integrated row by row on a sphere, because a degree of longitude shrinks with latitude — and an analyst can correct the boundary by hand." |
 | **Drift** | "The ocean run backwards — and it gives a region and a 24-hour window, not a point, because uncertainty grows every step back." |
 | **Vessels** | "Ranked by spatio-temporal correlation, every score component and its evidence visible, and never called guilty." |
-| **Method** | "Everything we can't tell you: patch metrics flatter, the honest whole-scene number is 0.64 mean and 0.13 at our worst scene, and our U-Net alone alarms on 100% of the look-alike patches we tested it against." |
+| **Method** | "Everything we can't tell you: patch metrics flatter, the honest whole-scene numbers are 0.58 pooled and 0.046 at our worst scene, and our U-Net alone alarms on 100% of the look-alike patches we tested it against." |
 
 ---
 
@@ -525,9 +534,9 @@ a vessel guilty — points the same way. That consistency is the pitch. Lean on 
 
 ## 5.8 Final checklist before you walk in
 
-- [ ] The three numbers, cold: **1,200 pairs / 270 acquisitions** · **0.771 vs 0.582 IoU** ·
-      **772 tests · whole pipeline offline in 24 s**
-- [ ] The fourth number ready for probing: **0.64 mean per-scene IoU**
+- [ ] The three numbers, cold: **1,200 pairs / 270 acquisitions** · **0.769 vs 0.676 IoU** ·
+      **776 tests · whole pipeline offline in 24 s**
+- [ ] The fourth number ready for probing: **0.584 pooled scene IoU** (mean per scene 0.693)
 - [ ] The PS sentence permitting synthetic AIS, quotable
 - [ ] The seven minimum concepts from document 2 §2.9
 - [ ] The "we attribute but we don't assert guilt" answer, word for word
