@@ -129,23 +129,32 @@ export function render(ctx) {
 
     mapCard(ctx, caseDoc, direction, run),
 
-    direction === "backward" ? spillAgeCard(caseDoc.spillAge) : null,
+    // -- what the run concluded -------------------------------------------
+    // The origin zone and the age window are the two answers a hindcast produces, and they
+    // came out of the same particle cloud, so they sit side by side directly under the map.
+    // The origin used to be a right-hand column beside a spread chart, which put the
+    // conclusion below and to the side of a diagnostic.
+    direction === "backward"
+      ? h(
+          "div",
+          { class: "grid grid--2" },
+          originCard(caseDoc, origin, run),
+          spillAgeCard(caseDoc.spillAge),
+        )
+      : forecastCard(run),
 
+    // -- the credibility statement, never folded ---------------------------
+    // Everything above inherits its meaning from the current field that drove it, so the
+    // sentence saying whether that field was measured or constructed stays on the screen.
+    // Only the parameters behind it fold away.
+    forcingNotice(caseDoc),
+
+    // -- the working, folded until someone wants to check it ---------------
     h(
       "div",
-      { class: "grid grid--wide-left" },
+      { class: "stack stack--tight" },
       spreadCard(run, direction),
-      h(
-        "div",
-        { class: "stack" },
-        direction === "backward" ? originCard(caseDoc, origin, run) : forecastCard(run),
-        outcomesCard(run),
-      ),
-    ),
-
-    h(
-      "div",
-      { class: "grid grid--2" },
+      outcomesCard(run),
       forcingCard(caseDoc),
       numericsCard(run),
     ),
@@ -488,11 +497,13 @@ function spreadCard(run, direction) {
       .map((step) => [Math.abs(step.hoursFromObservation), step[key]])
       .filter((p) => Number.isFinite(p[1]));
 
-  return U.card(
+  return U.foldout(
     "How the uncertainty grows",
     {
       id: "spread",
-      hint: `${F.int(timeline.length)} steps`,
+      // The chart's own headline, so the fold does not hide the number the chart exists to
+      // deliver: how wide the cloud got by the end of the horizon.
+      hint: `P90 ${F.km(run.endpoints?.spreadP90Km, 1)} km at ${F.hours(run.horizonHours)} · ${F.int(timeline.length)} steps`,
       note:
         "Spread is the distance from the particle cloud's own centroid, so it measures " +
         "disagreement between particles rather than distance travelled. It grows because " +
@@ -592,9 +603,14 @@ function outcomesCard(run) {
     { label: "Beached", value: outcomes.beached || 0, colour: C.danger },
     { label: "Left the forcing domain", value: outcomes.leftForcingDomain || 0, colour: C.synthetic },
   ];
-  return U.card(
+  return U.foldout(
     "Particle outcomes",
-    { id: "outcomes", hint: `${F.int(outcomes.released)} released` },
+    {
+      id: "outcomes",
+      hint:
+        `${F.int(outcomes.released)} released · ${F.int(outcomes.stillDrifting)} still drifting · ` +
+        `${F.int(outcomes.beached)} beached`,
+    },
     h(
       "div",
       { class: "stack stack--tight" },
@@ -697,8 +713,31 @@ function windRows(forcing, spec) {
 }
 
 /**
+ * Whether the current field was measured or constructed, as one sentence on the screen.
+ *
+ * This used to be the first thing inside the forcing card, which was one of nine cards of
+ * equal weight near the bottom. It is not equal weight: every distance, direction and
+ * envelope above it is only as good as this answer. So the sentence is hoisted out and the
+ * parameters that produced it stay folded below.
+ */
+function forcingNotice(caseDoc) {
+  const block = caseDoc.forcing || {};
+  const forcing = block.forcing || {};
+  const synthetic = forcing.isSynthetic !== false;
+  return U.notice(
+    synthetic
+      ? forcing.warning ||
+          "The current field is a deterministic synthetic construction, not a measurement. " +
+            "Drift distances and directions are illustrative."
+      : "Currents come from the supplied reanalysis for this acquisition time.",
+    { kind: synthetic ? "synthetic" : "", strongPrefix: block.label || "" },
+  );
+}
+
+/**
  * The forcing card. This is the one card on the screen that determines whether anything
- * else on it means anything, so it states the mode first and the numbers second.
+ * else on it means anything, so its verdict is hoisted into `forcingNotice` above and what
+ * remains here is the arithmetic that backs the verdict up.
  */
 function forcingCard(caseDoc) {
   const block = caseDoc.forcing || {};
@@ -708,20 +747,18 @@ function forcingCard(caseDoc) {
   const anchor = forcing.amplitudeAnchor || {};
   const synthetic = forcing.isSynthetic !== false;
 
-  return U.card(
+  return U.foldout(
     "Forcing",
-    { id: "forcing", hint: block.label, note: forcing.method },
+    {
+      id: "forcing",
+      hint: `${block.label || F.DASH}${
+        overlap.temporalOverlap === false ? " · no CMEMS time overlap" : ""
+      }`,
+      note: forcing.method,
+    },
     h(
       "div",
       { class: "stack stack--tight" },
-      U.notice(
-        synthetic
-          ? forcing.warning ||
-              "The current field is a deterministic synthetic construction, not a measurement. " +
-                "Drift distances and directions are illustrative."
-          : "Currents come from the supplied reanalysis for this acquisition time.",
-        { kind: synthetic ? "synthetic" : "", strongPrefix: block.label || "" },
-      ),
       (block.reasons || []).length
         ? h(
             "ul",
@@ -781,9 +818,13 @@ function forcingCard(caseDoc) {
 function numericsCard(run) {
   const numerics = run.numerics || {};
   const config = run.config || {};
-  return U.card(
+  return U.foldout(
     "Numerics",
-    { id: "numerics", note: numerics.note },
+    {
+      id: "numerics",
+      hint: `${F.int(numerics.steps)} × ${F.int(numerics.timeStepMinutes)} min · ${F.int(config.particle_count)} particles`,
+      note: numerics.note,
+    },
     U.rows(
       U.row("Scheme", numerics.scheme, { stack: true }),
       U.row("Time step", `${F.int(numerics.timeStepMinutes)} min`, { mono: true }),

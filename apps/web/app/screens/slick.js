@@ -133,17 +133,21 @@ export function render(ctx) {
       "div",
       { class: "grid grid--wide-left" },
       regionsCard(ctx, caseDoc, regions, selectedId),
-      h(
-        "div",
-        { class: "stack" },
-        regionDetailCard(selected),
-        methodCard(caseDoc),
-      ),
+      regionDetailCard(selected),
     ),
 
     screeningCard(ctx, caseDoc),
 
-    qualityCard(caseDoc, slick),
+    // -- how the numbers were produced, folded ----------------------------
+    // The morphology parameters and the pixel-area arithmetic have to be on the screen for
+    // the areas above to be checkable. They were a right-hand column next to the region
+    // table, where they competed with a finding for the same glance.
+    h(
+      "div",
+      { class: "stack stack--tight" },
+      methodCard(caseDoc),
+      qualityCard(caseDoc, slick),
+    ),
   );
 }
 
@@ -877,9 +881,15 @@ function methodCard(caseDoc) {
   const filtered = caseDoc.geometry?.filteredMask || {};
   const raw = caseDoc.geometry?.rawMask || {};
 
-  return U.card(
+  return U.foldout(
     "How the area was measured",
-    { id: "method", note: caseDoc.geometry?.areaMethod },
+    {
+      id: "method",
+      // The pixel-area contrast top to bottom is the evidence for the claim the card makes:
+      // a pixel is not a constant patch of ground, so areas are integrated row by row.
+      hint: `pixel ${F.num(raster.pixelAreaM2AtTop, 3)} → ${F.num(raster.pixelAreaM2AtBottom, 3)} m², top to bottom`,
+      note: caseDoc.geometry?.areaMethod,
+    },
     U.rows(
       U.row("Raster", `${raster.width} × ${raster.height} px, EPSG:${raster.epsg}`, { mono: true }),
       U.row(
@@ -898,26 +908,49 @@ function methodCard(caseDoc) {
   );
 }
 
+/**
+ * Caveats on the geometry.
+ *
+ * Open when there is something to say and closed when there is not. A card whose whole
+ * content is "no quality flags were raised" still reads as a warning at a glance, which is
+ * the opposite of what it means; as a closed row saying "no flags raised" it says the same
+ * thing without claiming the reader's attention.
+ */
 function qualityCard(caseDoc, slick) {
   const flags = slick.qualityFlags || [];
-  return U.card(
+  const truncated = Boolean(slick.touchesSceneEdge);
+  const invalid = slick.geometryValid === false;
+  const anything = flags.length > 0 || truncated || invalid;
+  return U.foldout(
     "Caveats on this geometry",
-    { id: "quality", note: caseDoc.geometry?.geojson?.note },
+    {
+      id: "quality",
+      open: anything,
+      hint: anything
+        ? [
+            flags.length ? `${F.int(flags.length)} flag${flags.length === 1 ? "" : "s"}` : null,
+            truncated ? "truncated by the scene edge" : null,
+            invalid ? "outline is display-only" : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : "no flags raised",
+      note: caseDoc.geometry?.geojson?.note,
+    },
     h(
       "div",
       { class: "stack stack--tight" },
       flags.length
-        ? h(
-            "ul",
-            { class: "bullets" },
-            flags.map((flag) => h("li", null, h("span", null, flag))),
-          )
+        ? // Set as a claim-and-qualifier table, the same treatment the case-level limits get
+          // on the command centre, so a caveat reads as a caveat and not as five identical
+          // bullet points.
+          U.limitList(flags)
         : h(
             "p",
             { class: "small muted" },
             "The geometry stage raised no quality flags for the largest region.",
           ),
-      slick.geometryValid === false
+      invalid
         ? U.notice(
             "Area, perimeter, length, width, elongation and compactness are all computed " +
               "from the pixel mask, not from the traced outline, so a self-intersecting " +
@@ -925,7 +958,7 @@ function qualityCard(caseDoc, slick) {
             { strongPrefix: "Outline is display-only." },
           )
         : null,
-      slick.touchesSceneEdge
+      truncated
         ? U.notice(
             "The slick reaches the edge of the acquisition, so the measured area is a lower " +
               "bound: whatever continues outside the frame was never imaged.",

@@ -111,9 +111,17 @@ export function render(ctx) {
         { class: "stack" },
         detectionCard(ctx, caseDoc),
         lookalikeCard(ctx, caseDoc),
-        analystCard(ctx, caseDoc),
-        georeferenceCard(previews, caseDoc.scene),
       ),
+    ),
+
+    // -- the operator's own note, and the coordinates, folded --------------
+    // Neither is a finding. Both were a fourth and fifth card stacked in the right-hand
+    // column, where they pushed the look-alike warning up out of sight on a laptop.
+    h(
+      "div",
+      { class: "stack stack--tight" },
+      analystCard(ctx, caseDoc),
+      georeferenceCard(previews, caseDoc.scene),
     ),
   );
 }
@@ -388,9 +396,10 @@ function detectionCard(ctx, caseDoc) {
 
   return U.card(
     "Detection",
-    { id: "detection", note: detection.note },
+    // The source is the hint rather than the first row: it is the one fact that decides how
+    // much of this screen is the model's work, and it should be readable without a scan.
+    { id: "detection", hint: detection.label, note: detection.note },
     U.rows(
-      U.row("Source", detection.label),
       U.row("Threshold applied", F.num(detection.threshold, 2), { mono: true }),
       U.row("Mean probability over slick", F.pct(slick.confidence), { mono: true }),
       U.row("Slick area", `${F.km2(slick.totalAreaKm2)} km²`, { mono: true }),
@@ -456,11 +465,11 @@ function analystCard(ctx, caseDoc) {
     ctx.announce("Analyst note saved locally.", { kind: "success" });
   };
 
-  return U.card(
+  return U.foldout(
     "Analyst review",
     {
       id: "review",
-      hint: note.updatedUtc ? `saved ${F.utc(note.updatedUtc)}` : null,
+      hint: note.updatedUtc ? `saved ${F.utc(note.updatedUtc)}` : "no note saved",
       note:
         "Kept in this browser only, keyed by case. It never overwrites the model output, " +
         "and it is not sent anywhere.",
@@ -523,9 +532,9 @@ function analystCard(ctx, caseDoc) {
 
 function georeferenceCard(previews, scene) {
   const bounds = previews.bounds || scene?.bounds || [];
-  return U.card(
+  return U.foldout(
     "Georeferencing",
-    { id: "geo", hint: scene?.crs },
+    { id: "geo", hint: `${scene?.crs || F.DASH} · ${scene?.width} × ${scene?.height} px` },
     U.rows(
       U.row("CRS", `${scene?.crs} (EPSG:${previews.epsg || scene?.epsg})`, { mono: true }),
       U.row("North-west", F.latLon([bounds[0], bounds[3]]), { mono: true }),

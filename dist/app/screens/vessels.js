@@ -80,98 +80,70 @@ export function render(ctx) {
     "div",
     { class: "stack" },
 
-    syntheticBanner(caseDoc),
+    // -- the disclosure, standing on its own ------------------------------
+    // Rule 1 of this file is that every vessel says it is synthetic. That sentence used to
+    // sit inside a card titled "Before reading this ranking", where the card's own title,
+    // two metadata rows and four supporting bullets all competed with the one line that has
+    // to land. It now stands alone at the top; the supporting detail is a foldout at the
+    // bottom, which is a promotion for the sentence, not a demotion.
+    U.notice(caseDoc.ais?.disclaimer || "", {
+      kind: "synthetic",
+      strongPrefix: caseDoc.ais?.label || "Synthetic AIS.",
+    }),
 
-    U.card(
-      "Ranking basis",
-      {
-        id: "basis",
-        hint: attribution.candidateLabel,
-        note: attribution.caveat,
-        actions: U.button("Candidates CSV", {
-          kind: "quiet",
-          small: true,
-          iconPath: ICONS.download,
-          onClick: () => {
-            X.downloadCsv(X.exportName(caseDoc, "candidates", "csv"), X.candidatesCsv(caseDoc));
-            ctx.announce("Candidate table downloaded as CSV.", { kind: "success" });
-          },
-        }),
-      },
-      h(
-        "div",
-        { class: "grid grid--stats" },
-        U.stat({
-          label: "Candidates scored",
-          value: F.int(attribution.candidateCount ?? candidates.length),
-          tone: "synthetic",
-          sub:
-            attribution.filtering
-              ? `${F.int(attribution.filtering.vesselsRelevant)} relevant · ` +
-                `${F.int(attribution.filtering.excludedTotal)} excluded as irrelevant traffic`
-              : `of ${F.int(caseDoc.ais?.counts?.vessels)} synthetic vessels generated`,
-        }),
-        U.stat({
-          label: "Release window",
-          value: F.hours(attribution.releaseWindow?.hours),
-          sub: `${F.utc(attribution.releaseWindow?.startUtc)} → ${F.utc(attribution.releaseWindow?.endUtc)}`,
-        }),
-        U.stat({
-          label: "Origin zone radius",
-          value: F.km(attribution.originZone?.radiusKm, 1),
-          unit: "km",
-          tone: "reference",
-          sub: "P90 of the backward particle cloud",
-        }),
-        U.stat({
-          label: "Top score",
-          value: F.num(candidates[0].score, 1),
-          sub: `of ${candidates[0].scoreMax} — ${candidates[0].name}`,
-        }),
-      ),
-      weightsStrip(attribution.weights),
-    ),
-
+    // -- the clause the statement was most prescriptive about -------------
+    // "The irrelevant traffic is to be filtered out." So the funnel comes before the
+    // shortlist: how ten vessels became two, then who the two are. It also means the
+    // presenter's eye only ever travels down this screen.
     filterCard(attribution),
+
+    // -- the conclusion ---------------------------------------------------
+    verdictCard(selected, attribution),
 
     mapCard(ctx, caseDoc, candidates, selectedMmsi),
 
     h(
       "div",
       { class: "grid grid--wide-left" },
-      rankingCard(ctx, candidates, selectedMmsi),
-      h(
-        "div",
-        { class: "stack" },
-        scoreCard(selected),
-        evidenceCard(selected, attribution),
-      ),
+      rankingCard(ctx, caseDoc, candidates, selectedMmsi),
+      evidenceCard(selected, attribution),
     ),
 
-    h(
-      "div",
-      { class: "grid grid--2" },
-      explanationCard(selected, attribution),
-      trackQualityCard(caseDoc, selected),
-    ),
-
-    generatorCard(caseDoc, selected),
-  );
-}
-
-// -- the disclosure that has to come first ----------------------------------
-
-function syntheticBanner(caseDoc) {
-  const ais = caseDoc.ais || {};
-  const schema = ais.schema || {};
-  const source = caseDoc.provenance?.aisSource || schema.label;
-  return U.card(
-    "Before reading this ranking",
-    { id: "disclosure" },
+    // -- the working, folded until someone wants to check it ---------------
+    // Weights, rule text, track defects and the generator's own intent. All of it has to be
+    // on the screen for the score to be auditable; none of it competes with the score.
     h(
       "div",
       { class: "stack stack--tight" },
-      U.notice(ais.disclaimer || "", { kind: "synthetic", strongPrefix: ais.label || "Synthetic AIS." }),
+      weightsCard(attribution),
+      explanationCard(selected, attribution),
+      trackQualityCard(caseDoc, selected),
+      generatorCard(caseDoc, selected),
+      feedCard(caseDoc),
+    ),
+  );
+}
+
+// -- the disclosure detail, under the sentence it supports -------------------
+
+/**
+ * How this feed was made and what its identifiers mean.
+ *
+ * The one mandated sentence is a `U.notice` at the top of the screen. What is left here is
+ * the detail that makes it checkable rather than merely stated: the source string, the
+ * column count, and what each fabricated field is and is not. Folded, because a reader who
+ * has taken the notice at the top at face value does not need to be told four more times.
+ */
+function feedCard(caseDoc) {
+  const ais = caseDoc.ais || {};
+  const schema = ais.schema || {};
+  const source = caseDoc.provenance?.aisSource || schema.label;
+  return U.foldout(
+    "About this synthetic feed",
+    { id: "disclosure", hint: source },
+    h(
+      "div",
+      { class: "stack stack--tight" },
       // Two separate facts, deliberately shown as two rows: this feed is fabricated, and it
       // is fabricated in the format the problem statement names. The second is what makes
       // the first replaceable -- a real MarineCadastre extract loads through the same reader.
@@ -219,7 +191,7 @@ function weightsStrip(weights) {
     }));
   return h(
     "div",
-    { class: "stack stack--tight", style: { "margin-top": "var(--s4)" } },
+    { class: "stack stack--tight" },
     stackBar(parts, { height: 10 }),
     U.legend(
       parts.map((part) => ({ label: `${part.label} ${part.value}`, colour: part.colour })),
@@ -231,6 +203,22 @@ function weightsStrip(weights) {
         "They were chosen by hand, not fitted to data, because there is no labelled " +
         "attribution ground truth to fit them to.",
     ),
+  );
+}
+
+/**
+ * The weight budget on its own. The bars in the verdict card show what this vessel scored;
+ * this shows the ceiling each component could have contributed, which is a different
+ * question and only asked once.
+ */
+function weightsCard(attribution) {
+  const weights = attribution.weights;
+  if (!weights) return null;
+  const count = Object.keys(weights).filter((key) => key !== "total").length;
+  return U.foldout(
+    "How the score is weighted",
+    { id: "weights", hint: `${count} components · total ${F.int(weights.total)}`, note: attribution.caveat },
+    weightsStrip(weights),
   );
 }
 
@@ -254,13 +242,21 @@ function filterCard(attribution) {
     },
     {
       label: "In the release window",
+      // The window itself, stated on the step that tests against it. "In the window" is an
+      // unfalsifiable claim until the reader can see which window, and putting it here
+      // costs nothing -- a separate card of context above the funnel cost 90 px and pushed
+      // the shortlist off the first screenful.
       value: F.int(funnel.vesselsInWindow),
-      sub: `${F.int(funnel.reportsInWindow)} reports fall inside the estimated window`,
+      sub:
+        `${F.int(funnel.reportsInWindow)} reports inside the ${F.hours(attribution.releaseWindow?.hours)} ` +
+        `window, ${F.utc(attribution.releaseWindow?.startUtc)} → ${F.utc(attribution.releaseWindow?.endUtc)}`,
     },
     {
       label: "Intersect the origin envelope",
       value: F.int(funnel.vesselsRelevant),
-      sub: `within ${F.num(funnel.irrelevantRadii, 0)} envelope radii at their own timestamps`,
+      sub:
+        `within ${F.num(funnel.irrelevantRadii, 0)} × the ${F.km(attribution.originZone?.radiusKm, 1)} km ` +
+        "origin radius, at their own timestamps",
     },
     {
       label: "Excluded as irrelevant",
@@ -292,7 +288,12 @@ function filterCard(attribution) {
           }),
         ),
       ),
-      h("p", { class: "small muted mono" }, funnel.summary),
+      // `funnel.summary` used to be printed here as a mono line. It reads "1112 AIS reports ·
+      // 10 vessels -> 9 with reports in the release window -> 2 intersect the origin envelope
+      // -> 8 excluded", which is the four figures above restated as a sentence. Saying the
+      // same thing twice, once as numbers and once as prose, is what makes a screen feel
+      // padded. The figures stay; the restatement goes. `funnel.rule` is the card's note and
+      // `retentionNote` is the auditability argument, so neither is a restatement.
       h("p", { class: "small muted" }, funnel.retentionNote),
     ),
   );
@@ -401,7 +402,7 @@ function mapCard(ctx, caseDoc, candidates, selectedMmsi) {
  * Both are in the DOM and CSS decides which is visible, which keeps the print stylesheet
  * able to force the table regardless of the viewport it was printed from.
  */
-function rankingCard(ctx, candidates, selectedMmsi) {
+function rankingCard(ctx, caseDoc, candidates, selectedMmsi) {
   const select = (mmsi) => ctx.setParams({ vessel: String(mmsi) });
 
   const rows = candidates.map((candidate) => {
@@ -486,6 +487,16 @@ function rankingCard(ctx, candidates, selectedMmsi) {
         "Vessels the filter set aside are kept at the bottom, dimmed and tagged, so the " +
         "filter can be audited. Selecting a row updates the map, the score breakdown and " +
         "the evidence panel.",
+      // The export belongs on the table it exports, not on a summary card three positions up.
+      actions: U.button("Candidates CSV", {
+        kind: "quiet",
+        small: true,
+        iconPath: ICONS.download,
+        onClick: () => {
+          X.downloadCsv(X.exportName(caseDoc, "candidates", "csv"), X.candidatesCsv(caseDoc));
+          ctx.announce("Candidate table downloaded as CSV.", { kind: "success" });
+        },
+      }),
     },
     h(
       "div",
@@ -521,11 +532,24 @@ function rankingCard(ctx, candidates, selectedMmsi) {
 
 // -- the selected vessel ----------------------------------------------------
 
-function scoreCard(candidate) {
+/**
+ * The screen's conclusion, promoted to the top.
+ *
+ * This used to be the fifth card down, titled "Score breakdown", underneath a "Ranking
+ * basis" card that repeated the same score and a map that repeated the same shortlist. A
+ * reader had to assemble one answer out of three cards. Now the vessel, its arithmetic and
+ * the one status this pipeline is allowed to assign are a single block, and everything that
+ * explains them is a foldout below.
+ */
+function verdictCard(candidate, attribution) {
   const detail = candidate.componentDetail || [];
+  const excluded = candidate.relevant === false;
   return U.card(
-    "Score breakdown",
-    { id: "score", hint: `rank ${candidate.rank}` },
+    excluded ? "Selected vessel" : "First in the queue",
+    {
+      id: "score",
+      hint: `rank ${candidate.rank} of ${F.int(attribution.candidateCount)} scored`,
+    },
     h(
       "div",
       { class: "stack stack--tight" },
@@ -546,7 +570,15 @@ function scoreCard(candidate) {
                 "This is the only status the pipeline assigns. It is a request to look, not a finding.",
             }),
             candidate.synthetic ? U.badge("Synthetic", "synthetic") : null,
+            excluded
+              ? U.badge("Excluded — irrelevant traffic", "", {
+                  title: candidate.relevanceReason || "",
+                })
+              : null,
           ),
+          candidate.band
+            ? h("p", { class: "small muted", style: { "margin-top": "var(--s2)" } }, candidate.band)
+            : null,
         ),
       ),
       h(
@@ -556,7 +588,7 @@ function scoreCard(candidate) {
           h(
             "div",
             { class: "bar" },
-            h("div", { class: "bar__label", title: part.reason }, part.component),
+            h("div", { class: "bar__label" }, part.component),
             h(
               "div",
               { class: "bar__track", role: "img", "aria-label": `${part.component}: ${part.score} of ${part.max}` },
@@ -569,13 +601,12 @@ function scoreCard(candidate) {
               }),
             ),
             h("div", { class: "bar__value" }, `${F.num(part.score, 1)}/${part.max}`),
+            // The measured reason for the points, under its own bar. It was a `title`
+            // tooltip on the label, which no keyboard and no touch screen can reach -- and
+            // this sentence is the entire justification for the number beside it.
+            part.reason ? h("div", { class: "bar__note" }, part.reason) : null,
           ),
         ),
-      ),
-      h(
-        "p",
-        { class: "small muted" },
-        candidate.band || "",
       ),
     ),
   );
@@ -638,7 +669,7 @@ function evidenceCard(candidate, attribution) {
 function explanationCard(candidate, attribution) {
   const lines = candidate.explanation || [];
   const method = attribution.method || {};
-  return U.card(
+  return U.foldout(
     "Why this score",
     { id: "why", hint: `${lines.length} rules applied` },
     h(
@@ -665,9 +696,9 @@ function trackQualityCard(caseDoc, candidate) {
     (entry) => String(entry.mmsi) === String(candidate.mmsi),
   );
   if (!vessel) {
-    return U.card(
+    return U.foldout(
       "Track quality",
-      { id: "quality" },
+      { id: "quality", open: true },
       U.missingState({
         title: "No raw track stored",
         body: "This candidate has a score but the case did not store its underlying reports.",
@@ -677,7 +708,7 @@ function trackQualityCard(caseDoc, candidate) {
   const cleaning = vessel.cleaning || {};
   const rejected = cleaning.rejected || {};
 
-  return U.card(
+  return U.foldout(
     "Track quality",
     {
       id: "quality",
@@ -731,7 +762,7 @@ function generatorCard(caseDoc, candidate) {
   );
   const repro = caseDoc.ais?.reproducibility || {};
 
-  return U.card(
+  return U.foldout(
     "How this track was generated",
     { id: "generator", hint: vessel?.pattern ? F.label(vessel.pattern) : null },
     h(

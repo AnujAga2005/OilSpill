@@ -21,7 +21,9 @@ export function stat({ label, value, unit, sub, tone, missing }) {
   return h(
     "div",
     { class: ["stat", tone ? `stat--${tone}` : null, absent ? "stat--missing" : null] },
-    h("div", { class: "stat__label" }, label),
+    // Skipped rather than rendered empty: `.stat` is a flex column with a gap, so a label-less
+    // stat with an empty label div carries a stray 4 px of space above the figure.
+    label ? h("div", { class: "stat__label" }, label) : null,
     h(
       "div",
       { class: "stat__value" },
@@ -136,6 +138,44 @@ export function card(title, { hint, note, flush = false, sunken = false, id, act
 }
 
 /**
+ * A card that starts closed, for the material a screen has to carry but nobody reads aloud.
+ *
+ * The provenance of a case -- product id, checkpoint, threshold, polarisations, stage
+ * timings -- has to be on the screen, or the findings above it are unverifiable. Rendered
+ * open, it is thirty rows of small print with exactly the same weight as the findings, and a
+ * reader scanning the page has no way to tell reference from result. That is what made this
+ * dashboard read as generated rather than designed: not the palette, but that every block
+ * on it shouted equally. Closed, each one is a single line naming what is inside, and one
+ * click for anyone who wants to check the number.
+ *
+ * Nothing is removed by this. `hint` is the part worth seeing while closed, so the headline
+ * fact survives the fold and only the detail costs a click.
+ *
+ * `<details>` rather than a button and a class: keyboard-operable for free, present in the
+ * accessibility tree as a disclosure, and forced open by the print sheet so a printed report
+ * still carries the whole audit trail.
+ */
+export function foldout(title, { hint, note, open = false, id } = {}, ...body) {
+  return h(
+    "details",
+    { class: "card foldout", id, open: open || null },
+    h(
+      "summary",
+      { class: "foldout__summary" },
+      icon(ICONS.chevronRight, { cls: "foldout__chevron", size: 15 }),
+      h("h2", { class: "card__title" }, title),
+      hint ? h("div", { class: "card__hint" }, hint) : null,
+    ),
+    h(
+      "div",
+      { class: "foldout__body" },
+      ...body,
+      note ? h("p", { class: "card__note" }, note) : null,
+    ),
+  );
+}
+
+/**
  * The one inverted card on a screen, holding the figure that screen exists to report.
  *
  * There is deliberately no `tone` here. The hero is dark, the figure is white, and the
@@ -221,6 +261,68 @@ export function metric({ label, value, unit, sub, tone, missing, iconPath }) {
         )
       : null,
     stat({ label, value, unit, sub, tone, missing }),
+  );
+}
+
+/**
+ * One numbered answer to one question the brief asks.
+ *
+ * This replaced a row of four `metric` cards. Four figures of equal weight left the reader
+ * to work out which one the screen was actually for, and the payoff -- how many vessels are
+ * worth investigating -- sat fourth, in the same box as the rest. But a spill report is a
+ * sequence, not a set: what is in the water, where it came from, who was near it when it
+ * started. Each step only means anything once the one before it holds.
+ *
+ * So the step number is the point of this component. It says there is an order, and the
+ * question above the figure means the figure does not have to explain itself -- a reader
+ * seeing this screen cold gets the brief restated in words before they get a number.
+ *
+ * `action` is the screen that shows the working. Everything here is a summary of a
+ * computation that happened on another screen, so each answer carries the way through to it
+ * rather than leaving the reader to guess which tab proves it.
+ */
+export function answer({ step, question, value, unit, sub, tone, missing, action } = {}) {
+  return h(
+    "section",
+    { class: ["answer", tone ? `answer--${tone}` : null] },
+    h(
+      "header",
+      { class: "answer__head" },
+      h("span", { class: "answer__step" }, String(step)),
+      h("h3", { class: "answer__question" }, question),
+    ),
+    stat({ value, unit, sub, tone, missing }),
+    action ? h("div", { class: "answer__action no-print" }, action) : null,
+  );
+}
+
+/**
+ * A caveat list, set as a two-column specification table rather than bullet points.
+ *
+ * Five full sentences with a dot in front of each read as an undifferentiated wall: every
+ * row the same shape, the same weight, the same length, so the eye has nowhere to land and
+ * the honesty they carry stops registering. Splitting each one at its first full stop puts
+ * the claim in the left column and the qualification in the right, which is how a person
+ * actually reads a caveat -- what is limited, then in what way.
+ *
+ * Anything without a full stop is left whole in the claim column, so a shorter caveat
+ * written later still renders.
+ */
+export function limitList(items) {
+  return h(
+    "ul",
+    { class: "limits" },
+    (items || []).map((text) => {
+      const at = String(text).indexOf(". ");
+      const claim = at === -1 ? String(text) : String(text).slice(0, at);
+      const rest = at === -1 ? "" : String(text).slice(at + 2);
+      return h(
+        "li",
+        { class: "limits__item" },
+        h("span", { class: "limits__claim" }, claim),
+        rest ? h("span", { class: "limits__rest" }, rest) : null,
+      );
+    }),
   );
 }
 

@@ -42,8 +42,8 @@ These are the literal stage names the pipeline reports as it runs:
 | 9 | `scoring` | score and rank every vessel on the 100-point scale |
 | 10 | `previews` | render the PNG layers the dashboard displays |
 
-A full run on scene `00053` takes **about 24 seconds** end to end — 9.6 s of that is decoding the
-2048 × 2048 GeoTIFF, 5.9 s is inference, 3.9 s is geometry and 3.6 s is the look-alike screen; the
+A full run on scene `00223` takes **about 20 seconds** end to end — 9.7 s of that is decoding the
+2048 × 2048 GeoTIFF, 5.7 s is inference, 1.9 s is geometry and 1.8 s is the look-alike screen; the
 six stages after `screening` cost about 1 s
 between them. The run is **deterministic** — run it twice and every figure is byte-identical,
 because every random process is seeded. Only the timing block and the generation timestamp
@@ -71,7 +71,7 @@ scripts/                   run_audit, run_preprocess, run_train, run_scene_eval,
                            run_api, build_web
 tests/                     776 tests
 dist/                      the offline static bundle
-docs/sih/                  these six documents
+docs/sih/                  these eight documents
 RUNBOOK.md                 how to run everything
 KNOWN-ISSUES.md            open defects, honestly stated — read before quoting a number
 DATA_AUDIT.md              the generated dataset audit
@@ -316,7 +316,7 @@ Checked against the code, clause by clause.
 | (c) Reconstruct traffic in the origin window | ✅ | tracks in space and time |
 | (c) **Irrelevant traffic filtered out** | ✅ | `attribution.filtering` publishes the funnel — 10 vessels → 9 in window → 2 relevant, 8 excluded under two distinct reasons; excluded rows dimmed, not deleted, so the filter can be audited |
 | (c) Score on proximity / trajectory / behavioural anomalies | ✅ | six components, below |
-| Automated pipeline | ✅ | ten stages, job queue, 24 s |
+| Automated pipeline | ✅ | ten stages, job queue, 20 s |
 | **Hindcasting** ML model | ✅ | backward drift |
 | Backward **and** forward mapping | ✅ | both |
 | Ranks candidates by spatio-temporal correlation | ✅ | 100-point scale |
@@ -351,7 +351,7 @@ Six screens, in the order an analyst would use them.
 
 | Screen | File | What it shows |
 |---|---|---|
-| **Command centre** | `command.js` | headline area, confidence, origin window, candidate count, live pipeline status |
+| **Command centre** | `command.js` | headline area, then four numbered answers (extent, release window, age, vessels worth a look) each linking to its evidence; map, shortlist, and a folded audit trail of acquisition / provenance / stage timings |
 | **Imagery** | `satellite.js` | VV/VH switch, prediction vs reference vs agreement overlays, before/after split slider, all layers |
 | **Slick** | `slick.js` | measured extent, per-region table, **analyst boundary editing**, GeoJSON/CSV export |
 | **Drift** | `drift.js` | animated particle timeline, backward/forward toggle |
@@ -367,34 +367,45 @@ paths and no credentials.
 
 ### The demo case — the numbers that will be on screen
 
-Two stored cases share the same scene and the same slick figures: `00053` and `demo`.
+Two stored cases share the same scene and the same slick figures: `00223` and `demo`.
 
 | Field | Value |
 |---|---|
-| Scene | `00053`, Persian Gulf |
-| Acquired | 2017-03-11T02:15:12Z |
+| Scene | `00223`, Central Mediterranean *(approximate offline label, not a gazetteer lookup)* |
+| Acquired | 2015-08-04T16:55:41Z |
 | Mission / mode | Sentinel-1A, IW |
-| **Total detected slick area** | **223.19 km²** |
-| Largest single region | **148.39 km²** |
-| Separate regions found | **9** |
-| Mean model confidence | **99.31%** — *on the `demo` case only, see below* |
-| Touches scene edge | **yes** — the slick continues outside the image, so the area is a lower bound |
-| Release window | **24.0 h** — 2017-03-10T02:15:12Z to 2017-03-11T02:15:12Z |
-| **Estimated spill age** | **up to 24 h at acquisition** (0–24 h), **not resolvable** — 8.556 km of drift against an 11.263 km P90 radius, a ratio of 0.76 |
-| AIS reports · vessels | **987 reports · 10 vessels** |
+| Split | **test** — held out; the model never trained on this acquisition |
+| **Total detected slick area** | **26.90 km²** |
+| Largest single region | **15.76 km²** |
+| Separate regions found | **12** |
+| Mean model confidence | **94.65%** — *on the `demo` case only, and shown on **Imagery**, not on the Command centre* |
+| Touches scene edge | **no** — the slick is fully inside the footprint, so the area is a complete measurement of what the model found |
+| Release window | **24.0 h** — 2015-08-03T16:55:41Z to 2015-08-04T16:55:41Z |
+| **Estimated spill age** | **up to 24 h at acquisition** (0–24 h), **not resolvable** — 6.563 km of drift against a 9.604 km P90 radius, a ratio of 0.68 |
+| Origin estimate | **14.5167 °E, 35.8916 °N** · P50 4.21 km · P90 9.60 km |
+| Particles | 300 released · backward: 205 still drifting, **95 beached**, 0 left the domain · forward: 279, **21 beached**, 0 |
+| AIS reports · vessels | **1,112 reports · 10 vessels** |
 | **Traffic filter** | 10 → **9** with reports in the window → **2** relevant · **8** excluded (1 never in the window, 7 in the window but too far) |
 | Candidates ranked | **10** |
-| Top candidate | **91.5 / 100** — `SYNTHETIC DEMO ALPHA`, band *"Strong geometric and temporal overlap – review first"* |
+| Top candidate | **90.3 / 100** — `SYNTHETIC DEMO ALPHA`, band *"Strong geometric and temporal overlap – review first"* |
 
-> **Present the `demo` case, not `00053`.** They have identical slick geometry, but the stored
-> `00053` case has no probability map saved, so its confidence field correctly shows an em dash
-> and the reason *"no probability map supplied, so no confidence is reported."* That is the
-> interface behaving properly, but it is not what you want on screen while saying "99.31%
-> confidence". Use the case picker next to *Export JSON* to select `demo` before judges arrive.
+> **Present the `demo` case. Never present `00053`.** `demo` and `00223` are the same scene with
+> identical figures, so either is safe. `00053` is not: it was generated on 2026-09-04, before the
+> retrain, by a superseded checkpoint, and its scene is not in the current train/val/test split at
+> all — so we cannot say the model never trained on it, and its 223.19 km² headline cannot be
+> defended. Use the case picker next to *Export JSON* to select `demo` before judges arrive, or
+> delete `data/processed/cases/00053.*` and rebuild so it cannot be clicked by accident.
+>
+> Confidence is deliberately **not** on the Command centre. A mean probability over the pixels the
+> model already decided were oil is close to 100% by construction — it measures how decisive the
+> model was, not how right it was. It belongs next to the agreement overlay on Imagery, where the
+> reference mask is on screen to contradict it, and not in the first figure a judge reads.
 
-**Note the "touches scene edge" flag.** The slick runs off the side of the image, so 223 km² is
-a floor, not a total. The interface says so. That is the kind of detail that makes a technical
-judge trust the rest of the numbers.
+**Note the two area figures.** The Command centre headline is the **total** across all 12 regions,
+26.90 km²; the first numbered answer card is the **largest single connected region**, 15.76 km². That
+card also reports whether the slick touches the scene edge and changes its own wording accordingly —
+here it reads *"fully inside the scene footprint"*, so 26.90 km² is a complete measurement rather
+than a floor. Do not claim an edge effect unless the card says there is one.
 
 ### The four standing labels, verbatim
 
@@ -466,7 +477,7 @@ missing was output. `scoring.py` now publishes `attribution.filtering` — count
 the filter, the two exclusion reasons kept apart, and the rule in prose. For the demo case:
 
 ```
-987 AIS reports · 10 vessels
+1112 AIS reports · 10 vessels
   → 9 vessels with reports inside the release window
   → 2 intersect the origin envelope (within 3 envelope radii)
   → 8 excluded as irrelevant traffic (1 never in the window, 7 in the window but too far)
@@ -482,8 +493,8 @@ would otherwise invert it.
 **3. Spill age, surfaced and bounded.** ✓ `services/drift/spilltrace_drift/age.py` publishes
 `spillAge` on every case: **up to 24 h at acquisition (0–24 h)**, its basis, and — the part that
 earns the mark — whether the hindcast can narrow it. For this scene it cannot, and the card says
-so with the arithmetic: over 24 h the estimated position moves **8.556 km against an 11.263 km
-P90 radius, a ratio of 0.76**, so the whole release window sits inside its own error bar. **The
+so with the arithmetic: over 24 h the estimated position moves **6.563 km against a 9.604 km
+P90 radius, a ratio of 0.68**, so the whole release window sits inside its own error bar. **The
 midpoint is deliberately not printed** — "12 h" would be a fabricated metric. Three data sources
 that would genuinely narrow it are listed instead.
 
@@ -550,7 +561,8 @@ processing chain, mask value encoding, and the acquisition date span. Put the DO
 
 **Stop saying "Persian Gulf data."** We were wrong about our own dataset. It is global: 1,200 scenes
 across **24 named seas**, 95°W to 130°E, 8°S to 61°N. Gulf of Mexico 388, Eastern Mediterranean 172,
-**Persian Gulf 88 — about 7%**, and only because our demo case happens to sit there. The region
+**Persian Gulf 88 — about 7%**. Our demo case sits in the Central Mediterranean, which is a reminder
+that the demo scene is chosen by held-out-split membership, not by region. The region
 table in `DATA_AUDIT.md` is generated from each scene's own corner coordinates.
 
 **The real gap is narrower and sharper: no Indian water at all.** Not one of the 1,200 scenes falls
@@ -676,7 +688,7 @@ server and the test suite. `.env.example` documents every variable involved.
   grew 40% in six days" is a far stronger story than one snapshot.
 - **Dark-ship detection** — SAR sees the metal hull as a bright target even with AIS switched
   off. This is the answer to "what if they turn the transponder off," and it is buildable.
-- **Impact quantification** — convert 223 km² into cleanup cost, fishery value at risk, response
+- **Impact quantification** — convert 26.9 km² into cleanup cost, fishery value at risk, response
   hours saved. That is what "potential impact" scoring means.
 - **Docker** so it runs on any judge's laptop.
 

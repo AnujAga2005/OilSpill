@@ -13,7 +13,7 @@ is written so it can be cut down or stretched without losing the spine.
 **Get the slides out of the way in about 90 seconds, then demo.**
 
 Almost every team in the room will have a deck, an architecture diagram and a promise. Very few
-will have a thing that runs. Yours runs, offline, on a laptop, in about 25 seconds, with no
+will have a thing that runs. Yours runs, offline, on a laptop, in about 20 seconds, with no
 internet.
 That is your entire competitive advantage and every minute spent on slides is a minute spent not
 using it.
@@ -69,7 +69,7 @@ Keep it this short. The demo is the presentation.
 | 2 | **The gap** | One number about spill frequency or damage, and NTRO's "remain un-attributable" quote. 15 seconds. |
 | 3 | **The chain** | The ten-stage diagram from document 1 §1.4. **This is your most important slide.** Point at it once, then never return. |
 | 4 | **PS compliance** | Left column: verbatim (a)/(b)/(c). Right column: the screen that does it and the number it produces. **Built for you: [document 6](06-PS-COMPLIANCE.md).** Show five of its thirteen rows; hand the full table over as a printout. Judges score against a rubric — hand it to them filled in. |
-| 5 | **The proof** | 1,200 real pairs · 270 acquisitions · grouped by acquisition, **zero acquisitions spanning two splits** (doc 3 §3.5 — and tell the story of the leak we fixed, it is a better line than the number) · **0.769 IoU vs 0.676 classical baseline**. |
+| 5 | **The proof** | 1,200 real pairs · 270 parent acquisitions, 240 selected one crop each · **zero acquisitions spanning two splits** (doc 3 §3.5 — and tell the story of the leak we found and fixed, it is a better line than the number) · **0.769 IoU vs 0.676 classical baseline**. |
 | 6 | **What's real, what's synthetic** | The table from document 3 §3.4, verbatim. Put it *before* the demo, not after. |
 | 7 | **Architecture** | Ten stages, two pipeline dependencies, zero frontend dependencies, runs offline. One line: *Node handles people and process, Python handles physics and pixels.* |
 | 8 | **Roadmap** | Tier 0 is done — say so in one line and move on. Then the Tier-1 items from doc 3 §3.10 with honest effort estimates, real forcing data first. |
@@ -84,8 +84,12 @@ rather than the team that got caught. That inversion is worth more than any extr
 
 Rehearse this until it needs no thought. Server already running, browser already open on the
 Command centre, `Live API` badge already green, **and the case picker set to `demo`** — the
-`00053` case has no stored probability map, so its confidence field shows an em dash. Never start
-a server in front of judges.
+`00053` case predates the retrain and its scene is not in the current split, so nothing it shows
+can be defended. Never start a server in front of judges.
+
+There is a second reason to have the API up. With it running there are two standing disclosure
+rows; offline there are three, and the extra one pushes the four numbered answers below the fold
+on a 1440 × 900 laptop. API up, the headline and all four answers are on screen without scrolling.
 
 **If you are cut short**, drop the boundary-editing sub-beat on Slick and shorten Imagery to one
 slider drag. Do **not** drop the spill-age card or the filtering funnel: those are the two beats
@@ -94,17 +98,34 @@ will not have. Document 6 §6.2 explains why.
 
 ### 0:00 — Command centre
 
-> "One Sentinel-1 radar pass over the Persian Gulf, 11 March 2017. Our model found **223 square
-> kilometres** of oil in **9 separate patches**."
+> "One Sentinel-1 radar pass over the Central Mediterranean, 4 August 2015. Our model found
+> **26.9 square kilometres** of oil in **12 separate patches**."
 
 Point at the headline figure. Then, without being asked:
 
-> "And note this flag — the slick runs off the edge of the image, so 223 is a lower bound, not a
-> total. The app says so rather than quietly reporting a number it can't support."
+> "And this scene is in our held-out test split — 240 satellite acquisitions, split by parent
+> acquisition, and not one of them appears on both sides of the line. The model has never seen
+> this water. We'll show you the split rule on the last screen."
 
-*Why this beat:* a big real number in the first ten seconds, immediately followed by a
-self-imposed caveat. You have established both capability and credibility before you have
-touched a second screen.
+Then sweep a hand across the four numbered cards below the headline — do not read them out, they
+are there so the judges can read them faster than you can speak:
+
+> "Underneath, the four questions the problem statement actually asks, answered in order. How big.
+> When it was released. How old the oil is. How many vessels are worth a look — **two**, out of ten
+> the system screened. Each one links to the screen that shows its working, and that's the next
+> four minutes."
+
+*Why this beat:* a real number in the first ten seconds, immediately followed by the
+provenance that makes it defensible, and then a table of contents that tells the panel your demo
+has a spine. You have established capability, credibility and structure before touching a second
+screen.
+
+**Note the difference between the two area figures**, because a judge will spot it: the headline
+**26.9 km²** is the total across all 12 regions; card 1 shows **15.76 km²**, the largest single
+connected region. Card 1 also says *"fully inside the scene footprint"* — the slick does not run
+off the edge of the image, so 26.9 is a complete measurement of what the model found, not a lower
+bound. If you demo a different scene that *does* touch the edge, that same card changes its own
+wording to say so; do not say it unless the screen does.
 
 ### 0:45 — Imagery
 
@@ -123,9 +144,9 @@ watching a slider reveal a near-match believes the model in a way no metric achi
 
 ### 1:45 — Slick
 
-> "148 km² in the largest region, nine regions total. Area is integrated row by row on a sphere,
-> because a degree of longitude shrinks with latitude — multiply pixels by one flat constant and
-> every area you report is systematically wrong."
+> "15.8 km² in the largest region, twelve regions totalling 26.9. Area is integrated row by row on
+> a sphere, because a degree of longitude shrinks with latitude — multiply pixels by one flat
+> constant and every area you report is systematically wrong."
 
 Then press **Edit boundary** and drag a handle.
 
@@ -140,9 +161,11 @@ The boundary editing shows you designed for an operator, not for a leaderboard.
 
 Press play.
 
-> "This is the part the problem statement calls hindcasting. We seed thousands of particles on
+> "This is the part the problem statement calls hindcasting. We seed **300 particles** on
 > the detected oil and integrate the ocean **backwards** — currents plus wind, because surface
-> oil moves at about 3% of wind speed and ignoring that puts your origin tens of kilometres out."
+> oil moves at about 3% of wind speed and ignoring that puts your origin tens of kilometres out.
+> Here the current is 0.21 m/s and the wind drift 0.17 — comparable, which is exactly why you
+> can't drop either one."
 
 Let the animation run to the end.
 
@@ -152,13 +175,15 @@ Let the animation run to the end.
 
 Then toggle to forward.
 
-> "Same engine forwards, for the cleanup crew and the coastline at risk."
+> "Same engine forwards, for the cleanup crew and the coastline at risk. And watch what happens
+> at the coast — this scene is twenty kilometres off Malta, and **21 of the 300 particles beach**.
+> They stop there. We don't let oil drift through rock to make a tidier envelope."
 
 Now scroll to **Estimated spill age** — this is the beat to slow down on.
 
 > "The statement asks for the spill's age *if feasible*. We bound it at **up to 24 hours**, and
 > then we tested whether the hindcast can tell one end of that window from the other. It can't:
-> the estimated position moves **8.6 kilometres** while the uncertainty around it is **11.3** — the
+> the estimated position moves **6.6 kilometres** while the uncertainty around it is **9.6** — the
 > whole window sits inside its own error bar. So we report the bound and the test, not a midpoint.
 > Printing '12 hours' would have been a made-up number, and a second acquisition would fix it —
 > that's a procurement decision, not a modelling one."
@@ -172,10 +197,10 @@ card is the clearest signal in the whole demo that you know what you are allowed
 Start with the funnel card, **before** the ranked list.
 
 > "The statement doesn't say score the traffic — it says *the irrelevant traffic is to be filtered
-> out*. So: **987 AIS reports, 10 vessels. Nine had reports inside the release window. Two of
+> out*. So: **1,112 AIS reports, 10 vessels. Nine had reports inside the release window. Two of
 > those were actually near the oil when the oil was there. Eight are irrelevant traffic** — and we
-> keep the two reasons apart, because they mean different things. Seven were in the window but 45
-> to 91 kilometres away: those mean look at a different ship. **One passed within 1.5 kilometres —
+> keep the two reasons apart, because they mean different things. Seven were in the window but 33
+> to 73 kilometres away: those mean look at a different ship. **One passed within 1.8 kilometres —
 > but outside the window.** Right place, wrong time. That one doesn't mean look elsewhere, it means
 > the window's own width is what's excluding it, and tightening the window needs better forcing
 > data."
@@ -185,7 +210,7 @@ Then point out that the excluded rows are still on screen, dimmed:
 > "We don't delete them. A shortlist that silently drops eight of ten can't be audited — and the
 > cheapest way to hide a scoring bug is to delete the vessels it got wrong."
 
-> "Of what's left, here's the top candidate at **91.5 out of 100** — and here is exactly why."
+> "Of what's left, here's the top candidate at **90.3 out of 100** — and here is exactly why."
 
 Click into the breakdown.
 
@@ -221,9 +246,9 @@ of judgement — in about eighty seconds.
 > figures are **0.58 pooled and 0.69 averaged per scene**, and our single worst scene is 0.046 —
 > a near-total miss, and it's on this screen. The dataset contains no labelled algal blooms or
 > low-wind zones, so we went and got 2,290 published look-alike patches and scored ourselves on
-> them: **our U-Net alone alarms on all of them.** A dedicated screen removes about seven in ten
-> of those dark regions, which is an improvement and not a solution. All of that ships in the
-> product, not just in the pitch."
+> them: **on a 340-patch sample our U-Net alone alarms on 305 of them.** A dedicated screen removes
+> about seven in ten of those dark regions, which is an improvement and not a solution. All of that
+> ships in the product, not just in the pitch."
 
 **Land the plane here.** Do not go back to the Command centre for a triumphant flourish. Ending
 on your own limitations is a power move with a technical intelligence audience, and it sets the
@@ -238,7 +263,7 @@ sentence and the three numbers.**
 
 **The sentence:**
 
-> "We detect the oil with a model that beats the classical method by 0.19 IoU, run the ocean
+> "We detect the oil with a model that beats the classical method by 0.09 IoU, run the ocean
 > backwards to find where it was dumped and when, and rank the ships that were there — with every
 > score component visible and without ever calling anyone guilty."
 
@@ -246,9 +271,9 @@ sentence and the three numbers.**
 
 | Number | Why this one |
 |---|---|
-| **1,200 real Sentinel-1 image/mask pairs, 270 acquisitions, grouped by acquisition** | real data, and a splitting rule you can defend — with the leak we found and fixed volunteered, not hidden |
+| **1,200 real Sentinel-1 image/mask pairs, 240 acquisitions used, none spanning two splits** | real data, and a splitting rule you can defend — with the leak we found and fixed volunteered, not hidden |
 | **0.769 IoU vs 0.676 for the classical dark-spot baseline** | the ML earns its place, measured not asserted |
-| **776 automated tests; the whole pipeline runs offline on one scene in 24 seconds** | it is engineering, not a notebook |
+| **776 automated tests; the whole pipeline runs offline on one scene in 20 seconds** | it is engineering, not a notebook |
 
 Have **0.584 pooled scene IoU** ready as the fourth number the moment anyone probes — it is the
 lower of the two whole-scene figures, so offering it unprompted cannot be turned against you.
@@ -268,7 +293,7 @@ model architecture. So convert your capabilities into response outcomes:
 | "backward drift simulation" | "we tell the investigator where and when to look, within hours of the image" |
 | "forward drift" | "we tell the cleanup crew where it's going and which coastline is at risk" |
 | "ranked candidates" | "we turn thousands of vessel movements into a shortlist of six an officer can actually work" |
-| "223 km²" | "223 km² — and here is what that costs to clean and what fishery it threatens" |
+| "26.9 km²" | "26.9 km² — and here is what that costs to clean and what fishery it threatens" |
 
 **Build the impact numbers before the finals.** Cleanup cost per km², fishery and mangrove value
 at risk, response hours saved by narrowing the search. That is the difference between a good
@@ -305,12 +330,12 @@ hesitation.
 | Never say | Because |
 |---|---|
 | "We identify the guilty ship" | contradicts the product and the ethics. **Priority candidate for investigation.** |
-| "There's no data leakage" | not true of the current run. Say **"grouped by parent acquisition, and we found and fixed a bug where that grouping wasn't reaching the splitter — these numbers predate the re-run."** |
+| "There's no data leakage" *(said flatly)* | true of the current run, but say it with the history attached: **"grouped by parent acquisition — 240 acquisitions, zero spanning two splits. We found a bug where that grouping wasn't reaching the splitter, fixed it, added a regression test and re-ran everything. These are the post-fix numbers."** Volunteering the bug is what makes the claim believable. |
 | "99% accurate" | accuracy is meaningless at 1% positive class, and it invites a demolition |
 | "Real time" | Sentinel-1 revisits every ~6 days. Say **"within hours of the image being available."** |
 | "Our AIS is real" | it is not. It is permitted, labelled, and defensible — but not real. |
 | "It works everywhere" | 24 seas but **no Indian water at all**, one sensor, and a look-alike rejection rate of 69%, not 100% |
-| "We use AI" *(and stop there)* | say what it replaced and by how much: +0.19 IoU over the classical baseline |
+| "We use AI" *(and stop there)* | say what it replaced and by how much: +0.09 IoU over the classical baseline |
 | Any MARPOL ppm figure you have not verified | a wrong regulatory detail in front of NTRO costs more than silence |
 | "I don't know" *(and stop there)* | always follow with what you would do to find out. See document 5. |
 
@@ -333,7 +358,9 @@ hesitation.
 ## 4.10 Logistics — the things that actually lose demos
 
 - [ ] Server started and warm **before** judges arrive. `Live API` badge green.
-- [ ] **Case picker set to `demo`**, not `00053`.
+- [ ] **Case picker set to `demo`**, never `00053` — that case predates the retrain and its scene
+      is not in the current split, so none of its numbers can be defended. Safest fix: delete
+      `data/processed/cases/00053.*` and rebuild, so it cannot be clicked by accident.
 - [ ] Browser zoom checked on the presenting display. Test at the projector's resolution.
 - [ ] **The offline `dist/` bundle also running on port 8787** as a hot spare. If the API dies
       mid-demo, switch tabs and keep talking — the demo case replays from static files.
