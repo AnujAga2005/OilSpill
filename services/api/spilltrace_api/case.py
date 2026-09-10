@@ -1104,13 +1104,18 @@ def assemble(
     }
 
 
+# Each limit is written as a short claim, a full stop, then the qualifier. The interface
+# splits on that first full stop to set the claim in the left column and the qualifier in
+# the right, so keep the shape when editing one. Semicolons make them unreadable in that
+# layout and are the reason this list used to read as a wall.
 LIMITS = [
     "AIS traffic is synthetic. No real vessel appears anywhere in this product.",
-    "Drift forcing is synthetic unless the CMEMS product covers the scene in both space "
-    "and time; the mode is stated on every screen that uses it.",
+    "Drift forcing may be synthetic. Real CMEMS currents are used only when the product "
+    "covers the scene in both space and time, and every screen states which mode it used.",
     "Rankings are triage aids. Nothing here establishes responsibility for a discharge.",
-    "Segmentation accuracy is measured on held-out patches from the supplied dataset "
-    "only, grouped by parent acquisition; it is not a field-validated detection rate.",
+    "Accuracy comes from held-out patches, not from the field. The split is grouped by "
+    "parent acquisition so no acquisition appears on both sides of it, which makes this an "
+    "honest test-set score and not a field-validated detection rate.",
     "Look-alike screening separates oil-like from not-oil-like. It does not identify the "
     "phenomenon, so no rejected patch is called algae, low wind or a wake.",
 ]

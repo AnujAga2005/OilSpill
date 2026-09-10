@@ -61,7 +61,7 @@ below ~16 pt.**
 ### Detailed explanation of the proposed solution
 
 - One SAR satellite image in → **ranked vessel shortlist + signed PDF incident report** out, in
-  **24 seconds** on a laptop.
+  **20 seconds** on a laptop.
 - **10 automated stages:** detect slick → screen out look-alikes → measure geometry → **run drift
   backward** to origin + release window → **run it forward** to a forecast → reconstruct vessel
   traffic → filter irrelevant traffic → score and rank → dispatch report.
@@ -73,13 +73,13 @@ One line per PS clause, each with a number. A reader scanning for compliance mus
 seconds.
 
 - **(a) Detect, characterise, age —** mean per-scene **IoU 0.693** over 35 held-out scenes;
-  **9 regions, 223.19 km²** measured on a sphere; spill age reported **with a resolvability test**
+  **12 regions, 26.90 km²** measured on a sphere; spill age reported **with a resolvability test**
   instead of a fabricated midpoint.
-- **(b) Ocean *and* met data, origin point *and* time, future flow —** current **0.072 m/s** plus
-  wind drift **0.168 m/s**; origin **54.64 °E, 25.52 °N**, P90 radius **11.26 km**, release window
+- **(b) Ocean *and* met data, origin point *and* time, future flow —** current **0.214 m/s** plus
+  wind drift **0.168 m/s**; origin **14.52 °E, 35.89 °N**, P90 radius **9.60 km**, release window
   **24 h**; forward forecast from the same integrator.
-- **(c) Reconstruct traffic, filter the irrelevant, score it —** **987 AIS reports · 10 vessels →
-  2 relevant, 8 filtered out**; six weighted components summing to **100**, top candidate **91.5**.
+- **(c) Reconstruct traffic, filter the irrelevant, score it —** **1,112 AIS reports · 10 vessels →
+  2 relevant, 8 filtered out**; six weighted components summing to **100**, top candidate **90.3**.
 
 ### Innovation and uniqueness of the solution
 
@@ -92,8 +92,9 @@ Exactly three. Each is something a competing deck almost certainly cannot say.
   was **at that ping's own timestamp**, not to a static circle. A vessel merely "present sometime
   in the window" scores **zero**.
 - **Every output states what it does not know —** the age card prints the arithmetic showing the age
-  is unresolvable; area is flagged a **lower bound** because the slick runs off the image edge; the
-  strongest phrase in the product is *"Priority candidate for investigation."*
+  is unresolvable; the Method screen ships our **worst single scene, IoU 0.046**, inside the product
+  rather than only in the pitch; the strongest phrase in the product is
+  *"Priority candidate for investigation."*
 
 That third point is a design decision, not an apology, and belongs under *innovation*. An
 attribution tool that overstates confidence is unusable by the agency that asked for it.
@@ -113,10 +114,10 @@ real system rather than a generic data → model → output chain.
 
 ```
 SAR GeoTIFF
- → decode 9.6s → detect 5.9s → geometry 3.9s → look-alike screen 3.6s
- → forcing 0.03s → BACKWARD hindcast 0.27s → FORWARD forecast 0.25s
- → AIS reconstruct 0.21s → score 0.08s → previews 0.21s
-→ ranked candidates + PDF report                        TOTAL 24.0 s
+ → decode 9.7s → detect 5.7s → geometry 1.9s → look-alike screen 1.8s
+ → forcing 0.03s → BACKWARD hindcast 0.26s → FORWARD forecast 0.25s
+ → AIS reconstruct 0.19s → score 0.08s → previews 0.22s
+→ ranked candidates + PDF report                        TOTAL 20.1 s
 ```
 
 Draw `BACKWARD` and `FORWARD` as one shared integrator block. The PS uses the word *hindcasting*,
@@ -125,10 +126,10 @@ and this is the box that answers it literally.
 ### Technologies to be used
 
 - **Python 3.12 · NumPy · OpenCV** — two pipeline dependencies. reportlab optional, PDF only.
-- **U-Net** segmentation, trained on **1,200 real Sentinel-1 pairs / 270 acquisitions**.
+- **U-Net** segmentation, trained on **1,200 real Sentinel-1 pairs / 240 acquisitions used**.
 - **RK2 particle advection**, tidal streamfunction current + 3% windage. Seed 26143 —
   **reproduces bit-for-bit**.
-- **Standard-library HTTP API**; **zero-dependency frontend**, 324 KB plain ES modules, no build
+- **Standard-library HTTP API**; **zero-dependency frontend**, 398 KB plain ES modules, no build
   step, runs offline.
 - **ERA5 wind + CMEMS current** readers; **MERN** deployment layer.
 
@@ -138,8 +139,8 @@ One screenshot. Use **Screen 5 · Vessel attribution** with the traffic-filterin
 breakdown visible — the densest single view of PS clause (c), and the screen no other team will
 have. Caption it: **6 screens · 776 tests passing · runs offline.**
 
-Use the `demo` case, not `00053`. `00053` has no probability map stored, so its confidence field
-correctly shows an em dash — right behaviour, wrong screenshot.
+Use the `demo` case, never `00053`. `00053` predates the retrain and its scene is not in the current
+train/val/test split, so nothing it shows can be defended in the Q&A that follows.
 
 ---
 
@@ -152,7 +153,7 @@ already answered because the thing runs.**
 ### Analysis of feasibility
 
 - Runs on a **consumer laptop, CPU only**. No GPU, no cloud spend, no licence fee.
-- **24.0 s per scene** → a day of regional acquisitions in minutes on one machine.
+- **20.1 s per scene** → a day of regional acquisitions in minutes on one machine.
 - Inputs are **free and operational**: Sentinel-1 GRD, ERA5, CMEMS, MarineCadastre-schema AIS.
 - **Deploys air-gapped** — relevant for an NTRO use case.
 
@@ -182,7 +183,7 @@ you cannot cite is a liability. Anchor on what the system changes instead.
 ### Potential impact on the target audience
 
 - **Coast guard / pollution-response officer** — receives an **incident file, not an image**:
-  origin estimate, release window, drift forecast, ranked shortlist, signed PDF, in 24 s.
+  origin estimate, release window, drift forecast, ranked shortlist, signed PDF, in 20 s.
 - **Enforcement and investigation** — "which ship in this sea" collapses to a defensible **2**,
   with each of the 8 exclusions **retained and auditable, not deleted**.
 - **NTRO / maritime domain awareness** — automated, reproducible, air-gappable, over free
@@ -227,7 +228,7 @@ competing decks and trivially easy to make strong. Real DOIs, as a plain list.
 Two things to get right. **Put the dataset DOI on the slide** — it is the dataset the problem
 statement itself names, and quoting it back is a compliance signal. And **say "global dataset",
 never "Persian Gulf data"**: 1,200 scenes across 24 named seas, 95 °W to 130 °E; the Persian Gulf
-is ~7% and only because our demo case sits there.
+is ~7%, and our demo case sits in the Central Mediterranean.
 
 ---
 
@@ -256,6 +257,6 @@ is ~7% and only because our demo case sits there.
 7. **Exported as PDF**, PDF reopened and checked, PDF uploaded — not the .pptx.
 
 **The final read-through question:** does the deck contain a number a judge could look up and
-verify? Ours has 0.769 vs 0.676, mean per-scene IoU 0.693, 223.19 km², 987 reports filtered to 2, 24.0 seconds,
+verify? Ours has 0.769 vs 0.676, mean per-scene IoU 0.693, 26.90 km², 1,112 reports filtered to 2, 20.1 seconds,
 776 tests. A deck with verifiable numbers reads as a report on a working system. A deck without
 them reads as a plan.

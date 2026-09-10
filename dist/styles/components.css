@@ -389,6 +389,147 @@
   color: var(--tint);
 }
 
+/* -- answer ------------------------------------------------------------ */
+
+/* A numbered answer to one question in the brief. Same card shell as `.metric`, plus a
+   head that carries the step number and the question in words.
+
+   The left rule is the only ornament, and it is tinted by tone -- so the three answers read
+   as one sequence in three colours rather than three unrelated boxes. There is no glyph
+   tile: a step number already says which step this is, and a picture of a ship next to the
+   word "vessels" was decoration pretending to be information. */
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding: var(--s5) var(--s5) var(--s5) calc(var(--s5) - 3px);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  box-shadow: var(--shadow-2);
+  min-width: 0;
+}
+
+.answer--oil {
+  border-left-color: var(--oil);
+}
+
+.answer--drift {
+  border-left-color: var(--drift);
+}
+
+.answer--reference {
+  border-left-color: var(--reference);
+}
+
+.answer--synthetic {
+  border-left-color: var(--synthetic);
+}
+
+.answer__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+/* Not a badge and not tinted. The number is an index into a sequence, not a measurement,
+   so it stays in the neutral chrome greys like every other non-data element. */
+.answer__step {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-strong);
+  color: var(--text-tertiary);
+  font-size: var(--t-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sentence case, not the uppercase micro-label the stats use. It is a question a person
+   would ask out loud, and uppercase would turn it back into a field name. */
+.answer__question {
+  font-size: var(--t-sub);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+  min-width: 0;
+}
+
+.answer__action {
+  margin-top: auto;
+  padding-top: var(--s1);
+}
+
+/* -- foldout ----------------------------------------------------------- */
+
+/* A card that starts closed. The summary row is the whole card until it is opened, so it
+   gets the card's padding and the body reclaims the gap below it only when open. */
+.foldout {
+  padding: 0;
+}
+
+.foldout__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  padding: var(--s4) var(--s6);
+  cursor: pointer;
+  border-radius: var(--r-lg);
+  list-style: none;
+  transition: background var(--fast) var(--ease);
+}
+
+/* Safari still paints the default triangle without this. */
+.foldout__summary::-webkit-details-marker {
+  display: none;
+}
+
+.foldout__summary:hover {
+  background: var(--surface-hover);
+}
+
+.foldout__summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.foldout__chevron {
+  flex: none;
+  align-self: center;
+  color: var(--text-quaternary);
+  transition: transform var(--fast) var(--ease);
+}
+
+.foldout[open] > .foldout__summary > .foldout__chevron {
+  transform: rotate(90deg);
+}
+
+.foldout[open] > .foldout__summary {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.foldout__body {
+  padding: 0 var(--s6) var(--s6);
+}
+
+/* An audit trail is no use folded away on paper, where there is nothing to click. */
+@media print {
+  .foldout__body {
+    display: block !important;
+  }
+
+  .foldout__chevron {
+    display: none;
+  }
+}
+
 /* -- definition rows --------------------------------------------------- */
 
 /* A hairline rule inside a card, for separating a list of findings from the rules that
@@ -1026,6 +1167,16 @@
   font-weight: 500;
 }
 
+/* What the stage did, on its own line under the bar. Starting at column 2 puts it under the
+   track rather than the label, so the indent alone says which bar it belongs to. */
+.bar__note {
+  grid-column: 2 / -1;
+  margin-top: calc(var(--s2) * -1);
+  color: var(--text-tertiary);
+  font-size: var(--t-caption);
+  line-height: 1.5;
+}
+
 @media (max-width: 560px) {
   .bar {
     grid-template-columns: 84px minmax(0, 1fr) 48px;
@@ -1630,13 +1781,17 @@
   min-width: 0;
 }
 
+/* A bullet is a mark, not an object. It was 5 px of pale grey floating a gap-width away
+   from its own sentence, which read as debris rather than as punctuation -- so it is now
+   a small dark dash tucked close to the text it introduces, and the rows sit tighter. */
 .bullets {
   display: flex;
   flex-direction: column;
-  gap: var(--s3);
+  gap: var(--s2);
   font-size: var(--t-sub);
   color: var(--text-secondary);
   line-height: 1.55;
+  max-width: 88ch;
 }
 
 .bullets li {
@@ -1647,11 +1802,60 @@
 .bullets li::before {
   content: "";
   flex: none;
-  width: 5px;
-  height: 5px;
-  margin-top: 7px;
-  border-radius: 50%;
-  background: var(--line-strong);
+  width: 6px;
+  height: 1.5px;
+  margin-top: 9px;
+  border-radius: 1px;
+  background: var(--text-tertiary);
+}
+
+/* -- stated limitations ------------------------------------------------- */
+/* Claim on the left, qualification on the right: the two halves of a caveat, in the order
+   a person reads one. As five identical bulleted sentences this block was the least-read
+   thing on the screen, which is the wrong outcome for the part that says what we cannot
+   do. The columns are hairline-separated rather than boxed -- it is a list, not a table. */
+.limits {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--t-sub);
+  line-height: 1.5;
+}
+
+.limits__item {
+  display: grid;
+  grid-template-columns: minmax(0, 17.5rem) minmax(0, 1fr);
+  gap: var(--s2) var(--s6);
+  padding: var(--s4) 0;
+  border-top: 1px solid var(--line);
+}
+
+.limits__item:first-child {
+  border-top: 0;
+  padding-top: var(--s1);
+}
+
+.limits__item:last-child {
+  padding-bottom: 0;
+}
+
+.limits__claim {
+  color: var(--text);
+  font-weight: 550;
+  letter-spacing: -0.005em;
+}
+
+.limits__rest {
+  color: var(--text-secondary);
+}
+
+/* Below this the two columns cannot both hold a line of text without hyphenating, so the
+   qualification goes under its claim and the indent carries the relationship instead. */
+@media (max-width: 760px) {
+  .limits__item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: var(--s3) 0;
+  }
 }
 
 .prose {

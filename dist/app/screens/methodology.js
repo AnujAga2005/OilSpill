@@ -13,7 +13,6 @@ import { h, icon } from "../dom.js";
 import { ICONS } from "../icons.js";
 import * as F from "../format.js";
 import * as U from "../ui.js";
-import * as X from "../exporters.js";
 import { lineChart, strip } from "../chart.js";
 import { C } from "../layers.js";
 
@@ -46,14 +45,38 @@ export function render(ctx) {
           : h(
               "div",
               { class: "stack" },
+
+              // -- the answer -------------------------------------------------
               honestyCard(m),
-              scaleCard(m),
-              h("div", { class: "grid grid--2" }, baselineCard(m), thresholdCard(m)),
-              h("div", { class: "grid grid--wide-left" }, perSceneCard(m), protocolCard(m)),
+
+              // -- the two numbers that qualify it ----------------------------
+              // "Is it better than not having a model" and "how bad does it get on a bad
+              // day". Neither is a detail: an accuracy figure with no baseline beside it and
+              // no worst case under it is a number an operator cannot act on.
+              h("div", { class: "grid grid--2" }, baselineCard(m), perSceneCard(m)),
+
+              // -- the question the statement asks that IoU cannot answer -----
               lookAlikeCard(m),
-              trainingCard(m),
-              samplesCard(ctx, m),
+
+              // -- the ledger, in the open ------------------------------------
               limitationsCard(m),
+
+              // -- the working, folded ----------------------------------------
+              // Thirteen cards of equal weight is not thirteen findings, it is one finding
+              // and twelve appendices presented as peers. Everything below has to be on the
+              // screen for the figures above to be checkable, and none of it is what a reader
+              // came here to learn, so each one keeps its headline in the summary line and
+              // its evidence one click away.
+              h(
+                "div",
+                { class: "stack stack--tight" },
+                lookAlikeDetailCard(m),
+                scaleCard(m),
+                thresholdCard(m),
+                protocolCard(m),
+                trainingCard(m),
+                samplesCard(ctx, m),
+              ),
             ),
       {
         loadingTitle: "Loading measured metrics",
@@ -69,11 +92,16 @@ export function render(ctx) {
       },
     ),
 
-    datasetCard(ctx, caseDoc),
-    reproduceCard(ctx, caseDoc),
+    // -- where the inputs came from, and how to re-run it ------------------
+    // Outside the metrics switch, because both still render when nothing has been trained.
+    h(
+      "div",
+      { class: "stack stack--tight" },
+      datasetCard(ctx, caseDoc),
+      reproduceCard(caseDoc),
+    ),
   );
 }
-
 // -- what the pipeline does --------------------------------------------------
 
 function pipelineCard(caseDoc) {
@@ -248,11 +276,13 @@ function honestyCard(m) {
       }),
     ),
     measured
-      ? U.notice(
-          `Pooled scene IoU is ${F.metric(scene.pooled.iou, 3)} and mean per-scene IoU is ` +
-            `${F.metric(scene.meanSceneIou, 3)}, both below the patch figure of ` +
-            `${F.metric(patch.iou, 3)}. The scene number is the one that reflects running on a ` +
-            "full acquisition, and it is the number to quote.",
+      ? // The three figures are already on the screen, an inch above this sentence. Printing
+        // them again in prose was padding; what a reader cannot get from the stats is which
+        // one to say out loud and what all of them are measured against.
+        U.notice(
+          "The patch figure is measured on 128 px tiles the sampler drew around labelled oil. " +
+            "The scene figure is every pixel of a full acquisition, which is mostly open water. " +
+            "Both are accuracy against the dataset's own masks, whose accuracy is unknown.",
           { strongPrefix: "Quote the scene figure." },
         )
       : U.notice(
@@ -271,10 +301,13 @@ function scaleCard(m) {
     { label: "Test, scenes at the scene threshold", value: m.sceneScale?.test?.atSceneThreshold?.pooled },
   ].filter((entry) => entry.value);
 
-  return U.card(
+  return U.foldout(
     "Every measured split",
     {
       id: "splits",
+      // The card above quotes IoU and nothing else. The one thing this table adds that the
+      // headline cannot is the direction of the error, so that goes in the summary line.
+      hint: `${rows.length} splits · IoU, Dice, precision, recall`,
       note:
         "Precision is the fraction of predicted oil pixels that are labelled oil; recall is " +
         "the fraction of labelled oil pixels that were predicted. Recall above precision " +
@@ -368,10 +401,10 @@ function baselineCard(m) {
         }),
       ),
       U.notice(
-        `A calibrated global threshold on the supplied dB values already reaches ` +
-          `${F.metric(comparison.baselineTestIou, 3)} IoU on the same held-out patches. The model ` +
-          `adds ${F.metric(delta, 3)}. That gap is the entire contribution of the network, and it ` +
-          "is worth knowing before deciding a network is required.",
+        "A calibrated global threshold on the supplied dB values already gets most of the way " +
+          "there on the same held-out patches. The improvement above is the entire " +
+          "contribution of the network, and it is worth knowing before deciding a network is " +
+          "required at all.",
         { strongPrefix: "Most of the way without a model." },
       ),
       Object.keys(calibration).length
@@ -399,11 +432,15 @@ function thresholdCard(m) {
   }
   const points = (key) => sweep.map((entry) => [entry.threshold, entry[key]]);
 
-  return U.card(
+  return U.foldout(
     "Threshold sweep, on validation",
     {
       id: "threshold",
-      hint: `${sweep.length} thresholds`,
+      // A sweep of 41 thresholds is a diagnostic; the two thresholds it settled on are the
+      // fact, and they are what the other five screens actually run at.
+      hint:
+        `patch ${F.num(selection.threshold, 2)} · scene ` +
+        `${F.num(m.sceneScale?.sceneThreshold, 2)} · ${sweep.length} swept`,
       note:
         "Swept on validation only. Choosing it on test would make the test figure an " +
         "optimistic estimate of a threshold that was fitted to it.",
@@ -563,15 +600,27 @@ function protocolCard(m) {
   const protocol = m.patchScale?.protocol || {};
   const splits = protocol.cacheSplits || {};
   const usage = m.patchScale?.dataUsage || {};
+  const acquisitions = ["train", "val", "test"].reduce(
+    (total, name) => total + (splits[name]?.acquisitions || 0),
+    0,
+  );
 
-  return U.card(
+  return U.foldout(
     "Split protocol",
     {
       id: "protocol",
+      // Counts, not the guarantee. The guarantee is a claim about how the split was formed
+      // and it belongs in the pipeline's own words below, not paraphrased into a summary
+      // line where nobody can see what it was measured over.
+      hint: acquisitions
+        ? `${F.int(acquisitions)} acquisition groups · ` +
+          ["train", "val", "test"]
+            .map((name) => `${F.int(splits[name]?.acquisitions)} ${name}`)
+            .join(" / ")
+        : "grouped by parent acquisition",
       note:
-        "Patches are grouped by parent acquisition before splitting, so no two patches from " +
-        "the same acquisition can land on opposite sides of the train/test boundary. Without " +
-        "that grouping the test figure would be measuring memorisation.",
+        "Without that grouping the test figure would be measuring memorisation: two crops of " +
+        "the same slick, one trained on and one tested on, are very nearly the same picture.",
     },
     h(
       "div",
@@ -614,6 +663,13 @@ function protocolCard(m) {
     h(
       "div",
       { class: "stack stack--tight", style: { "margin-top": "var(--s3)" } },
+      // The preprocessing stage records its own grouping rule into metrics.json and nothing
+      // was rendering it, so the screen was paraphrasing a sentence it already had. The
+      // pipeline's words are the ones worth reading: they are what the code did, not what
+      // this file believes the code did.
+      protocol.splitGrouping
+        ? U.row("Grouping rule", protocol.splitGrouping, { stack: true })
+        : null,
       ...["train", "val", "test"].map((name) =>
         usage[name]?.rule
           ? U.row(`${F.label(name)} sampling`, usage[name].rule, { stack: true })
@@ -644,11 +700,15 @@ function trainingCard(m) {
   const model = m.patchScale?.model || {};
   const config = m.patchScale?.trainConfig || {};
 
-  return U.card(
+  return U.foldout(
     "Training",
     {
       id: "training",
-      hint: `${history.length} epochs in ${F.seconds(m.patchScale?.trainingSeconds)}`,
+      // Epoch count and wall-clock are the two things a reader wants before opening a chart
+      // of a run that has already finished.
+      hint:
+        `${history.length} epochs in ${F.seconds(m.patchScale?.trainingSeconds)} · best at ` +
+        `epoch ${F.int(bestEpoch(history))}`,
       note:
         `${model.architecture} · ${model.framework} · ${F.int(model.parameters)} parameters. ` +
         "There is no autograd in this build, so every gradient in the backward pass is " +
@@ -728,11 +788,13 @@ function samplesCard(ctx, m) {
   if (!samples.length) return null;
   const ordered = [...samples].sort((a, b) => (a.iou ?? 0) - (b.iou ?? 0));
 
-  return U.card(
+  return U.foldout(
     "Example patches, worst to best",
     {
       id: "samples",
-      hint: `${samples.length} written during evaluation`,
+      hint:
+        `${samples.length} tiles · worst IoU ${F.metric(ordered[0].iou, 3)}, best ` +
+        `${F.metric(ordered.at(-1).iou, 3)}`,
       note:
         "Each tile is the VV band in dB with three overlays: where the model and the " +
         "reference agree, where the model painted oil the reference does not mark, and where " +
@@ -783,9 +845,8 @@ function samplesCard(ctx, m) {
       h(
         "p",
         { class: "small muted" },
-        `The worst of these scores ${F.metric(ordered[0].iou, 3)} and the best ` +
-          `${F.metric(ordered.at(-1).iou, 3)}. Both were produced by the same weights on the ` +
-          "same held-out split, at the same threshold.",
+        "Every tile came from the same weights on the same held-out split at the same " +
+          "threshold. The spread is the model's, not a difference in how it was run.",
       ),
     ),
   );
@@ -794,15 +855,19 @@ function samplesCard(ctx, m) {
 // -- the ledger --------------------------------------------------------------
 
 function limitationsCard(m) {
-  const patch = m.patchScale?.limitations || [];
-  const scene = m.sceneScale?.limitations || [];
-  const screen = m.lookAlike?.limitations || [];
-  if (!patch.length && !scene.length && !screen.length) return null;
+  const groups = [
+    { label: "Patch-scale evaluation", items: m.patchScale?.limitations || [] },
+    { label: "Scene-scale evaluation", items: m.sceneScale?.limitations || [] },
+    { label: "Look-alike screening", items: m.lookAlike?.limitations || [] },
+  ].filter((group) => group.items.length);
+  if (!groups.length) return null;
+  const total = groups.reduce((sum, group) => sum + group.items.length, 0);
 
   return U.card(
     "Limitations, as recorded by the pipeline",
     {
       id: "limitations",
+      hint: `${F.int(total)} recorded across ${groups.length} evaluations`,
       note:
         "These strings are written by the evaluation scripts into metrics.json, " +
         "scene_metrics.json and lookalike_metrics.json. They are not editorial: they " +
@@ -811,30 +876,18 @@ function limitationsCard(m) {
     h(
       "div",
       { class: "stack stack--tight" },
-      patch.length
-        ? h(
-            "div",
-            null,
-            h("div", { class: "small muted" }, "Patch-scale evaluation"),
-            h("ul", { class: "bullets" }, patch.map((text) => h("li", null, h("span", null, text)))),
-          )
-        : null,
-      scene.length
-        ? h(
-            "div",
-            null,
-            h("div", { class: "small muted" }, "Scene-scale evaluation"),
-            h("ul", { class: "bullets" }, scene.map((text) => h("li", null, h("span", null, text)))),
-          )
-        : null,
-      screen.length
-        ? h(
-            "div",
-            null,
-            h("div", { class: "small muted" }, "Look-alike screening"),
-            h("ul", { class: "bullets" }, screen.map((text) => h("li", null, h("span", null, text)))),
-          )
-        : null,
+      // Same treatment as the caveats on the other screens: each limitation split at its
+      // first full stop, claim in the left column and qualification in the right. Eleven
+      // full sentences behind eleven identical dots was a wall the eye slid off, which is
+      // the one outcome a limitations list cannot afford.
+      groups.map((group) =>
+        h(
+          "div",
+          null,
+          h("div", { class: "small muted" }, group.label),
+          U.limitList(group.items),
+        ),
+      ),
     ),
   );
 }
@@ -868,11 +921,8 @@ function lookAlikeCard(m) {
   }
 
   const held = block.sameDomain?.crossValidation?.pooledHeldOut || {};
-  const training = block.sameDomain?.training || {};
   const validation = block.sameDomain?.crossValidation || {};
   const cross = block.crossDomain?.screen;
-  const dataset = block.crossDomain?.dataset;
-  const detector = block.crossDomain?.detector;
   const single = held.singleFeatureAuc || {};
   const bestSingle = Object.entries(single)
     .filter(([, value]) => !F.isMissing(value))
@@ -917,23 +967,6 @@ function lookAlikeCard(m) {
         }),
       ),
 
-      U.rows(
-        U.row("Fitted on", training.labelRule, { stack: true }),
-        U.row(
-          "Fitted from",
-          `${F.int(training.regions)} dark regions across ${F.int(training.scenes)} scenes ` +
-            `and ${F.int(training.products)} parent products, at ${F.num(training.spacingM, 1)} m/pixel`,
-          { stack: true },
-        ),
-        U.row("Folds grouped by", validation.grouping, { stack: true }),
-        U.row(
-          "Proposer recall of the labelled oil",
-          F.pct(training.meanMaskRecallOfProposer),
-          { mono: true },
-        ),
-        U.row("Ambiguous regions dropped", F.int(training.droppedAmbiguous), { mono: true }),
-      ),
-
       cross
         ? h(
             "div",
@@ -967,15 +1000,11 @@ function lookAlikeCard(m) {
                 sub: "so a film occupies the same number of pixels it did in training",
               }),
             ),
-            dataset
-              ? U.rows(
-                  U.row("Archive", dataset.source, { stack: true }),
-                  U.row("Coverage", dataset.coverage, { stack: true }),
-                  U.row("Independence", cross.note, { stack: true }),
-                )
-              : null,
-            cross.bySubset ? subsetTable(cross.bySubset) : null,
-            cross.byCluster ? clusterTable(cross.byCluster) : null,
+            // The spread across families, in the open. A single pooled rejection rate is the
+            // one figure on this card that can be quoted misleadingly in both directions, so
+            // the best case and the worst case travel with it rather than sitting in a table
+            // underneath a fold.
+            cross.byCluster ? clusterNotice(cross.byCluster) : null,
           )
         : U.notice(
             "The published look-alike archive is not on disk in this checkout, so the " +
@@ -983,7 +1012,71 @@ function lookAlikeCard(m) {
               "this project's own scenes only.",
             { kind: "synthetic", strongPrefix: "Same domain only." },
           ),
+    ),
+  );
+}
 
+/**
+ * Everything behind the two rejection rates: what the screen was fitted on, how the archive
+ * is split, the per-family breakdown, and the detector's own rate with no screen in front.
+ *
+ * This was four more blocks inside the card above, which made a card that answers one
+ * question 1,400 px tall. All of it has to be reachable -- a rejection rate with no
+ * denominator and no baseline is not evidence -- and none of it is the answer.
+ */
+function lookAlikeDetailCard(m) {
+  const block = m.lookAlike;
+  if (!block || block.available === false) return null;
+  const training = block.sameDomain?.training || {};
+  const validation = block.sameDomain?.crossValidation || {};
+  const cross = block.crossDomain?.screen;
+  const dataset = block.crossDomain?.dataset;
+  const detector = block.crossDomain?.detector;
+  const families = cross?.byCluster ? Object.keys(cross.byCluster).length : 0;
+
+  return U.foldout(
+    "How the look-alike screen was fitted, and which families defeat it",
+    {
+      id: "lookalike-detail",
+      hint: [
+        `fitted on ${F.int(training.regions)} dark regions`,
+        families ? `${F.int(families)} published families` : null,
+        detector ? "detector baseline included" : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    },
+    h(
+      "div",
+      { class: "stack" },
+
+      U.rows(
+        U.row("Fitted on", training.labelRule, { stack: true }),
+        U.row(
+          "Fitted from",
+          `${F.int(training.regions)} dark regions across ${F.int(training.scenes)} scenes ` +
+            `and ${F.int(training.products)} parent products, at ${F.num(training.spacingM, 1)} m/pixel`,
+          { stack: true },
+        ),
+        U.row("Folds grouped by", validation.grouping, { stack: true }),
+        U.row(
+          "Proposer recall of the labelled oil",
+          F.pct(training.meanMaskRecallOfProposer),
+          { mono: true },
+        ),
+        U.row("Ambiguous regions dropped", F.int(training.droppedAmbiguous), { mono: true }),
+      ),
+
+      dataset
+        ? U.rows(
+            U.row("Archive", dataset.source, { stack: true }),
+            U.row("Coverage", dataset.coverage, { stack: true }),
+            U.row("Independence", cross?.note, { stack: true }),
+          )
+        : null,
+
+      cross?.bySubset ? subsetTable(cross.bySubset) : null,
+      cross?.byCluster ? clusterTable(cross.byCluster) : null,
       detector ? detectorRows(detector) : null,
     ),
   );
@@ -1036,6 +1129,36 @@ function subsetTable(bySubset) {
 /** Coastal or open water, read off a subset or family prefix. */
 const LOOKALIKE_SETTING = { nc: "coastal", nw: "open water", oc: "coastal", ow: "open water" };
 
+/** Families with a measured rejection rate, best-handled first. */
+function clusterEntries(byCluster) {
+  return Object.entries(byCluster || {})
+    .filter(([, bucket]) => !F.isMissing(bucket.rejectionRate))
+    .sort((a, b) => b[1].rejectionRate - a[1].rejectionRate);
+}
+
+/**
+ * The spread across families, as one sentence for the open card.
+ *
+ * Split out of the table below it because the sentence and the table answer different
+ * questions. "Does one rejection rate describe this screen" is a finding and belongs where
+ * the rate is; "which family is which" is a lookup and belongs behind a fold.
+ */
+function clusterNotice(byCluster) {
+  const entries = clusterEntries(byCluster);
+  if (!entries.length) return null;
+  const best = entries[0][1];
+  const worst = entries[entries.length - 1][1];
+
+  return U.notice(
+    `Across ${F.int(entries.length)} published families the screen rejects ` +
+      `${F.pct(best.rejectionRate)} of the dark regions in the one it handles best and ` +
+      `${F.pct(worst.rejectionRate)} in the one it handles worst. The families are groupings, ` +
+      "not diagnoses: the source paper never names the phenomenon, so this screen does not " +
+      "either — it answers oil-like or not, nothing more.",
+    { strongPrefix: "Not one number." },
+  );
+}
+
 /**
  * Rejection rate per published look-alike family.
  *
@@ -1050,13 +1173,8 @@ const LOOKALIKE_SETTING = { nc: "coastal", nw: "open water", oc: "coastal", ow: 
  * and neither dataset labels the phenomenon. A cluster is a grouping, not a diagnosis.
  */
 function clusterTable(byCluster) {
-  const entries = Object.entries(byCluster)
-    .filter(([, bucket]) => !F.isMissing(bucket.rejectionRate))
-    .sort((a, b) => b[1].rejectionRate - a[1].rejectionRate);
+  const entries = clusterEntries(byCluster);
   if (!entries.length) return null;
-
-  const best = entries[0][1];
-  const worst = entries[entries.length - 1][1];
 
   return h(
     "div",
@@ -1064,14 +1182,7 @@ function clusterTable(byCluster) {
     h(
       "div",
       { class: "small muted" },
-      `Per look-alike family — ${F.int(entries.length)} published K-Means clusters`,
-    ),
-    U.notice(
-      `The screen rejects ${F.pct(best.rejectionRate)} of the dark regions in the family it ` +
-        `handles best and ${F.pct(worst.rejectionRate)} in the family it handles worst. The ` +
-        "families are groupings, not diagnoses: the source paper never names the phenomenon, " +
-        "so this screen does not either — it answers oil-like or not, nothing more.",
-      { strongPrefix: "Not one number." },
+      `Per look-alike family — ${F.int(entries.length)} published K-Means clusters, best handled first`,
     ),
     h(
       "div",
@@ -1165,11 +1276,19 @@ function detectorRows(detector) {
 function datasetCard(ctx, caseDoc) {
   const scenes = ctx.state.scenes;
   const health = ctx.state.health;
-  return U.card(
+  return U.foldout(
     "Data provenance",
     {
       id: "data",
-      hint: scenes?.count ? `${F.int(scenes.count)} scenes indexed` : null,
+      // The three labels are the whole point of the card -- which of the four inputs are
+      // measurements and which are constructions -- so they go in the summary line.
+      hint: [
+        scenes?.count ? `${F.int(scenes.count)} scenes indexed` : null,
+        caseDoc?.forcing?.label,
+        caseDoc?.ais?.label,
+      ]
+        .filter(Boolean)
+        .join(" · "),
       note:
         "Raw imagery, masks and the reanalysis file stay on disk and are served by the local " +
         "API. Nothing in this dataset is bundled into the interface.",
@@ -1180,24 +1299,25 @@ function datasetCard(ctx, caseDoc) {
       U.provenanceBadges(caseDoc),
       U.rows(
         U.row("Imagery", caseDoc?.provenance?.satellite, { stack: true }),
-        U.row("Reference masks", "supplied with the dataset and treated as ground truth", { stack: true }),
+        U.row(
+          "Reference masks",
+          "supplied with the dataset and treated as ground truth; their own accuracy is unknown",
+          { stack: true },
+        ),
         U.row("Currents", caseDoc?.forcing?.label, { stack: true }),
         U.row("AIS", caseDoc?.ais?.label, { stack: true }),
         U.row("Scenes indexed", F.int(scenes?.count), { mono: true }),
         U.row("Cases stored", F.int(ctx.state.cases?.count), { mono: true }),
         U.row("API", health?.status ? `${health.status} · ${health.pipelineVersion || ""}`.trim() : "not reachable", { mono: true }),
       ),
-      U.notice(
-        "The reference masks are the supplied labels. Their own accuracy is unknown and is " +
-          "treated as ground truth everywhere in this product, so every accuracy figure here " +
-          "is accuracy against those labels rather than against the sea.",
-        { strongPrefix: "Ground truth is an assumption." },
-      ),
+      // The "accuracy is unknown" caveat used to be a notice here as well as a row above it.
+      // It is the row's own qualification, and the accuracy card at the top of the screen now
+      // states it where the accuracy figures are, which is where it changes a reader's mind.
     ),
   );
 }
 
-function reproduceCard(ctx, caseDoc) {
+function reproduceCard(caseDoc) {
   const commands = [
     { label: "Audit the supplied dataset", command: ".venv/bin/python scripts/run_audit.py" },
     { label: "Build the patch cache", command: ".venv/bin/python scripts/run_preprocess.py" },
@@ -1208,24 +1328,17 @@ function reproduceCard(ctx, caseDoc) {
     { label: "Run the tests", command: ".venv/bin/python -m pytest tests/ -q" },
   ];
 
-  return U.card(
+  return U.foldout(
     "Reproduce this",
     {
       id: "reproduce",
-      hint: caseDoc?.requestKey ? `request key ${caseDoc.requestKey}` : null,
+      hint: `${commands.length} commands, in order${caseDoc?.requestKey ? ` · request key ${caseDoc.requestKey}` : ""}`,
       note:
         "Every stage is seeded. Running these in order on the same inputs reproduces every " +
         "number on this product, including the synthetic AIS and the synthetic forcing.",
-      actions: U.button("Export case JSON", {
-        kind: "quiet",
-        small: true,
-        iconPath: ICONS.download,
-        disabled: !caseDoc,
-        onClick: () => {
-          X.downloadJson(X.exportName(caseDoc, "case", "json"), caseDoc);
-          ctx.announce("Case document downloaded.", { kind: "success" });
-        },
-      }),
+      // The "Export case JSON" button that used to sit here did exactly what the "Export
+      // JSON" button in the page header does, on every screen, always visible. A second
+      // control for the same download is not a second feature.
     },
     h(
       "div",

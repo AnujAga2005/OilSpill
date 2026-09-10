@@ -101,8 +101,12 @@ The Sentinel-1 source rasters are about **91 GB** and are excluded by
 | `.venv/` | 277 MB | virtualenv |
 
 **What still works after a clone:** the API, all six dashboard screens, the stored `demo` and
-`00053` cases with their preview imagery, and the entire test suite. The trained model
+`00223` cases with their preview imagery, and the entire test suite. The trained model
 (`models/unet_vv_vh.npz`, 7 MB) is committed, so inference works.
+
+> The picker also still lists `00053`. Do not demo it — it was generated on 2026-09-04 by a
+> superseded pre-retrain checkpoint, and its scene is not in the current train/val/test split at
+> all. Delete `data/processed/cases/00053.*` and rebuild if you want the picker clean.
 
 **What needs the dataset:** re-running the audit, rebuilding the patch cache, and retraining.
 

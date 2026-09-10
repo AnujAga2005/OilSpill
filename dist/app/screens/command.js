@@ -43,14 +43,30 @@ export function render(ctx) {
   const candidates = caseDoc.attribution?.candidates || caseDoc.vessels || [];
   const top = candidates[0];
   const scene = caseDoc.scene || {};
+  // How many of the screened vessels survived both halves of the relevance test. This, not
+  // the raw candidate count, is the number a duty officer acts on: the shortlist worth a look.
+  const relevant = caseDoc.attribution?.relevantCount;
+  const screened = caseDoc.attribution?.candidateCount ?? candidates.length;
+
+  // Each numbered answer links to the screen that shows its working, so the summary is a
+  // table of contents for the investigation rather than a dead end.
+  const jump = (label, path, extra) =>
+    U.button(label, {
+      kind: "quiet",
+      small: true,
+      iconAfter: ICONS.chevronRight,
+      onClick: () => ctx.navigate(path, extra),
+    });
 
   return h(
     "div",
     { class: "stack" },
 
-    // -- the headline figure ----------------------------------------------
-    // One number, inverted, above everything: the area of water covered. Every other
-    // figure on the screen qualifies it.
+    // -- the headline finding ---------------------------------------------
+    // One number, inverted, above everything: is there a spill and how big. The aside
+    // carries the payoff of the whole pipeline -- the one vessel to look at first -- so the
+    // first glance already spans detection to triage. It is a score, not a verdict, and it
+    // keeps the "priority candidate for investigation" wording that the brief requires.
     U.hero({
       label: "Total detected slick area",
       value: F.km2(slick.totalAreaKm2),
@@ -70,15 +86,14 @@ export function render(ctx) {
         caseDoc.demo ? U.chip("Seeded offline case", { tone: "reference" }) : null,
       ].filter(Boolean),
       aside: [
-        F.isMissing(slick.confidence)
-          ? null
-          : U.heroStat({
-              value: F.num(slick.confidence * 100, 1),
-              unit: "%",
-              label: "Mean model confidence",
-              fraction: slick.confidence,
-              title: slick.confidenceBasis || "",
-            }),
+        top
+          ? U.heroStat({
+              value: F.num(top.score, 1),
+              unit: `/ ${top.scoreMax}`,
+              label: `Priority candidate · ${top.name}`,
+              title: top.band || caseDoc.attribution?.candidateLabel || "",
+            })
+          : null,
         U.button("Open investigation", {
           kind: "primary",
           iconAfter: ICONS.arrowRight,
@@ -88,52 +103,64 @@ export function render(ctx) {
       ].filter(Boolean),
     }),
 
-    // -- the figures that qualify it --------------------------------------
+    // -- the investigation, in four numbered answers ----------------------
+    // The same four figures as before, but read as a sequence a person could say out loud:
+    // what is in the water, when it started, how old it is, who to look at. The step number
+    // gives the row an order so the eye is not asked to weigh four equal boxes at once.
     h(
       "div",
       { class: "grid grid--stats", id: "summary" },
-      U.metric({
-        label: "Largest region",
+      U.answer({
+        step: 1,
+        tone: "oil",
+        question: "How large is the main slick?",
         value: F.km2(slick.areaKm2),
         unit: "km²",
-        tone: "oil",
-        iconPath: ICONS.slick,
         sub: slick.touchesSceneEdge
-          ? "touches the scene edge, so it may continue beyond the image"
-          : "fully inside the scene footprint",
+          ? "the largest connected region; it touches the scene edge, so it may continue beyond the image"
+          : "the largest connected region, fully inside the scene footprint",
         missing: "no slick measured",
+        action: jump("Imagery", "/imagery"),
       }),
-      U.metric({
-        label: "Estimated origin window",
-        value: window_ ? F.hours(window_.hours) : null,
+      U.answer({
+        step: 2,
         tone: "drift",
-        iconPath: ICONS.clock,
-        sub: window_ ? `${F.utc(window_.startUtc)} to ${F.utc(window_.endUtc)}` : undefined,
+        question: "When could it have been released?",
+        value: window_ ? F.hours(window_.hours) : null,
+        unit: window_ ? "window" : undefined,
+        sub: window_ ? `${F.utc(window_.startUtc)} → ${F.utc(window_.endUtc)}` : undefined,
         missing: "drift not run",
+        action: jump("Drift", "/drift"),
       }),
-      U.metric({
-        label: "Estimated spill age",
-        value: age ? `≤ ${F.hours(age.maxHours)}` : null,
+      U.answer({
+        step: 3,
         tone: "reference",
-        iconPath: ICONS.clock,
+        question: "How old is the oil?",
+        value: age ? `≤ ${F.hours(age.maxHours)}` : null,
         // The upper bound is the honest headline: one acquisition bounds the age by the
         // hindcast horizon and cannot narrow it further. The sub-line says which it is.
         sub: age
           ? age.resolution?.resolvable
             ? `resolvable from ${F.hours(age.resolution.fromHours)} back`
-            : "not resolvable from one acquisition — bounded by the hindcast horizon"
+            : "bounded by the hindcast horizon, not narrowed by one image"
           : undefined,
         missing: "drift not run",
+        action: jump("Drift", "/drift"),
       }),
-      U.metric({
-        label: "Candidate vessels",
-        value: F.int(candidates.length),
+      U.answer({
+        step: 4,
         tone: "synthetic",
-        iconPath: ICONS.ship,
-        sub: top
-          ? `top score ${F.num(top.score, 1)} of ${top.scoreMax} — ${top.name}`
+        question: "How many vessels warrant a look?",
+        value: F.int(relevant != null ? relevant : candidates.length),
+        sub: candidates.length
+          ? relevant != null
+            ? `of ${F.int(screened)} screened near the origin${top ? ` · top ${F.num(top.score, 1)} — ${top.name}` : ""}`
+            : top
+              ? `top score ${F.num(top.score, 1)} of ${top.scoreMax} — ${top.name}`
+              : undefined
           : undefined,
         missing: "attribution not run",
+        action: jump("Ranking", "/vessels"),
       }),
     ),
 
@@ -141,23 +168,23 @@ export function render(ctx) {
       ? h("p", { class: "small muted", style: { "max-width": "92ch", padding: "0 4px" } }, slick.areaMethod)
       : null,
 
+    // -- the two things a presenter actually opens: where, and who --------
     h(
       "div",
       { class: "grid grid--wide-left" },
       locatorCard(ctx, caseDoc),
-      h(
-        "div",
-        { class: "stack" },
-        acquisitionCard(caseDoc),
-        provenanceCard(caseDoc),
-      ),
+      shortlistCard(ctx, caseDoc, candidates),
     ),
 
+    // -- the audit trail, folded away until someone wants to check it -----
+    // Product id, checkpoint, threshold, stage timings: on the screen so the findings above
+    // are verifiable, closed so they do not compete with them.
     h(
       "div",
-      { class: "grid grid--2" },
+      { class: "stack stack--tight" },
+      acquisitionCard(caseDoc),
+      provenanceCard(caseDoc),
       processingCard(ctx, caseDoc),
-      shortlistCard(ctx, caseDoc, candidates),
     ),
 
     limitsCard(caseDoc),
@@ -206,18 +233,26 @@ function locatorCard(ctx, caseDoc) {
 function acquisitionCard(caseDoc) {
   const scene = caseDoc.scene;
   if (!scene) {
-    return U.card(
+    // Left open: a missing scene block is a fault, and a fault should not be behind a fold.
+    return U.foldout(
       "Acquisition",
-      { id: "acq" },
+      { id: "acq", open: true },
       U.missingState({
         title: "No acquisition metadata",
         body: "This case has no scene block, which should not happen for a stored case.",
       }),
     );
   }
-  return U.card(
+  // The mission and the timestamp are the one line worth reading without opening the card:
+  // they say which satellite pass every figure above was measured from. `scene.name` is a
+  // patch index in this dataset ("00053") and would tell a reader nothing.
+  return U.foldout(
     "Acquisition",
-    { id: "acq", hint: scene.crs, note: scene.regionNote },
+    {
+      id: "acq",
+      hint: `${scene.mission || F.DASH} · ${F.utc(scene.acquiredStartUtc)}`,
+      note: scene.regionNote,
+    },
     U.rows(
       U.row("Scene", scene.name, { mono: true }),
       U.row("Mission", `${scene.mission || F.DASH} · ${scene.mode || F.DASH} ${scene.productType || ""}`.trim()),
@@ -228,6 +263,7 @@ function acquisitionCard(caseDoc) {
         (scene.bounds?.[1] + scene.bounds?.[3]) / 2,
       ]), { mono: true }),
       U.row("Extent", `${scene.width} × ${scene.height} px`, { mono: true }),
+      U.row("CRS", scene.crs, { mono: true }),
       U.row("Reference mask", scene.hasReferenceMask ? "supplied" : "not supplied"),
       U.row("Product", F.clip(scene.productId, 44), { mono: true, stack: true, title: scene.productId }),
     ),
@@ -236,9 +272,18 @@ function acquisitionCard(caseDoc) {
 
 function provenanceCard(caseDoc) {
   const detection = caseDoc.detection || {};
-  return U.card(
+  // Closed, but the hint still says whether the slick above came from the model or from the
+  // supplied mask -- the single fact that decides how much of this case is our own work.
+  return U.foldout(
     "Provenance",
-    { id: "prov", note: detection.note },
+    {
+      id: "prov",
+      hint:
+        detection.source === "model"
+          ? `U-Net · threshold ${F.num(detection.threshold, 2)}`
+          : F.label(detection.source),
+      note: detection.note,
+    },
     h(
       "div",
       { class: "stack stack--tight" },
@@ -261,7 +306,7 @@ function processingCard(ctx, caseDoc) {
   const stages = timing?.stages || [];
   const slowest = stages.reduce((acc, s) => Math.max(acc, s.seconds || 0), 0);
 
-  return U.card(
+  return U.foldout(
     "Processing status",
     {
       id: "timing",
@@ -294,7 +339,7 @@ function processingCard(ctx, caseDoc) {
             h("div", { class: "bar__label" }, F.label(stage.stage)),
             h(
               "div",
-              { class: "bar__track", title: stage.note || "" },
+              { class: "bar__track" },
               h("div", {
                 class: "bar__fill",
                 style: {
@@ -304,17 +349,16 @@ function processingCard(ctx, caseDoc) {
               }),
             ),
             h("div", { class: "bar__value" }, F.seconds(stage.seconds)),
+            // What the stage actually did, under its own bar rather than in a block of ten
+            // sentences below the chart. A `title` tooltip would be shorter but unreachable
+            // by keyboard and invisible on a touch screen, and this text is the explanation.
+            stage.note ? h("div", { class: "bar__note" }, stage.note) : null,
           ),
         ),
       ),
+      // Each stage's note now sits under its own bar, so there is nothing left to repeat here.
       stages.length
-        ? h(
-            "div",
-            { class: "small muted" },
-            stages.map((stage) =>
-              h("div", null, `${F.label(stage.stage)}: ${stage.note || ""}`),
-            ),
-          )
+        ? null
         : U.emptyState({ title: "No stage timings", body: "This case was stored without a timing block." }),
     ),
   );
@@ -372,13 +416,5 @@ function shortlistCard(ctx, caseDoc, candidates) {
 function limitsCard(caseDoc) {
   const limits = caseDoc.limits || [];
   if (!limits.length) return null;
-  return U.card(
-    "What this does not tell you",
-    { id: "limits" },
-    h(
-      "ul",
-      { class: "bullets" },
-      limits.map((text) => h("li", null, h("span", null, text))),
-    ),
-  );
+  return U.card("What this does not tell you", { id: "limits" }, U.limitList(limits));
 }

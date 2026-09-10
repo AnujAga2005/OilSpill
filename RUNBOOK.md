@@ -52,7 +52,7 @@ sidebar on desktop, the tab bar on a phone.
 
 | # | Screen | What to do on it |
 |---|--------|------------------|
-| 1 | **Command centre** | Read the headline: total detected slick area, model confidence, origin window, candidate count. Click **Open investigation** to start the walkthrough. |
+| 1 | **Command centre** | Read the headline slick area, then the four numbered answers below it — *how large*, *when released*, *how old*, *how many vessels*. Each one links to the screen that shows its working. Acquisition, provenance and stage timings are folded away underneath; click a heading to open one. Click **Open investigation** to start the walkthrough. |
 | 2 | **Imagery** | Switch **band** between VV and VH. Switch **overlay** between prediction, reference mask and agreement. Drag the split handle on the before/after viewer. Toggle the layer switches. Click any thumbnail in *All layers*. **Run detection again** re-segments the scene. |
 | 3 | **Slick** | Read the measured extent and the per-region table. Click a row to see that region's detail. Press **Edit boundary** and drag a handle — the analyst ring is stored separately from the model ring and measured with the same spherical formula. Export **GeoJSON** or **CSV**. |
 | 4 | **Drift** | Press play on the timeline to animate the particle cloud. The segmented control switches the view between backward (to origin) and forward (where it goes). **Run drift now** recomputes it. |
@@ -65,7 +65,9 @@ Also worth trying:
 - **Print** — the layout has a print stylesheet; the dark imagery stages get a hairline
   border and cards avoid page breaks.
 - Resize the window narrow, or open it on your phone over the LAN, to see the mobile layout.
-- The case picker next to *Export JSON* switches between `00053` and `demo`.
+- The case picker next to *Export JSON* switches between the stored cases. Use `demo` (scene
+  `00223`). **`00053` predates the retrain and its scene is not in the current split** — don't
+  present it; delete `data/processed/cases/00053.*` and rebuild if you want it gone from the picker.
 
 ---
 
@@ -110,11 +112,11 @@ curl -s http://localhost:8765/api/cases/demo | head -c 2000
 ```
 
 Start a job and watch it. A `drift` POST reuses the stored detection, so it needs a case that
-already has one — `00053` and `demo` both do; anything else returns 404 telling you to POST
+already has one — `00223` and `demo` both do; anything else returns 404 telling you to POST
 `/detect` first:
 
 ```bash
-curl -s -X POST http://localhost:8765/api/cases/00053/drift -H 'Content-Type: application/json' -d '{"horizonHours": 24, "particles": 1200}'
+curl -s -X POST http://localhost:8765/api/cases/00223/drift -H 'Content-Type: application/json' -d '{"horizonHours": 24, "particles": 1200}'
 ```
 
 The response contains `pollUrl`. Poll it until `state` is `done`, `failed` or `cancelled`:
@@ -127,11 +129,11 @@ Every POST body is optional and takes the same keys, all with defaults:
 `detector` (`auto`), `particles` (50–20000), `horizonHours`, `threshold`, `previews`, `seed`.
 An empty body `{}` is valid and uses the configured defaults.
 
-A `drift` run on `00053` with the parameters above takes **about 25 seconds** and moves through
+A `drift` run on `00223` with the parameters above takes **about 21 seconds** and moves through
 ten stages — `decode, detect, geometry, screening, forcing, backward, forward, ais, scoring,
 previews`.
-Most of that is fixed cost you pay whatever you ask for: 9.4 s decoding the 2048 × 2048 GeoTIFF,
-5.7 s of inference, 3.8 s of geometry and 3.6 s screening the dark patches for look-alikes. The two
+Most of that is fixed cost you pay whatever you ask for: 9.7 s decoding the 2048 × 2048 GeoTIFF,
+5.7 s of inference, 1.9 s of geometry and 1.8 s screening the dark patches for look-alikes. The two
 drift stages are 1 s each at 1200 particles, so particle count is
 a cheap dial. The run is seeded, so running it twice gives byte-identical figures; only the
 timing block and the generated timestamp change.
@@ -249,13 +251,13 @@ answer, not a footnote.
    - Variables: `10m_u_component_of_wind` and `10m_v_component_of_wind` — both, and nothing
      else. The reader looks for `u10`/`v10` and will refuse a file that lacks either.
    - Date: the acquisition day **and the day either side**, because a 24 h hindcast reaches
-     back past midnight. For the shipped demo scene (`00053`, Persian Gulf,
-     `2017-03-11T02:15:12Z`) that is 10–12 March 2017.
+     back past midnight. For the shipped demo scene (`00223`, Central Mediterranean,
+     `2015-08-04T16:55:41Z`) that is **3–5 August 2015**.
    - Times: all 24 hours. Wind is the one product interpolated in time, so cadence is used.
    - Geographical area: **sub-region**, padded ~1° around the scene footprint. The demo scene
-     spans `54.598…54.782 E, 25.502…25.686 N`, so North `27`, West `53`, South `24`, East `56`.
+     spans `14.477…14.661 E, 35.788…35.972 N`, so North `37`, West `13`, South `35`, East `16`.
    - Format: **NetCDF4**. GRIB is not readable here.
-3. Save it as `data/raw/era5_wind_2017-03.nc` — anything matching `era5_wind*.nc` in
+3. Save it as `data/raw/era5_wind_2015-08.nc` — anything matching `era5_wind*.nc` in
    `data/raw/` or the repository root is found automatically. To keep it elsewhere:
 
 ```bash
@@ -282,9 +284,11 @@ rejection: the wind clamps at the ends of the file and the card reports the frac
 
 ### 6b. CMEMS currents
 
-The `.nc` that ships here is a real CMEMS global physics product, but it does not cover March
-2017, so the temporal overlap check fails and the currents stay synthetic — visibly, on every
-screen. To make the currents real, download a product whose time axis contains the acquisition
+The `.nc` that ships here is a real CMEMS global physics product, but it does not cover August
+2015, so the temporal overlap check fails and the currents stay synthetic — visibly, on every
+screen. Note that the *magnitude* is still borrowed from it: the synthetic field is scaled to the
+0.2138 m/s mean the real product reports over this scene's footprint, and only the pattern is
+invented. To make the currents real, download a product whose time axis contains the acquisition
 from the [Copernicus Marine Service](https://marine.copernicus.eu), keep the
 `cmems_mod_glo_phy_*.nc` naming (or point `SPILLTRACE_CMEMS` at it), and rebuild. The overlap
 check re-runs on its own; there is no flag to force it, by design.

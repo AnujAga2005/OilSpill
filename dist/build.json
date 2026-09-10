@@ -1,27 +1,27 @@
 {
   "pipelineVersion": "spilltrace-0.1.0",
-  "generatedUtc": "2026-09-09T13:20:38Z",
+  "generatedUtc": "2026-09-10T13:43:43Z",
   "note": "A verified copy of apps/web. No bundler, no minifier and no content hashing: the interface is plain ES modules and runs from source. Cache behaviour comes from the server's Cache-Control headers, not from filenames.",
   "totals": {
-    "files": 53,
-    "bytes": 3842544
+    "files": 59,
+    "bytes": 4216319
   },
   "byExtension": {
+    ".png": {
+      "files": 28,
+      "bytes": 2481944
+    },
     ".json": {
       "files": 7,
-      "bytes": 1945843
-    },
-    ".png": {
-      "files": 22,
-      "bytes": 1515142
+      "bytes": 1326928
     },
     ".js": {
       "files": 19,
-      "bytes": 314247
+      "bytes": 334730
     },
     ".css": {
       "files": 4,
-      "bytes": 65314
+      "bytes": 70719
     },
     ".html": {
       "files": 1,
@@ -86,33 +86,33 @@
     },
     {
       "path": "app/screens/command.js",
-      "bytes": 13459,
-      "sha256": "e27a1a3a6f0377d6149004c9d6791555a7d945b4a5da4c83a9c1a9882d4384a1"
+      "bytes": 16353,
+      "sha256": "44290be10b064a92698f0beba44aed1e5500858397ed2e59b4acde3bb6d47440"
     },
     {
       "path": "app/screens/drift.js",
-      "bytes": 29817,
-      "sha256": "4f00160d316779427d9f1c5e91a20725cd88727b1f852aff3c9163bf255b720b"
+      "bytes": 31849,
+      "sha256": "defcb9e4e9ebc2ce4b7fffe55a759777b4c05505197ba6079ce39a868d6a38de"
     },
     {
       "path": "app/screens/methodology.js",
-      "bytes": 45269,
-      "sha256": "38e0a068f92c7ee2a01cef6da9b8d893691f8ea1e7370528702aa1b83e3d5f96"
+      "bytes": 51047,
+      "sha256": "f6f061d2f30604b20186c56a5704abdceaf685a6065d3cd8cce0fb65678dfa7a"
     },
     {
       "path": "app/screens/satellite.js",
-      "bytes": 18783,
-      "sha256": "ecf261a343f80b06e75845905ec1ba2558f3fae3d3059fb2237efec7118a2136"
+      "bytes": 19338,
+      "sha256": "24e3be3d8b081e966936929639b2576f9d2e15e25bbcd9c2f885bfa235dd2fb2"
     },
     {
       "path": "app/screens/slick.js",
-      "bytes": 37075,
-      "sha256": "8036c96a66ac5c10d1f60ddc4d48c1a6d699e002c561bc57c3ec98300ec703e5"
+      "bytes": 38698,
+      "sha256": "4efebf35c212f6269e600f36585f62c1f540835dc3108af55ec33ce245724ae2"
     },
     {
       "path": "app/screens/vessels.js",
-      "bytes": 27167,
-      "sha256": "757bebdac3850c08e636f90d4b9fe808ca1ccae992dcb09be824c0268e73ecd9"
+      "bytes": 30272,
+      "sha256": "2f3d6ac67169e9f8ce155723578c2fc6d1a09e5c9f08a6249bdff14ccf908db6"
     },
     {
       "path": "app/state.js",
@@ -121,18 +121,18 @@
     },
     {
       "path": "app/ui.js",
-      "bytes": 20353,
-      "sha256": "5aada229f32b8fb5ffa5e34e08974ea77e6d0fc53155febb8c74c8a141dac9c6"
+      "bytes": 24849,
+      "sha256": "b840de9468a17606b2290ca396ab0fcfd368c8dc309c0b705340d7abdb5860da"
     },
     {
       "path": "demo/case-demo.json",
-      "bytes": 1029549,
-      "sha256": "fe7a99d44a59e9759d82f5d3b27fbec57778c826007f382e4bbe75e54e40ba2a"
+      "bytes": 660028,
+      "sha256": "8003011ffd89484dfe7edf444570d60e04af725d0cdd5bc3303ee680b1b2cff5"
     },
     {
       "path": "demo/cases.json",
-      "bytes": 1844,
-      "sha256": "f1c13c7a14c8ccd0f117cf3f0c74cb1c0897b5bf83e7408ca60c1ee550cc38d1"
+      "bytes": 2771,
+      "sha256": "ee47883ec623c135943f7b7d9d341fda129c28f90d7b084a83765d4b618165f3"
     },
     {
       "path": "demo/eval/test_0013_iou000.png",
@@ -216,13 +216,13 @@
     },
     {
       "path": "demo/health.json",
-      "bytes": 1248,
-      "sha256": "721f5c2763d17a8dfb4d37a62fe99d66b20f465cb514fa6f3eba5b33584e881e"
+      "bytes": 1256,
+      "sha256": "edb494452cc5a72b43b94baeb580f0d2315117ad5681d70190f92f279097161c"
     },
     {
       "path": "demo/images-demo.json",
-      "bytes": 1451,
-      "sha256": "b05d2437a1401e84928fcec71bc796f2eee53482e6c2dbee5c15c6cd5a5a0a63"
+      "bytes": 1448,
+      "sha256": "c73d74d84582cca1b25b954369a22796eac2e249d2e62e104fa618ff77c7b241"
     },
     {
       "path": "demo/metrics.json",
@@ -260,14 +260,44 @@
       "sha256": "ecc8f911da75518ce3ee45c7fd30876c94949d2d8d212de5b4b1342d8209e9f7"
     },
     {
+      "path": "demo/previews/00223_comparison.png",
+      "bytes": 320435,
+      "sha256": "4409384d9a27e2e7bb9e33088d959fa611262f134f25ddd734ef3c4d6456a133"
+    },
+    {
+      "path": "demo/previews/00223_mask.png",
+      "bytes": 3965,
+      "sha256": "115b8f76739f1a54da3878d22c589cc61bbbb6d0ddc989faa4d4f07cf705a3df"
+    },
+    {
+      "path": "demo/previews/00223_prediction.png",
+      "bytes": 4803,
+      "sha256": "ef8fd37c2d434e99ee1586d26ffd8b3285319ae5200c3bd097f3cc312e6c9a16"
+    },
+    {
+      "path": "demo/previews/00223_probability.png",
+      "bytes": 178665,
+      "sha256": "26e29706e91f48863ad8a6ca94d29a99b64c0576870a3f3ffe7e047a6b8e2d9e"
+    },
+    {
+      "path": "demo/previews/00223_vh.png",
+      "bytes": 235582,
+      "sha256": "fadfb7b4b2953e39fbf213abffc78e7b1b7464225a88eab9116bcc3715d1f740"
+    },
+    {
+      "path": "demo/previews/00223_vv.png",
+      "bytes": 223352,
+      "sha256": "4e6c51fdf41d758159e82baabda6a0d4671d44e89dc5b2d2879e550d2f038add"
+    },
+    {
       "path": "demo/report-demo.json",
-      "bytes": 547651,
-      "sha256": "d032a4183a6b5ea24a1fd6df897740a51f5bd7c1acfeaa3ad19500881c7bd7bd"
+      "bytes": 297326,
+      "sha256": "a8ff78fd6ee50c539362a2a1eb63d021414967e6658b20cadbcb1bfab2f9db42"
     },
     {
       "path": "demo/scenes.json",
-      "bytes": 175612,
-      "sha256": "1b31c7a52939fa18c75129646810a27161622f30af0cb221adaf6b83551166df"
+      "bytes": 175611,
+      "sha256": "38230938584c7f6e9f15516d105eea7c38d0238d3f0e388c58899433976b8178"
     },
     {
       "path": "index.html",
@@ -281,8 +311,8 @@
     },
     {
       "path": "styles/components.css",
-      "bytes": 34682,
-      "sha256": "14e3f2e94cfa1b1e6a0b98e3dbb6601502168430112c55ded564deb9fde7e09c"
+      "bytes": 40087,
+      "sha256": "a536168283eaa4f5992be6120acdf6a13a992b6ed9f112e5837eefe1e162dbb5"
     },
     {
       "path": "styles/screens.css",

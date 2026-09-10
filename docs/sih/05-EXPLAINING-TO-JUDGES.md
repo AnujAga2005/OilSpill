@@ -28,10 +28,10 @@ strength of this project's position is that it can survive being checked.
 > input channels.
 >
 > A U-Net segments the oil per pixel. We measure the result on a sphere — area, perimeter, shape,
-> and the nine separate regions in our demo case.
+> and the twelve separate regions in our demo case.
 >
 > Then the interesting part. Oil drifts with currents and wind, and drift is physics, so physics
-> runs backwards. We seed thousands of particles on the detected oil and integrate backwards in
+> runs backwards. We seed 300 particles on the detected oil and integrate backwards in
 > time — that's what the problem statement calls hindcasting. It doesn't give a point; it gives a
 > probability region and a release window, because uncertainty grows every step you go back. In
 > our case that's a 24-hour window.
@@ -88,7 +88,7 @@ prepared.
 **"Why is the AIS synthetic?"**
 > "Because the problem statement permits it. It says real AIS may be used 'else synthetic data can
 > be prepared for the region of oil spill to demonstrate the functioning of the algorithm.' Real
-> historic AIS for an arbitrary ocean patch in 2017 isn't obtainable by us. So we generate a fleet
+> historic AIS for an arbitrary ocean patch in 2015 isn't obtainable by us. So we generate a fleet
 > for the hindcast envelope, label it on every screen, give every vessel an MMSI starting 999 —
 > outside the ITU country-code range, so no real ship can hold one — and name them with NATO
 > phonetic words. The algorithm operating on it is entirely real."
@@ -98,20 +98,22 @@ prepared.
 > NetCDF file and a working reader for it. Its time coverage doesn't overlap our imagery's
 > acquisition dates. We could have interpolated across a multi-year gap and called the result
 > real — instead the pipeline falls back to a deterministic synthetic field and says so. Getting a
-> current field that covers 11 March 2017, from CMEMS or from INCOIS, flips that label to real
-> without touching the physics."
+> current field that covers 4 August 2015, from CMEMS or from INCOIS, flips that label to real
+> without touching the physics. One detail worth volunteering: the *magnitude* of our synthetic
+> current, 0.214 m/s, is measured from the real CMEMS product over this scene's own footprint. Only
+> the pattern is invented, and the interface says which is which."
 
-**"Why the Persian Gulf and not Indian waters?"** — *the premise is wrong; correct it, then concede
+**"Why foreign waters and not Indian waters?"** — *the premise is wrong; correct it, then concede
 the real gap*
-> "It isn't Persian Gulf data — that's just the scene in our demo. The dataset is global: 1,200
-> scenes across 24 seas, 95°W to 130°E. The largest block is the Gulf of Mexico at 388 scenes; the
-> Persian Gulf is 88, about 7%. And it is the dataset the problem statement itself names — Zenodo
+> "The dataset is global rather than regional: 1,200 scenes across 24 seas, 95°W to 130°E. Our demo
+> scene happens to be Central Mediterranean. The largest block is the Gulf of Mexico at 388 scenes;
+> the Persian Gulf is 88, about 7%. And it is the dataset the problem statement itself names — Zenodo
 > 10.5281/zenodo.8346860, published with a Marine Pollution Bulletin paper.
 >
 > Where you're right: **there is not one scene in Indian water** in the recommended dataset. Nothing
 > between 65 and 95 east. So we can't claim we've validated on Indian seas, and we don't. The
 > pipeline is region-agnostic in the real sense — it reads the geotransform out of each file, so any
-> Sentinel-1 GeoTIFF works — and running a Gulf of Kutch or Ennore 2017 scene from the Copernicus
+> Sentinel-1 GeoTIFF works — and running a Gulf of Kutch or Ennore scene from the Copernicus
 > Data Space is a download and a run. That's a generalisation test we owe you, not a compliance
 > problem."
 
@@ -213,23 +215,24 @@ highest-value thing you do all session.
 ### C. The drift physics
 
 **"How does the backward drift work?"**
-> "Lagrangian particle tracking. We seed thousands of particles on the detected oil, then for each
-> small time step we look up the local current and wind at each particle's own position, add the
-> windage contribution and a turbulent diffusion term, and move it — with the velocity field
-> negated, so it runs backwards. After 24 hours of that, the particle cloud is the origin
-> probability region."
+> "Lagrangian particle tracking. We seed 300 particles on the detected oil, then for each
+> small time step — 30 minutes, 48 of them — we look up the local current and wind at each
+> particle's own position, add the windage contribution and a turbulent diffusion term, and move it
+> — with the velocity field negated, so it runs backwards. After 24 hours of that, the particle
+> cloud is the origin probability region."
 
 **"Why don't you get a single origin point?"**
 > "Because you can't, and a system that reported one would be lying. You start from a slick that's
-> already spread over 223 km², and every backward step adds uncertainty. What comes out is a
+> already spread over 26.9 km², and every backward step adds uncertainty. What comes out is a
 > region and a time window. That's honest, and it's still useful — a region and a 24-hour window is
 > exactly the search box you need to query AIS."
 
 **"Do you use wind?"**
 > "Yes, and the problem statement requires it — it asks for oceanographic *and* meteorological
 > data. Surface oil moves at roughly 3% of wind speed; we use 3%. The arithmetic is why it matters:
-> a 6 m/s wind contributes about 0.18 m/s, which over 24 hours is roughly 15 km. That's the same
-> order as the current contribution. Ignore wind and your origin estimate is tens of kilometres
+> a 5.6 m/s wind contributes 0.17 m/s, which over 24 hours is about 14.5 km. The current in this
+> case is 0.21 m/s, about 18.5 km over the same period — the same order. Ignore wind and your origin
+> estimate is tens of kilometres
 > off, so you search the wrong water and shortlist the wrong ships."
 
 **"What physics are you missing?"**
@@ -249,15 +252,15 @@ highest-value thing you do all session.
 **"Can you tell how old the spill is?"** — *the statement says "age if feasible", so expect this*
 > "We bound it: up to 24 hours at the time of the image, which is the horizon we actually
 > integrated. Then we test whether the hindcast can tell one end of that window from the other,
-> and for this scene it can't — over 24 hours the estimated position moves 8.6 kilometres while the
-> uncertainty around it is 11.3. The whole release window sits inside its own error bar.
+> and for this scene it can't — over 24 hours the estimated position moves 6.6 kilometres while the
+> uncertainty around it is 9.6. The whole release window sits inside its own error bar.
 >
 > So we print the bound and the test, not a midpoint. Saying '12 hours' would have been a
 > fabricated number.
 >
-> And that's a property of *this* case rather than of the method: it's unresolvable because a
-> 148 km² slick spreads faster than it drifts. A tight, compact slick does resolve, and we have
-> tests asserting both sides of that so the claim stays tied to the physics. Three things would
+> And that's a property of *this* case rather than of the method: it's unresolvable because a slick
+> already 26.9 km² across spreads faster than it drifts. A tight, compact slick does resolve, and we
+> have tests asserting both sides of that so the claim stays tied to the physics. Three things would
 > narrow it — a second acquisition, licensed metocean forcing, or an earlier acquisition showing
 > the area clear. All three are data, not code."
 
@@ -276,11 +279,11 @@ highest-value thing you do all session.
 **"How do you filter irrelevant traffic?"**
 > "On both axes at once, and we publish the counts. A vessel is relevant only if the *same* AIS
 > report is inside the estimated release window **and** within three drift-envelope radii of where
-> the oil is estimated to have been at that report's own timestamp. For this case: 987 reports, 10
+> the oil is estimated to have been at that report's own timestamp. For this case: 1,112 reports, 10
 > vessels → 9 with reports in the window → 2 relevant, 8 excluded.
 >
 > The two exclusion reasons are kept apart on purpose, because they mean different things. Seven
-> were in the window but 45 to 91 kilometres away — look at a different ship. One passed within 1.5
+> were in the window but 33 to 73 kilometres away — look at a different ship. One passed within 1.8
 > kilometres but outside the window: right place, wrong time, and what's excluding it is the width
 > of our own release window rather than distance.
 >
@@ -340,7 +343,7 @@ apology.
 > That's a deliberate design decision for this specific customer. This is an NTRO deliverable. An
 > intelligence product that overstates its confidence can't survive scrutiny, and a false
 > accusation against a named, identifiable vessel is a diplomatic problem, not a software bug.
-> Our top candidate scores 91.5 out of 100 on correlation with the origin window — that's a strong
+> Our top candidate scores 90.3 out of 100 on correlation with the origin window — that's a strong
 > investigative lead, and calling it a conviction would make it weaker, not stronger, because the
 > first defence lawyer or foreign ministry to look at it would break it.
 >
@@ -507,12 +510,12 @@ The one thing to say on each screen if you have only one sentence:
 
 | Screen | The one sentence |
 |---|---|
-| **Command centre** | "223 km² of oil in 9 regions — and the flag says it runs off the image edge, so that's a lower bound." |
+| **Command centre** | "26.9 km² of oil in 12 regions, on a scene in our held-out test split — the model has never seen this water." |
 | **Imagery** | "Two radar polarisations in, and you can drag between our prediction and the human ground truth to see where we disagree." |
 | **Slick** | "Area integrated row by row on a sphere, because a degree of longitude shrinks with latitude — and an analyst can correct the boundary by hand." |
 | **Drift** | "The ocean run backwards — and it gives a region and a 24-hour window, not a point, because uncertainty grows every step back." |
 | **Vessels** | "Ranked by spatio-temporal correlation, every score component and its evidence visible, and never called guilty." |
-| **Method** | "Everything we can't tell you: patch metrics flatter, the honest whole-scene numbers are 0.58 pooled and 0.046 at our worst scene, and our U-Net alone alarms on 100% of the look-alike patches we tested it against." |
+| **Method** | "Everything we can't tell you: patch metrics flatter, the honest whole-scene numbers are 0.58 pooled and 0.046 at our worst scene, and our U-Net alone alarms on 305 of 340 look-alike patches we tested it against." |
 
 ---
 
@@ -534,8 +537,8 @@ a vessel guilty — points the same way. That consistency is the pitch. Lean on 
 
 ## 5.8 Final checklist before you walk in
 
-- [ ] The three numbers, cold: **1,200 pairs / 270 acquisitions** · **0.769 vs 0.676 IoU** ·
-      **776 tests · whole pipeline offline in 24 s**
+- [ ] The three numbers, cold: **1,200 pairs / 240 acquisitions used, none spanning two splits** ·
+      **0.769 vs 0.676 IoU** · **776 tests · whole pipeline offline in 20 s**
 - [ ] The fourth number ready for probing: **0.584 pooled scene IoU** (mean per scene 0.693)
 - [ ] The PS sentence permitting synthetic AIS, quotable
 - [ ] The seven minimum concepts from document 2 §2.9
