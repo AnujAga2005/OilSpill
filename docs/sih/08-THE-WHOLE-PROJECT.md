@@ -682,10 +682,10 @@ will interrupt you.
 **Before you present:**
 
 1. `.venv/bin/python scripts/run_api.py` and confirm http://localhost:8765 loads.
-2. Confirm the case selector shows **`demo`** and **`00223`**, and that you are on one of them.
-   **Never demo `00053`** — it was generated on 2026-09-04 by a superseded pre-retrain checkpoint,
-   and its scene is not in the current train/val/test split at all, so nothing it shows can be
-   defended in the Q&A. Delete `data/processed/cases/00053.*` and rebuild if you want it gone.
+2. Confirm the case selector shows **`00223 · demo`** and that you are on it. The old `00053` case
+   — a superseded pre-retrain checkpoint on a scene outside the current split — has been deleted,
+   so it can no longer be selected. Every other entry was built by `scripts/build_cases.py`, which
+   refuses anything that is not a held-out test scene.
 3. Open a second tab on `dist/` served statically, as the fallback. It needs no API.
 
 **If the API dies mid-demo:** switch to the `dist/` tab. The dashboard falls back to the offline
@@ -1255,6 +1255,7 @@ it.
 | `run_lookalike_eval.py` (917) | `... scripts/run_lookalike_eval.py` | The look-alike evidence. In-domain cross-validation (`cross_validate`, `grouped_folds`), cross-domain on DARTIS (`collect_dartis_rows`, `screen_on_dartis`), and the U-Net comparison (`detector_on_dartis`). Writes `lookalike_metrics.json` |
 | `fetch_dartis2019.py` (284) | `... scripts/fetch_dartis2019.py --limit N` | Downloads the DARTIS archive from PANGAEA. `resolve_index`, `read_index`, `collapse_to_patches`, `fetch`, `report_manifest` |
 | `run_api.py` (61) | `.venv/bin/python scripts/run_api.py` | **Starts the API and dashboard on :8765.** `--build-demo` runs the pipeline once and stores the case |
+| `build_cases.py` (220) | `... scripts/build_cases.py --list` | **Pre-builds stored cases for other scenes**, so they appear in the dashboard's picker. `--list` shows every test scene with its IoU; `--test-split --limit N` builds the top N. **Refuses train/val scenes unless `--allow-any`**, because their scores beat the published accuracy |
 | `make_report.py` (62) | `... scripts/make_report.py demo` | Generates the PDF from the command line, optionally dispatching it |
 | `build_web.py` (494) | `... scripts/build_web.py` | **The production build.** See below |
 

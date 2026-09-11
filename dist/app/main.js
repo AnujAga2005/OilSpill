@@ -343,7 +343,7 @@ function caseSelector(state) {
       h(
         "option",
         { value: entry.id, selected: entry.id === state.caseId },
-        `${entry.scene || entry.id}${entry.demo ? " · demo" : ""}`,
+        `${entry.scene || entry.id}${entry.isDemo ? " · demo" : ""}`,
       ),
     ),
   );
@@ -576,7 +576,7 @@ function resolveCaseId(route) {
   const requested = route.get("case");
   if (requested) return requested;
   const list = store.get().cases?.cases || [];
-  const demo = list.find((entry) => entry.demo);
+  const demo = list.find((entry) => entry.isDemo);
   return demo?.id || list[0]?.id || "demo";
 }
 

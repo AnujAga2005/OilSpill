@@ -83,9 +83,8 @@ rather than the team that got caught. That inversion is worth more than any extr
 ## 4.4 The demo — six minutes, beat by beat
 
 Rehearse this until it needs no thought. Server already running, browser already open on the
-Command centre, `Live API` badge already green, **and the case picker set to `demo`** — the
-`00053` case predates the retrain and its scene is not in the current split, so nothing it shows
-can be defended. Never start a server in front of judges.
+Command centre, `Live API` badge already green, **and the case picker set to `00223 · demo`**.
+Never start a server in front of judges.
 
 There is a second reason to have the API up. With it running there are two standing disclosure
 rows; offline there are three, and the extra one pushes the four numbered answers below the fold
@@ -358,9 +357,8 @@ hesitation.
 ## 4.10 Logistics — the things that actually lose demos
 
 - [ ] Server started and warm **before** judges arrive. `Live API` badge green.
-- [ ] **Case picker set to `demo`**, never `00053` — that case predates the retrain and its scene
-      is not in the current split, so none of its numbers can be defended. Safest fix: delete
-      `data/processed/cases/00053.*` and rebuild, so it cannot be clicked by accident.
+- [ ] **Case picker set to `00223 · demo`.** The old `00053` case has been deleted from the store,
+      so the picker can no longer offer a scene whose numbers cannot be defended.
 - [ ] Browser zoom checked on the presenting display. Test at the projector's resolution.
 - [ ] **The offline `dist/` bundle also running on port 8787** as a hot spare. If the API dies
       mid-demo, switch tabs and keep talking — the demo case replays from static files.

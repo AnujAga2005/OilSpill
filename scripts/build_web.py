@@ -279,6 +279,18 @@ def fetch_json(path: str) -> Any:
     return json.loads(body.decode())
 
 
+def demo_only(payload: dict, demo: str) -> dict:
+    """Reduce the case list to the one case the bundle actually carries.
+
+    `write_fixtures` saves the live API's whole case list but only one case *document*,
+    so every other entry becomes a picker option that 404s once the API is gone. The
+    store legitimately holds more -- scenes built by `scripts/build_cases.py` for a demo
+    with a running API -- and the live picker still lists all of them.
+    """
+    cases = [entry for entry in (payload.get("cases") or []) if entry.get("id") == demo]
+    return {**payload, "cases": cases, "count": len(cases)}
+
+
 def write_fixtures() -> list[str]:
     """Save the real API's own responses as the offline fixtures."""
     notes = []
@@ -298,6 +310,8 @@ def write_fixtures() -> list[str]:
 
     for name, path in wanted:
         payload = fetch_json(path)
+        if name == "cases":
+            payload = demo_only(payload, demo)
         target = out_dir / f"{name}.json"
         target.write_text(json.dumps(strip_host_paths(payload), separators=(",", ":")))
         say(f"  ok {target.relative_to(ROOT)}  {target.stat().st_size / 1024:.0f} KB")
