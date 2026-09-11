@@ -13,10 +13,6 @@ import * as U from "../ui.js";
 import { createMap, mapLegend } from "../mapview.js";
 import { sceneVectors } from "../layers.js";
 
-export const LEDE =
-  "One acquisition, one detection, one ranked shortlist. Every figure below is computed " +
-  "from the supplied scene; nothing on this screen is a placeholder.";
-
 export function render(ctx) {
   const { caseDoc, caseStatus, state } = ctx;
 
@@ -204,7 +200,10 @@ function locatorCard(ctx, caseDoc) {
       includeDrift: true,
       includeVessels: false,
     });
-    map.setRasters(rasters).setVectors(vectors).fitContent(0.12);
+    // This map is a locator, so it keeps more context than the working screens do - but
+    // it still frames the finding rather than the whole acquisition, which would show a
+    // 16 km scene with a slick too small to read.
+    map.setRasters(rasters).setVectors(vectors).fitFindings(0.42);
     ctx.onCleanup(() => map.destroy());
   });
 
@@ -287,7 +286,6 @@ function provenanceCard(caseDoc) {
     h(
       "div",
       { class: "stack stack--tight" },
-      U.provenanceBadges(caseDoc),
       U.rows(
         U.row("Detection source", detection.source === "model" ? "U-Net prediction" : F.label(detection.source)),
         U.row("Scene threshold", F.num(detection.threshold, 2), { mono: true }),

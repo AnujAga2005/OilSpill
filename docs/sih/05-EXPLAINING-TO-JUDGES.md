@@ -6,6 +6,10 @@ from it until the answers come without thinking.
 Rule zero: **every answer in this file is true.** Do not improve on them by adding a claim. The
 strength of this project's position is that it can survive being checked.
 
+> **In plain words:** the question bank. Someone will ask you these things — "is the data real?",
+> "what's the accuracy?", "why didn't you use PyTorch?". The answers are written out here in full
+> sentences. Read them, then have a friend fire them at you until you don't need the file.
+
 ---
 
 ## 5.1 The same explanation at three depths
@@ -82,14 +86,16 @@ prepared.
 > "The imagery and the ground-truth masks are completely real — 1,200 Sentinel-1 pairs from 270
 > distinct satellite passes, across 24 seas, and it is the problem statement's own recommended
 > Zenodo dataset (10.5281/zenodo.8346860). The model and every metric are real, trained and
-> measured here. Two things are synthetic and labelled as such on every screen: the ocean current
+> measured here. Two things are synthetic and labelled as such on the card that reports each: the
+> ocean current
 > and wind field, and the AIS tracks. I can tell you exactly why for each."
 
 **"Why is the AIS synthetic?"**
 > "Because the problem statement permits it. It says real AIS may be used 'else synthetic data can
 > be prepared for the region of oil spill to demonstrate the functioning of the algorithm.' Real
 > historic AIS for an arbitrary ocean patch in 2015 isn't obtainable by us. So we generate a fleet
-> for the hindcast envelope, label it on every screen, give every vessel an MMSI starting 999 —
+> for the hindcast envelope, label it on the first card of the Vessels screen, give every vessel an
+> MMSI starting 999 —
 > outside the ITU country-code range, so no real ship can hold one — and name them with NATO
 > phonetic words. The algorithm operating on it is entirely real."
 
@@ -179,8 +185,7 @@ highest-value thing you do all session.
 
 **"What about false positives?"**
 > "Precision 0.83, recall 0.91 at patch scale — so we slightly over-call. For disaster response
-> that's the right
-> direction: missing a real spill costs more than sending an analyst to check a false one.
+> that's the right direction: missing a real spill costs more than sending an analyst to check a false one.
 >
 > But the honest framing is bigger than that. Every scene in our dataset contains labelled oil, so
 > our metrics measure delineation quality on scenes already known to have a slick. **They are not a
@@ -376,15 +381,16 @@ rather than imagining it is the whole chain.
 > same case twice and every figure is byte-identical; only the timestamps change. That matters for
 > an evidentiary product: a result you can't reproduce is a result you can't defend."
 
-**"Will it scale? This takes twenty-five seconds."**
-> "Twenty-four seconds for a full ten-stage run on one 2048-pixel scene, on a laptop CPU,
-> single-threaded, with no GPU — and two thirds of that is decoding the GeoTIFF and running
-> inference. Almost all the rest is pixel work too: the whole physics chain — forcing, hindcast,
-> forecast, AIS, scoring — is about one second.
+**"Will it scale? This takes twenty seconds."**
+> "Twenty seconds for a full ten-stage run on one 2048-pixel scene, on a laptop CPU,
+> single-threaded, with no GPU — and three quarters of that is two stages: **9.7 seconds decoding
+> the GeoTIFF and 5.7 running inference**. Almost all the rest is pixel work too — geometry and
+> look-alike screening are another 3.7 between them. The whole physics chain — forcing, hindcast,
+> forecast, AIS, scoring — is **under a second**.
 > Sentinel-1 revisits every six days, so throughput isn't the binding
 > constraint — but the API is already built as a job queue rather than blocking requests, so it
 > parallelises across scenes without redesign. Inference on a GPU would be a small fraction of
-> those twenty-four seconds."
+> those twenty seconds."
 
 **"Why not React? You said you know MERN."**
 > "Because it would have earned nothing. The value here is the model, the drift physics and the
@@ -515,7 +521,7 @@ The one thing to say on each screen if you have only one sentence:
 | **Slick** | "Area integrated row by row on a sphere, because a degree of longitude shrinks with latitude — and an analyst can correct the boundary by hand." |
 | **Drift** | "The ocean run backwards — and it gives a region and a 24-hour window, not a point, because uncertainty grows every step back." |
 | **Vessels** | "Ranked by spatio-temporal correlation, every score component and its evidence visible, and never called guilty." |
-| **Method** | "Everything we can't tell you: patch metrics flatter, the honest whole-scene numbers are 0.58 pooled and 0.046 at our worst scene, and our U-Net alone alarms on 305 of 340 look-alike patches we tested it against." |
+| **Method** | "Everything we can't tell you: patch metrics flatter, the honest whole-scene numbers are 0.58 pooled and 0.046 at our worst scene, and our U-Net alone alarms on 288 of 340 look-alike patches we tested it against." |
 
 ---
 

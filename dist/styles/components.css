@@ -38,11 +38,22 @@
   letter-spacing: -0.018em;
 }
 
+/* Short tags ("12 regions", "10 scored") sit at the right of the title row. A long hint
+ * wraps onto its own line, where right-alignment reads as a mistake — so cap the width and
+ * let anything that wraps fall back to the left, in line with the title above it. */
 .card__hint {
   margin-left: auto;
   font-size: var(--t-footnote);
   color: var(--text-tertiary);
   text-align: right;
+  max-width: 52ch;
+}
+
+.card__hint--long {
+  margin-left: 0;
+  flex: 1 0 100%;
+  text-align: left;
+  max-width: 68ch;
 }
 
 .card__note {
@@ -648,16 +659,10 @@
   background: var(--danger-dim);
 }
 
-.badge-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s2);
-}
-
 /* -- notice ------------------------------------------------------------ */
 
-/* A tinted card, not a banner with a rule around it. The three standing disclosures sit at
-   the top of every screen, so they have to be legible without being loud. */
+/* A tinted card, not a banner with a rule around it. Used inside dialogs and cards where
+   one sentence genuinely has to be read before the reader acts. */
 .notice {
   display: flex;
   gap: var(--s3);
@@ -698,62 +703,6 @@
 .notice strong {
   color: inherit;
   font-weight: 600;
-}
-
-/* -- standing disclosures ---------------------------------------------- */
-/* One inset block, hairline-separated, at footnote size. See `ui.js::disclosureBar`.
- *
- * Inset rather than elevated: as a white card with a shadow it sat at the same visual weight
- * as the findings underneath it, and a full-width plate holding one line of 12 px grey text
- * looks like an empty toolbar. Sunken and tight, it reads as what it is -- a footnote that
- * cannot be dismissed. */
-
-.disclosures {
-  display: flex;
-  flex-direction: column;
-  padding: 0 var(--s4);
-  border-radius: var(--r-md);
-  background: var(--sunken);
-  border: 1px solid var(--line);
-}
-
-.disclosures__row {
-  display: flex;
-  gap: 9px;
-  align-items: flex-start;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: var(--t-footnote);
-  line-height: 1.45;
-  color: var(--text-tertiary);
-}
-
-.disclosures__row > p {
-  max-width: 108ch;
-}
-
-.disclosures__row:last-child {
-  border-bottom: 0;
-}
-
-.disclosures__icon {
-  flex: none;
-  width: 13px;
-  height: 13px;
-  margin-top: 2px;
-  color: var(--text-quaternary);
-}
-
-.disclosures__label {
-  font-weight: 600;
-  color: var(--text);
-}
-
-/* The colour stays on the label, so grouping the rows does not cost the synthetic-data
- * warning its salience. */
-.disclosures__row--synthetic .disclosures__icon,
-.disclosures__row--synthetic .disclosures__label {
-  color: var(--synthetic-text);
 }
 
 /* -- buttons ----------------------------------------------------------- */

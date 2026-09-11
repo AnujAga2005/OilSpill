@@ -173,7 +173,7 @@ These appear in the product and should never be dropped:
   and either can be made real on its own, so this label has four forms
   (`… CMEMS data`, `… Synthetic currents with ERA5 wind`, `… CMEMS currents with ERA5 wind`);
   supplying a wind file is described in [RUNBOOK.md](RUNBOOK.md) §6a.
-- `Status: Research PoC — human review required`
+- `Status: Research PoC - human review required`
 - `Priority candidate for investigation` — never "responsible", never "guilty".
 
 Read [KNOWN-ISSUES.md](KNOWN-ISSUES.md) before quoting any accuracy figure. The train/test

@@ -353,15 +353,6 @@ kbd,
   min-width: 0;
 }
 
-.page__eyebrow {
-  font-size: var(--t-caption);
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--text-quaternary);
-  margin-bottom: var(--s2);
-}
-
 /* The one serif on the screen. A display face at display size, tracked in, is what makes
  * the page read as a document rather than a control panel. */
 .page__title {
@@ -370,15 +361,6 @@ kbd,
   font-weight: 500;
   letter-spacing: -0.024em;
   line-height: 1.08;
-}
-
-.page__lede {
-  margin-top: var(--s3);
-  max-width: 62ch;
-  font-size: var(--t-lead);
-  line-height: 1.5;
-  color: var(--text-tertiary);
-  letter-spacing: -0.011em;
 }
 
 .page__actions {
@@ -507,10 +489,6 @@ kbd,
 
   .page__head {
     padding-top: 0;
-  }
-
-  .page__lede {
-    font-size: var(--t-body);
   }
 }
 

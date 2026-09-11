@@ -17,10 +17,6 @@ import * as X from "../exporters.js";
 import { createMap, mapLegend } from "../mapview.js";
 import { baseRasters, slickRings, slickLayers, C, Z } from "../layers.js";
 
-export const LEDE =
-  "Area, perimeter, length, orientation and the method behind each, plus an editable " +
-  "boundary so an analyst's own delineation can be measured the same way.";
-
 /** Handle radius in screen pixels, and the grab tolerance around one. */
 const HANDLE = 4.2;
 const GRAB = 11;
@@ -473,7 +469,10 @@ function boundaryCard(ctx, caseDoc, rings, selectedId) {
     });
     map.setRasters(baseRasters(caseDoc, ctx.caseId, { kind: "vv", opacity: 0.95 }));
     paintMap();
-    map.fitContent(0.1);
+    // Frame the slick, not the acquisition it sits in. The backdrop is the whole 2048 px
+    // scene and the slick is a fraction of it, so fitting both puts the subject of this
+    // screen on screen as a sliver.
+    map.fitFindings();
 
     // The gesture claim: while editing, a pointerdown near a handle drags it instead of
     // panning the view.

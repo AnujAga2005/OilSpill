@@ -3,6 +3,11 @@
 Every number in this document was read out of the project's own output files. Nothing here is
 estimated or rounded up. If a figure appears on stage it should come from this page.
 
+> **In plain words:** this is the scoreboard. What's finished, what isn't, and the real number for
+> each. If someone on stage asks "what is your accuracy?" or "how many scenes?", the answer is in
+> here and nowhere else — do not quote a figure from memory. §3.8 is the honest list of what's
+> still missing.
+
 ---
 
 ## 3.1 One paragraph summary
@@ -292,7 +297,7 @@ concealed will discount everything else you said.
    against 2 290 published look-alike patches it never trained on: **AUC 0.9573** held out
    in-domain, **69.4 %** of 84 758 cross-domain dark regions rejected, and — the number that
    matters — the U-Net **alone** alarms on **100 %** of those patches under one radiometric mapping
-   and **89.7 %** under the other. See KNOWN-ISSUES.md §4 and `lookalike_metrics.json`.
+   and **84.7 %** under the other. See KNOWN-ISSUES.md §4 and `lookalike_metrics.json`.
 3. Patch metrics do not include errors that only appear at scene scale — hence the scene
    evaluation.
 4. The reference masks are the supplied labels; their own accuracy is unknown and is treated as
@@ -407,14 +412,19 @@ card also reports whether the slick touches the scene edge and changes its own w
 here it reads *"fully inside the scene footprint"*, so 26.90 km² is a complete measurement rather
 than a floor. Do not claim an edge effect unless the card says there is one.
 
-### The four standing labels, verbatim
+### The four mandated labels, verbatim
 
-These strings appear in the shipped output. Know them; they are your honesty policy in code.
+These strings appear in the shipped output. Know them; they are your honesty policy in code. They
+are no longer repeated in a strip on every screen — each is stated once, where it applies, and all
+four are in the case JSON and the PDF report regardless of what is on screen.
 
-- `AIS mode: Synthetic demonstration data`
-- `Drift forcing: Synthetic scenario data`
-- `Status: Research PoC – human review required`
-- `Priority candidate for investigation` — the strongest phrase anywhere in the product
+- `AIS mode: Synthetic demonstration data` — Vessels, on the *Traffic filtering* card, under the
+  reports-ingested figure
+- `Drift forcing: Synthetic scenario data` — Drift, the *Forcing* fold (its summary line, readable
+  without opening it)
+- `Status: Research PoC - human review required` — the footer of every screen
+- `Priority candidate for investigation` — the strongest phrase anywhere in the product; on the
+  Vessels verdict card and every ranking row
 
 Plus the ranking caveat, in full:
 
@@ -610,7 +620,7 @@ guessed at.
 | | Screen | U-Net alone |
 |---|---|---|
 | Held out, same domain (5-fold, grouped by parent product) | **AUC 0.9573** — keeps 90.2 % of oil, rejects 89.4 % of dark non-oil | — |
-| 2 290 published look-alike patches, never trained on | **69.4 %** of 84 758 dark regions rejected; 73.2 % of patches still raise something | **89.7 %** of patches alarm under one radiometric mapping, **100 %** under the other |
+| 2 290 published look-alike patches, never trained on | **69.4 %** of 84 758 dark regions rejected; 73.2 % of patches still raise something | **84.7 %** of patches alarm under one radiometric mapping, **100 %** under the other |
 
 Say the right thing about this on stage: **the screen is a real improvement and the problem is not
 solved.** The U-Net on its own alarms on essentially every look-alike patch it is shown. Two

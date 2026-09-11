@@ -15,10 +15,6 @@ import { ICONS } from "../icons.js";
 import * as F from "../format.js";
 import * as U from "../ui.js";
 
-export const LEDE =
-  "The supplied VV and VH backscatter, the model's probability field, the thresholded " +
-  "mask and the dataset's own reference mask - the same pixels, four ways.";
-
 /** Overlay choices. `reference` is dropped when the dataset supplied no mask. */
 const OVERLAYS = [
   { value: "none", label: "None" },

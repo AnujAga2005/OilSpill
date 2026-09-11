@@ -2820,15 +2820,15 @@
       "note": "the screen was fitted on this project's decibel scenes only; nothing here was used to choose a weight, a threshold or a feature"
     },
     "detector": {
-      "threshold": 0.8,
+      "threshold": 0.7,
       "thresholdSource": "sceneThreshold from scene_metrics.json, the operating point chosen on the validation scenes",
       "alarmRule": "a patch counts as an alarm when a connected region of at least 400 pixels exceeds the threshold",
       "lookAlikes": {
         "clipRange": {
           "assumption": "digital numbers 0-255 mapped linearly onto the clip bounds the training normalisation uses for each polarisation, i.e. assuming the JPEG stretch spanned exactly that dynamic range",
           "patches": 340,
-          "patchesWithAlarm": 305,
-          "meanPredictedFraction": 0.041381,
+          "patchesWithAlarm": 288,
+          "meanPredictedFraction": 0.031474,
           "byCluster": {
             "nc-00": {
               "patches": 20,
@@ -2842,8 +2842,8 @@
             },
             "nc-02": {
               "patches": 20,
-              "alarms": 19,
-              "alarmRate": 0.95
+              "alarms": 18,
+              "alarmRate": 0.9
             },
             "nc-03": {
               "patches": 20,
@@ -2852,28 +2852,28 @@
             },
             "nc-04": {
               "patches": 20,
-              "alarms": 18,
-              "alarmRate": 0.9
-            },
-            "nw-00": {
-              "patches": 20,
               "alarms": 20,
               "alarmRate": 1.0
             },
+            "nw-00": {
+              "patches": 20,
+              "alarms": 19,
+              "alarmRate": 0.95
+            },
             "nw-01": {
+              "patches": 20,
+              "alarms": 13,
+              "alarmRate": 0.65
+            },
+            "nw-02": {
               "patches": 20,
               "alarms": 16,
               "alarmRate": 0.8
             },
-            "nw-02": {
-              "patches": 20,
-              "alarms": 18,
-              "alarmRate": 0.9
-            },
             "nw-03": {
               "patches": 20,
-              "alarms": 19,
-              "alarmRate": 0.95
+              "alarms": 15,
+              "alarmRate": 0.75
             },
             "nw-04": {
               "patches": 20,
@@ -2882,18 +2882,18 @@
             },
             "nw-05": {
               "patches": 20,
-              "alarms": 7,
-              "alarmRate": 0.35
+              "alarms": 5,
+              "alarmRate": 0.25
             },
             "nw-06": {
               "patches": 20,
-              "alarms": 20,
-              "alarmRate": 1.0
+              "alarms": 19,
+              "alarmRate": 0.95
             },
             "nw-07": {
               "patches": 20,
-              "alarms": 17,
-              "alarmRate": 0.85
+              "alarms": 16,
+              "alarmRate": 0.8
             },
             "nw-08": {
               "patches": 20,
@@ -2902,27 +2902,27 @@
             },
             "nw-09": {
               "patches": 20,
-              "alarms": 16,
-              "alarmRate": 0.8
+              "alarms": 17,
+              "alarmRate": 0.85
             },
             "nw-10": {
               "patches": 20,
-              "alarms": 18,
-              "alarmRate": 0.9
+              "alarms": 16,
+              "alarmRate": 0.8
             },
             "nw-11": {
               "patches": 20,
-              "alarms": 20,
-              "alarmRate": 1.0
+              "alarms": 17,
+              "alarmRate": 0.85
             }
           },
-          "falseAlarmRate": 0.8971
+          "falseAlarmRate": 0.8471
         },
         "momentMatch": {
           "assumption": "each patch standardised by its own mean and standard deviation, then given the training mean and standard deviation of each polarisation, i.e. assuming the patch is radiometrically typical of the training scenes",
           "patches": 340,
           "patchesWithAlarm": 340,
-          "meanPredictedFraction": 0.17182,
+          "meanPredictedFraction": 0.444335,
           "byCluster": {
             "nc-00": {
               "patches": 20,
@@ -3018,7 +3018,7 @@
           "assumption": "digital numbers 0-255 mapped linearly onto the clip bounds the training normalisation uses for each polarisation, i.e. assuming the JPEG stretch spanned exactly that dynamic range",
           "patches": 10,
           "patchesWithAlarm": 10,
-          "meanPredictedFraction": 0.020226,
+          "meanPredictedFraction": 0.014229,
           "byCluster": {
             "ow": {
               "patches": 10,
@@ -3026,14 +3026,14 @@
               "alarmRate": 1.0
             }
           },
-          "alarmsInsideAnnotatedBox": 9,
+          "alarmsInsideAnnotatedBox": 10,
           "detectionRate": 1.0
         },
         "momentMatch": {
           "assumption": "each patch standardised by its own mean and standard deviation, then given the training mean and standard deviation of each polarisation, i.e. assuming the patch is radiometrically typical of the training scenes",
           "patches": 10,
           "patchesWithAlarm": 10,
-          "meanPredictedFraction": 0.179217,
+          "meanPredictedFraction": 0.59968,
           "byCluster": {
             "ow": {
               "patches": 10,
@@ -3044,7 +3044,13 @@
           "alarmsInsideAnnotatedBox": 10,
           "detectionRate": 1.0
         }
-      }
+      },
+      "computedUtc": "2026-09-11T18:42:40Z",
+      "checkpoint": "unet_vv_vh.npz",
+      "modelVersion": "unet-vvvh-b16d4-v1",
+      "checkpointTrainedUtc": "2026-09-09T12:01:39Z",
+      "recomputedNote": "Recomputed on its own after the checkpoint was retrained on the acquisition-grouped split. The screen half of this file predates that retrain and is unaffected by it: its region proposer is the classical dark-region finder, not the network.",
+      "elapsedSeconds": 1886.97
     }
   },
   "limitations": [

@@ -82,37 +82,12 @@ export function notice(text, { kind = "", strongPrefix = "" } = {}) {
   );
 }
 
-/**
- * The standing disclosures, as one block instead of a stack of banners.
- *
- * These are conditions of the data, so they appear on every screen and cannot be dismissed.
- * Three separate tinted banners at the top of every screen pushed the actual findings off
- * the first screenful, which is its own kind of dishonesty -- so they are grouped into a
- * single quiet block, at footnote size, with the colour kept on the label of each row. The
- * wording is untouched.
- *
- * `items` is `[{ label, text, kind }]`.
- */
-export function disclosureBar(items) {
-  const rows_ = items.filter(Boolean);
-  if (!rows_.length) return null;
-  return h(
-    "aside",
-    { class: "disclosures", "aria-label": "Standing disclosures about this data" },
-    rows_.map(({ label, text, kind }) =>
-      h(
-        "div",
-        { class: ["disclosures__row", kind ? `disclosures__row--${kind}` : null] },
-        icon(kind === "synthetic" ? ICONS.warning : ICONS.info, { cls: "disclosures__icon" }),
-        h(
-          "p",
-          null,
-          label ? h("strong", { class: "disclosures__label" }, `${label} `) : null,
-          text,
-        ),
-      ),
-    ),
-  );
+/** A hint is normally a short tag pushed to the right of the title. A long one wraps onto
+ * its own line, where right-alignment reads as a layout bug, so it gets its own class. */
+const HINT_WRAPS_AT = 48;
+
+function hintClass(hint) {
+  return ["card__hint", typeof hint === "string" && hint.length > HINT_WRAPS_AT ? "card__hint--long" : null];
 }
 
 export function card(title, { hint, note, flush = false, sunken = false, id, actions } = {}, ...body) {
@@ -128,7 +103,7 @@ export function card(title, { hint, note, flush = false, sunken = false, id, act
           "header",
           { class: "card__head" },
           h("h2", { class: "card__title", id: id ? `${id}-title` : null }, title),
-          hint ? h("div", { class: "card__hint" }, hint) : null,
+          hint ? h("div", { class: hintClass(hint) }, hint) : null,
           actions ? h("div", { class: "inline card__hint no-print" }, actions) : null,
         )
       : null,
@@ -164,7 +139,7 @@ export function foldout(title, { hint, note, open = false, id } = {}, ...body) {
       { class: "foldout__summary" },
       icon(ICONS.chevronRight, { cls: "foldout__chevron", size: 15 }),
       h("h2", { class: "card__title" }, title),
-      hint ? h("div", { class: "card__hint" }, hint) : null,
+      hint ? h("div", { class: hintClass(hint) }, hint) : null,
     ),
     h(
       "div",
@@ -528,50 +503,6 @@ export function stateSwitch(status, value, render, options = {}) {
 /** A skeleton block sized like the content it stands in for. */
 export function skeleton(width = "100%", height = "1em") {
   return h("span", { class: "skeleton", style: { display: "block", width, height } }, " ");
-}
-
-/** A short provenance strip, used in the header bar and on every screen that needs it. */
-export function provenanceBadges(caseDoc, { compact = false } = {}) {
-  const p = caseDoc?.provenance || {};
-  const badges = [];
-  if (p.satellite) {
-    badges.push(badge(compact ? "Supplied SAR" : p.satellite, "supplied", { title: p.satellite }));
-  }
-  if (p.detectionLabel) {
-    badges.push(
-      badge(
-        compact
-          ? p.detectionSource === "reference" ? "Reference mask" : "Model prediction"
-          : p.detectionLabel,
-        p.detectionSource === "reference" ? "supplied" : "model",
-        { title: p.detectionLabel },
-      ),
-    );
-  }
-  if (p.aisLabel) {
-    badges.push(badge(compact ? "Synthetic AIS" : p.aisLabel, "synthetic", { title: p.aisLabel }));
-  }
-  if (p.driftLabel) {
-    // Currents and wind are separate products and either can be real alone, so the
-    // badge tone follows whichever half is real rather than the currents alone. The
-    // full label always names both.
-    const realWind = p.windMode === "era5";
-    const realCurrents = p.driftMode === "cmems";
-    const shortLabel = realCurrents
-      ? (realWind ? "CMEMS + ERA5" : "CMEMS drift")
-      : (realWind ? "ERA5 wind drift" : "Synthetic drift");
-    badges.push(
-      badge(
-        compact ? shortLabel : p.driftLabel,
-        realCurrents || realWind ? "drift" : "synthetic",
-        { title: p.driftLabel },
-      ),
-    );
-  }
-  if (caseDoc?.status) {
-    badges.push(badge(compact ? "Research PoC" : caseDoc.status, "warn", { title: caseDoc.status }));
-  }
-  return h("div", { class: "badge-row" }, badges);
 }
 
 /** The footer that stamps every screen with version, run time and status. */

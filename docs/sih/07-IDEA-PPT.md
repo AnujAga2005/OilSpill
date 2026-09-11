@@ -3,6 +3,11 @@
 This is the **idea-stage** PPT on SIH's own template. It is a different document from the finals
 deck in [document 4](04-HOW-TO-PITCH.md) §4.3, and it is written under harder constraints.
 
+> **In plain words:** SIH makes you submit a six-slide idea deck on their template before the
+> finals. This file fills it in, slide by slide, with the exact text to paste and the word count
+> each slide allows. This is a *submission*, not a presentation — different rules, and §7.0 lists
+> them.
+
 ## 7.0 The template's own rules, and what each one costs us
 
 Read off the template's *Important Instructions* slide. These are not suggestions — format

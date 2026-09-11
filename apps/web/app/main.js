@@ -5,9 +5,9 @@
  * store changes. Re-rendering a whole screen on every change is affordable at this size
  * and removes the entire class of bugs where the interface and the data disagree.
  *
- * Two disclosures are structural rather than decorative and are painted before any screen
- * gets a chance to render: the synthetic-AIS label and the research-status label. They live
- * in the shell so no screen can forget them.
+ * The data labels are structural rather than decorative and are painted before any screen
+ * gets a chance to render: which AIS, which forcing, which detection source, which status.
+ * They live in the shell so no screen can forget them.
  */
 
 import { h, mount, announce, icon } from "./dom.js";
@@ -242,7 +242,6 @@ function render() {
       "div",
       { class: "page" },
       pageHeader(screen, state, ctx),
-      disclosures(state),
       body,
       U.runFooter(state.caseDoc),
     ),
@@ -263,17 +262,7 @@ function pageHeader(screen, state, ctx) {
     h(
       "div",
       { class: "page__head-text" },
-      h(
-        "div",
-        { class: "page__eyebrow" },
-        screen.step ? `Step ${screen.step} of 5` : "Reference",
-      ),
       h("h1", { class: "page__title" }, screen.title),
-      h(
-        "p",
-        { class: "page__lede" },
-        screen.module.LEDE || "",
-      ),
     ),
     h(
       "div",
@@ -509,43 +498,6 @@ function topbarActions(state) {
 function jobStageLabel(job) {
   const line = job.message || (job.log || []).at(-1);
   return line ? F.clip(String(line), 44) : "working";
-}
-
-/**
- * The disclosures every screen inherits. Not dismissible: the AIS label and the research
- * status are conditions of the data, not notifications about it.
- */
-function disclosures(state) {
-  const caseDoc = state.caseDoc;
-  if (!caseDoc) return null;
-  const items = [];
-
-  if (caseDoc.ais?.label) {
-    items.push({
-      kind: "synthetic",
-      label: caseDoc.ais.label,
-      text: caseDoc.ais.disclaimer || "",
-    });
-  }
-  if (caseDoc.forcing?.mode === "synthetic") {
-    items.push({
-      kind: "synthetic",
-      label: caseDoc.forcing.label || "Synthetic forcing.",
-      text:
-        caseDoc.forcing.forcing?.warning ||
-        "Drift is driven by a deterministic synthetic current field because the supplied " +
-          "reanalysis does not cover this acquisition time.",
-    });
-  }
-  if (api.apiMode() === "offline") {
-    items.push({
-      label: "Offline.",
-      text:
-        "The API is not reachable, so this is the bundled demo case replayed from static " +
-        "files. New analyses cannot be started until the API is running.",
-    });
-  }
-  return U.disclosureBar(items);
 }
 
 // -- data -------------------------------------------------------------------

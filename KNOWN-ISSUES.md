@@ -182,7 +182,7 @@ different sensor product:
 
 | | Screen | U-Net alone, `clipRange` | U-Net alone, `momentMatch` |
 | --- | --- | --- | --- |
-| Patches raising an alarm | **1 677 of 2 290 (73.2 %)** | 305 of 340 (89.7 %) | **340 of 340 (100 %)** |
+| Patches raising an alarm | **1 677 of 2 290 (73.2 %)** | 288 of 340 (84.7 %) | **340 of 340 (100 %)** |
 | Dark regions rejected | **58 812 of 84 758 (69.4 %)** | — | — |
 
 Read the two columns together, because that contrast is the finding. The U-Net alone alarms on
@@ -214,6 +214,19 @@ seven limitations, and three of them bound the headline:
 cross-domain half needs the archive on disk first:
 `.venv/bin/python scripts/fetch_dartis2019.py --subset nc,nw`. The full eval took **2 h 57 m**;
 the same-domain half alone is minutes.
+
+**The two halves of that file were computed at different times, and it says so.** The detector
+half was recomputed on 11 September 2026 against the checkpoint retrained on the
+acquisition-grouped split, at that model's operating point of 0.7 rather than the 0.8 the earlier
+run used — which moved the `clipRange` alarm count from 305 of 340 to **288 of 340**. The screen
+half is untouched and should be: its region proposer is the classical dark-region finder, not the
+network, so retraining cannot have moved it. Redoing only the block that changed took **31
+minutes** instead of three hours:
+
+    .venv/bin/python scripts/refresh_lookalike_detector.py
+
+The block carries its own `computedUtc`, `checkpoint`, `modelVersion` and a `recomputedNote`
+recording exactly this, so the mixed provenance is readable in the file rather than only here.
 
 **What is still a dataset gap.** The screen never names *which* look-alike it thinks it is looking
 at, because nothing in either dataset labels the phenomenon. Closing that needs Part II of the

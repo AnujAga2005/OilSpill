@@ -2,6 +2,11 @@
 
 Read this first. It is the contract. Everything else in these documents exists to satisfy it.
 
+> **In plain words:** the government has written down a problem it wants solved. This file is that
+> problem, quoted, plus what each clause is actually asking for. If you only remember one thing:
+> they want us to *find* oil spills and *work out who to look at* — two different jobs, and the
+> second one is the hard half. New to the vocabulary? [Document 12](12-PLAIN-LANGUAGE.md) first.
+
 ---
 
 ## 1.1 The official record

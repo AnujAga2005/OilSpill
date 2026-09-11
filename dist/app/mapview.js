@@ -89,9 +89,27 @@ export function createMap(container, options = {}) {
 
   // -- view ----------------------------------------------------------------
 
+  /** Read the canvas's laid-out size into `size`.
+   *
+   * `draw()` also does this, but `draw()` runs on a rAF and every fit needs the real size
+   * *now*: `fit()` divides the canvas dimensions by the span it is framing, so computing one
+   * before the first frame divides by the initial 1x1 and clamps to MIN_SCALE -- a 2000 km
+   * view of a 16 km scene. A screen that sets its layers and fits in the same frame, which
+   * is all of them, hit that on every load.
+   */
+  function measure() {
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    // Before the element is laid out both are 0. Keep the old size rather than adopting a
+    // zero, so a fit issued that early is merely stale rather than degenerate, and the
+    // ResizeObserver re-runs it as soon as there is a box to measure.
+    if (width > 0 && height > 0) size = { w: width, h: height };
+  }
+
   /** Fit `[west, south, east, north]` with a margin. */
   function fit(bounds, pad = 0.08) {
     if (!bounds || bounds.length < 4) return;
+    measure();
     const [west, south, east, north] = bounds;
     const lon = (west + east) / 2;
     const lat = (south + north) / 2;
@@ -103,12 +121,31 @@ export function createMap(container, options = {}) {
       size.h / (spanLat * (1 + pad * 2)),
     );
     view = { lon, lat, scale: clamp(scale, MIN_SCALE, MAX_SCALE) };
-    fitted = bounds.slice();
+    // What the view was fitted to, so a resize or a late-arriving raster can re-fit.
+    // Recording the *intent* rather than only the bounds matters: a screen that framed
+    // its findings must re-frame its findings, not the extent they happened to have
+    // before the rest of them were painted.
+    fitted = { bounds: bounds.slice(), pad, mode: "explicit" };
     schedule();
   }
 
-  /** The union of every raster footprint and every vector coordinate. */
-  function contentBounds() {
+  /** Re-run whichever fit produced the current view, against freshly measured bounds. */
+  function refit() {
+    if (!fitted) return schedule();
+    if (fitted.mode === "content") return api.fitContent(fitted.pad);
+    if (fitted.mode === "findings") return api.fitFindings(fitted.pad);
+    return fit(fitted.bounds, fitted.pad);
+  }
+
+  /** The union of vector coordinates, and optionally the raster footprints too.
+   *
+   * The distinction matters because the backdrop is the whole 2048 px acquisition while
+   * the finding is usually a few kilometres of it. Framing the union of both puts a
+   * slick that is 22% of the scene height on screen as a sliver. `includeRasters: false`
+   * frames the findings and lets the imagery run off the edges, which is what every
+   * screen that exists to show one slick, one corridor or one shortlist actually wants.
+   */
+  function contentBounds({ includeRasters = true } = {}) {
     let west = Infinity;
     let south = Infinity;
     let east = -Infinity;
@@ -122,10 +159,12 @@ export function createMap(container, options = {}) {
       if (lat > north) north = lat;
     };
 
-    for (const raster of rasters) {
-      if (!raster.bounds) continue;
-      eat(raster.bounds[0], raster.bounds[1]);
-      eat(raster.bounds[2], raster.bounds[3]);
+    if (includeRasters) {
+      for (const raster of rasters) {
+        if (!raster.bounds) continue;
+        eat(raster.bounds[0], raster.bounds[1]);
+        eat(raster.bounds[2], raster.bounds[3]);
+      }
     }
     for (const vector of vectors) {
       if (vector.hidden) continue;
@@ -179,7 +218,7 @@ export function createMap(container, options = {}) {
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(height * ratio);
     }
-    size = { w: width, h: height };
+    measure();
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
 
@@ -572,12 +611,26 @@ export function createMap(container, options = {}) {
   const observer = new ResizeObserver(() => {
     // Re-fit rather than re-centre, so a phone rotating from portrait to landscape keeps
     // the whole corridor in frame instead of cropping it.
-    if (fitted) fit(fitted);
-    else schedule();
+    refit();
   });
   observer.observe(canvas);
 
   const images = new Map();
+
+  /**
+   * Re-fit or redraw once a raster's pixels exist.
+   *
+   * A screen sets its rasters and fits in the same frame, before the imagery has been
+   * fetched. The footprint is known synchronously, so the fit itself is already right;
+   * what the load event changes is that there are now pixels to draw. Re-running the
+   * fit still matters for the findings mode, where vectors painted after the first fit
+   * would otherwise sit outside the frame.
+   *
+   * A reader who has zoomed or panned has cleared `fitted`, and keeps their view.
+   */
+  function onRasterReady() {
+    refit();
+  }
 
   /** Load a raster once and redraw when it arrives. */
   function raster(url, bounds, opacity = 1) {
@@ -586,7 +639,7 @@ export function createMap(container, options = {}) {
     if (!image) {
       image = new Image();
       image.decoding = "async";
-      image.addEventListener("load", schedule);
+      image.addEventListener("load", onRasterReady);
       // A missing preview is not fatal: the vectors still carry the answer, so the map
       // degrades to a graticule with geometry on it rather than an error.
       image.addEventListener("error", () => {
@@ -595,6 +648,10 @@ export function createMap(container, options = {}) {
       });
       image.src = url;
       images.set(url, image);
+    } else if (image.complete && image.naturalWidth) {
+      // Already decoded from an earlier screen. The load event will not fire again, so
+      // the re-fit has to be requested here or the second visit keeps the first fit.
+      onRasterReady();
     }
     return { image, bounds, opacity };
   }
@@ -622,7 +679,26 @@ export function createMap(container, options = {}) {
 
     fitContent(pad = 0.08) {
       const bounds = contentBounds();
-      if (bounds) fit(bounds, pad);
+      if (bounds) {
+        fit(bounds, pad);
+        fitted = { bounds, pad, mode: "content" };
+      }
+      return api;
+    },
+
+    /** Frame the findings, letting the backdrop imagery run past the edges.
+     *
+     * This is the right default for any screen whose subject is the geometry rather
+     * than the acquisition: the slick, the drift corridor, the vessel shortlist. When
+     * a case has no vectors at all it falls back to framing everything, so a screen
+     * still shows the scene rather than an empty graticule.
+     */
+    fitFindings(pad = 0.14) {
+      const bounds = contentBounds({ includeRasters: false }) || contentBounds();
+      if (bounds) {
+        fit(bounds, pad);
+        fitted = { bounds, pad, mode: "findings" };
+      }
       return api;
     },
 

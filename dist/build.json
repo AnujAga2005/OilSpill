@@ -1,10 +1,10 @@
 {
   "pipelineVersion": "spilltrace-0.1.0",
-  "generatedUtc": "2026-09-10T16:57:56Z",
+  "generatedUtc": "2026-09-11T21:41:22Z",
   "note": "A verified copy of apps/web. No bundler, no minifier and no content hashing: the interface is plain ES modules and runs from source. Cache behaviour comes from the server's Cache-Control headers, not from filenames.",
   "totals": {
     "files": 53,
-    "bytes": 3085934
+    "bytes": 3085395
   },
   "byExtension": {
     ".png": {
@@ -13,15 +13,15 @@
     },
     ".json": {
       "files": 7,
-      "bytes": 1325145
+      "bytes": 1326021
     },
     ".js": {
       "files": 19,
-      "bytes": 334734
+      "bytes": 334832
     },
     ".css": {
       "files": 4,
-      "bytes": 70719
+      "bytes": 69206
     },
     ".html": {
       "files": 1,
@@ -71,13 +71,13 @@
     },
     {
       "path": "app/main.js",
-      "bytes": 20654,
-      "sha256": "031b4f12977da958804a2c6fbc7fe6dd359a90c564f7ff941f695e34004207d5"
+      "bytes": 19294,
+      "sha256": "34bff1cce18e2353d5b73ebb9de0977e36fb96902fc447ac735b2c9060e81ea0"
     },
     {
       "path": "app/mapview.js",
-      "bytes": 25794,
-      "sha256": "f52219a6701e2e6441001a9a3ad67b953efdd2aad6d62cb1d0b0b1d26c98bad2"
+      "bytes": 29429,
+      "sha256": "4fd42eecffac44f7f35dc7ae665d09fcda6e6dca6c06f5ff7bab9f7cb92b72ee"
     },
     {
       "path": "app/router.js",
@@ -86,33 +86,33 @@
     },
     {
       "path": "app/screens/command.js",
-      "bytes": 16353,
-      "sha256": "44290be10b064a92698f0beba44aed1e5500858397ed2e59b4acde3bb6d47440"
+      "bytes": 16364,
+      "sha256": "59056d4df1b4a413d960f0461984ac366861fee8df79085d1efa3bb07c573ca7"
     },
     {
       "path": "app/screens/drift.js",
-      "bytes": 31849,
-      "sha256": "defcb9e4e9ebc2ce4b7fffe55a759777b4c05505197ba6079ce39a868d6a38de"
+      "bytes": 31737,
+      "sha256": "87d51fd8462a3dace31a8348fc6839f2911d8662c552619bf5a3a894870d1041"
     },
     {
       "path": "app/screens/methodology.js",
-      "bytes": 51047,
-      "sha256": "f6f061d2f30604b20186c56a5704abdceaf685a6065d3cd8cce0fb65678dfa7a"
+      "bytes": 51083,
+      "sha256": "2f64e5f437ff205aeecde0e1d665c086fd9f61e7d1b627680a3c2b4ee6c2c3c9"
     },
     {
       "path": "app/screens/satellite.js",
-      "bytes": 19338,
-      "sha256": "24e3be3d8b081e966936929639b2576f9d2e15e25bbcd9c2f885bfa235dd2fb2"
+      "bytes": 19150,
+      "sha256": "04faad98d03816b13a4a833bf049df31cb270598c61e38c1984f1965332d0e92"
     },
     {
       "path": "app/screens/slick.js",
-      "bytes": 38698,
-      "sha256": "4efebf35c212f6269e600f36585f62c1f540835dc3108af55ec33ce245724ae2"
+      "bytes": 38726,
+      "sha256": "ec4367c0941086777c2b484c3f9550f5b2f9a7836d4196a624679aef060ed077"
     },
     {
       "path": "app/screens/vessels.js",
-      "bytes": 30272,
-      "sha256": "2f3d6ac67169e9f8ce155723578c2fc6d1a09e5c9f08a6249bdff14ccf908db6"
+      "bytes": 30748,
+      "sha256": "c45940efb4606b43230930c1881e02d19160f3313aaa7d8cc06ce093342e50be"
     },
     {
       "path": "app/state.js",
@@ -121,8 +121,8 @@
     },
     {
       "path": "app/ui.js",
-      "bytes": 24849,
-      "sha256": "b840de9468a17606b2290ca396ab0fcfd368c8dc309c0b705340d7abdb5860da"
+      "bytes": 22421,
+      "sha256": "4f8c7cd6b68ca6f6349367ca66fc53e464f7a7a44abf9146c62a8c9229090875"
     },
     {
       "path": "demo/case-demo.json",
@@ -217,7 +217,7 @@
     {
       "path": "demo/health.json",
       "bytes": 1313,
-      "sha256": "f9d4f2f1cb402d569853bcc816113e99b02c9ed63acca257886f85c513875e98"
+      "sha256": "41d0bf11b70d14cb3c062c3e884e9a5f9b89fe7c057412206570636f104cafdb"
     },
     {
       "path": "demo/images-demo.json",
@@ -226,8 +226,8 @@
     },
     {
       "path": "demo/metrics.json",
-      "bytes": 188488,
-      "sha256": "78a4db517d47973466daeecb2cb13a3c20071e820f4f51fdcd7e3929d685147b"
+      "bytes": 188926,
+      "sha256": "f23ec6a12793f4c01521deac921b5636fd5111565eaf2b3d8874987a4065854a"
     },
     {
       "path": "demo/previews/00223_comparison.png",
@@ -261,8 +261,8 @@
     },
     {
       "path": "demo/report-demo.json",
-      "bytes": 297326,
-      "sha256": "a8ff78fd6ee50c539362a2a1eb63d021414967e6658b20cadbcb1bfab2f9db42"
+      "bytes": 297764,
+      "sha256": "a0bb9ef6be11b87f78145f257f33b0b3b8f85b3057406abc7fcd7444d9825f2e"
     },
     {
       "path": "demo/scenes.json",
@@ -276,13 +276,13 @@
     },
     {
       "path": "styles/base.css",
-      "bytes": 10847,
-      "sha256": "72d0efaa4c9fc26208aa5557cea2b5f99f1cd7b50dabb2196d4074efadbe1d5e"
+      "bytes": 10441,
+      "sha256": "a34a2c3cbce4598904dbd02b234a90a2a4587ccd3f2dfb2acbe63f36391f30b5"
     },
     {
       "path": "styles/components.css",
-      "bytes": 40087,
-      "sha256": "a536168283eaa4f5992be6120acdf6a13a992b6ed9f112e5837eefe1e162dbb5"
+      "bytes": 38980,
+      "sha256": "932c01020acc21509e8f8ca00f9bedc8bddce5650ea8158a8fb53da029967163"
     },
     {
       "path": "styles/screens.css",
