@@ -3,6 +3,11 @@
 Written for someone who knows AI and the MERN stack and has never touched satellite data.
 No prior remote-sensing knowledge assumed.
 
+> **In plain words:** this is the domain teaching file. It explains why radar can see oil at all,
+> how oil moves on the sea, and what ship-tracking data is. **§2.9 is the minimum you need** — read
+> that one section if you read nothing else. Everything before it is the "why", for when a judge
+> goes deeper. [Document 12](12-PLAIN-LANGUAGE.md) is the same material compressed into a glossary.
+
 You do **not** need all of this to present well. §2.9 tells you the minimum. The rest is here so
 that when a judge asks something specific, the answer is in a file you have read.
 
@@ -67,7 +72,7 @@ Many things other than oil flatten the sea or otherwise look dark:
 This is *the* unsolved problem in the field and it is where a judge will push hardest. Our U-Net
 has never been shown a labelled look-alike, because the supplied dataset contains none — so **the
 U-Net alone cannot reject one, and we have measured exactly how badly.** Shown 340 published
-look-alike patches it never trained on, it raised an alarm on 89.7 % or 100 % of them depending on
+look-alike patches it never trained on, it raised an alarm on 84.7 % or 100 % of them depending on
 how the 8-bit imagery is mapped back to decibels.
 
 That is why a separate **screen** sits in front of it: seven shape-and-contrast features per dark
@@ -151,13 +156,9 @@ and the size of one pixel in degrees.
 **Why area calculation is not just `pixels × constant`.** A degree of latitude is about 111 km
 everywhere. A degree of *longitude* is 111 km at the equator but shrinks by `cos(latitude)` as
 you go towards the poles — about 96 km at 30° N, about 64 km at 55° N. So a pixel that is
-0.0001° × 0.0001° covers a different amount of ground depending on where it is. Multiply pixels
-by a single flat constant and you get a systematically wrong area, and the error grows with
-latitude.
+0.0001° × 0.0001° covers a different amount of ground depending on where it is. Multiply pixels by a single flat constant and you get a systematically wrong area, and the error grows with latitude.
 
-Our geometry module integrates area row by row using the actual latitude of each row, on a
-sphere. That is why the number on screen is defensible. It is also a very good 15-second answer
-when a judge asks "how do you compute area?"
+Our geometry module integrates area row by row using the actual latitude of each row, on a sphere. That is why the number on screen is defensible. It is also a very good 15-second answer when a judge asks "how do you compute area?"
 
 ---
 
@@ -165,13 +166,9 @@ when a judge asks "how do you compute area?"
 
 You know AI, so this section is short.
 
-**The task is semantic segmentation**: classify *every pixel* as oil or not-oil. Input is a
-2-channel image, output is a per-pixel probability map. Not classification (one label per
-image), not detection (bounding boxes) — per-pixel masks, because we need the shape to compute
-area and to seed drift particles.
+**The task is semantic segmentation**: classify *every pixel* as oil or not-oil. Input is a 2-channel image, output is a per-pixel probability map. Not classification (one label per image), not detection (bounding boxes) — per-pixel masks, because we need the shape to compute area and to seed drift particles.
 
-**U-Net** is the standard architecture for this. It came out of biomedical image segmentation
-(Ronneberger et al., 2015) and it is an encoder–decoder:
+**U-Net** is the standard architecture for this. It came out of biomedical image segmentation (Ronneberger et al., 2015) and it is an encoder–decoder:
 
 - The **encoder** downsamples, learning what things are while losing where they are.
 - The **decoder** upsamples back to full resolution.
@@ -183,8 +180,7 @@ boundaries. Boundaries matter to us because area and perimeter are deliverables.
 
 ### The metrics, plainly
 
-Let TP = pixels we correctly called oil, FP = pixels we wrongly called oil, FN = oil pixels we
-missed.
+Let TP = pixels we correctly called oil, FP = pixels we wrongly called oil, FN = oil pixels we missed.
 
 | Metric | Formula | In words |
 |---|---|---|
@@ -194,27 +190,18 @@ missed.
 | **Recall** | `TP / (TP + FN)` | of all the real oil, how much we found. Low recall = missed spills. |
 | **Accuracy** | correct ÷ total | **almost useless here.** If 1% of pixels are oil, calling everything "clean" scores 99%. Never lead with accuracy. |
 
-**The precision/recall trade-off is an operational choice, not a bug.** Our model has recall
-0.93 and precision 0.83 — it over-calls slightly. For disaster response that is the right
-direction: missing a real spill is worse than sending an analyst to check a false one. Be ready
+**The precision/recall trade-off is an operational choice, not a bug.** Our model has recall 0.93 and precision 0.83 — it over-calls slightly. For disaster response that is the right direction: missing a real spill is worse than sending an analyst to check a false one. Be ready
 to say that; it shows you understand the deployment, not just the metric.
 
 ### Threshold
 
-The model outputs a probability per pixel. To get a binary mask you pick a cutoff. Raise it and
-precision goes up, recall goes down. It must be chosen on **validation** data and then applied
-unchanged to **test** data — choosing it on test is cheating, and a sharp judge may ask. We
-choose 0.8 on validation and report test at 0.8.
+The model outputs a probability per pixel. To get a binary mask you pick a cutoff. Raise it and precision goes up, recall goes down. It must be chosen on **validation** data and then applied unchanged to **test** data — choosing it on test is cheating, and a sharp judge may ask. We choose 0.8 on validation and report test at 0.8.
 
 ### Why patch metrics flatter every team's numbers
 
-Our model is trained and scored on 128 × 128 pixel **patches** cut out of the big scenes. Those
-patches are sampled around labelled oil. So the model is being examined on a region where oil is
-about 18–38% of pixels — an exam where the answer is nearly always "yes, oil, right here."
+Our model is trained and scored on 128 × 128 pixel **patches** cut out of the big scenes. Those patches are sampled around labelled oil. So the model is being examined on a region where oil is about 18–38% of pixels — an exam where the answer is nearly always "yes, oil, right here."
 
-A real scene is 2048 × 2048 and is 99%-plus open water. All the false alarms live out there in
-the water the patch sampler never showed the model. That is why we also score **whole scenes**,
-and why the whole-scene number is lower and is the honest one.
+A real scene is 2048 × 2048 and is 99%-plus open water. All the false alarms live out there in the water the patch sampler never showed the model. That is why we also score **whole scenes**, and why the whole-scene number is lower and is the honest one.
 
 **Almost every team will quote a patch number without knowing this.** Knowing it, and
 volunteering both numbers, is one of the strongest moves available to you.
@@ -225,8 +212,7 @@ volunteering both numbers, is one of the strongest moves available to you.
 
 ### Lagrangian particle tracking
 
-Do not try to model the slick as a continuous fluid. Instead: scatter thousands of imaginary
-particles over the detected oil, and move each one independently, small time step by small time
+Do not try to model the slick as a continuous fluid. Instead: scatter thousands of imaginary particles over the detected oil, and move each one independently, small time step by small time
 step, by whatever the water and wind are doing at its own position:
 
 ```
@@ -244,10 +230,8 @@ breaking into fragments naturally.
 
 ### Hindcast versus forecast
 
-- **Forecast** — integrate *forwards*. Where will the oil be in 24 hours? This is for the
-  cleanup crew and the coastline at risk.
-- **Hindcast** — integrate *backwards*, with the velocity field negated. Where was this oil 24
-  hours ago? This is for the investigator, and it is NTRO's own word for it.
+- **Forecast** — integrate *forwards*. Where will the oil be in 24 hours? This is for the cleanup crew and the coastline at risk.
+- **Hindcast** — integrate *backwards*, with the velocity field negated. Where was this oil 24 hours ago? This is for the investigator, and it is NTRO's own word for it.
 
 **A hindcast never gives you a point.** You start from a spread-out slick, uncertainty
 accumulates every step, and the particle cloud fans out as you go back in time. What you get is
@@ -263,8 +247,7 @@ direction. We use **3%** (`windage_factor = 0.03`).
 
 Do the arithmetic and you see why the PS demands meteorological data: a 6 m/s wind contributes
 0.18 m/s of drift, which over 24 hours is about 15 km. Currents in many areas are a similar
-magnitude. **Ignore wind and your origin estimate can be tens of kilometres wrong**, which means
-you search the wrong water and shortlist the wrong ships.
+magnitude. **Ignore wind and your origin estimate can be tens of kilometres wrong**, which means you search the wrong water and shortlist the wrong ships.
 
 ### What we do not model — know these before a judge names them
 
@@ -375,16 +358,14 @@ you have checked.
 
 ## 2.7 Why "spatio-temporal" is the whole trick
 
-The phrase appears in the PS's expected solution and it names the core idea. Neither space nor
-time alone is enough:
+The phrase appears in the PS's expected solution and it names the core idea. Neither space nor time alone is enough:
 
 - **Space only** — "which ships passed through this patch of sea?" Dozens, over a week. Useless.
 - **Time only** — "which ships were sailing at 02:00 on 11 March?" Thousands. Useless.
 - **Both, intersected** — "which ships were inside *this* region during *this* 24-hour window?"
   A handful. That is a shortlist.
 
-Our hindcast produces exactly that box: a region and a window. Everything before it in the
-pipeline exists to compute that box, and everything after it exists to rank what falls inside.
+Our hindcast produces exactly that box: a region and a window. Everything before it in the pipeline exists to compute that box, and everything after it exists to rank what falls inside.
 If you can explain that one paragraph, you can explain the project.
 
 ---
@@ -435,8 +416,7 @@ unhesitatingly.
 2. **Why oil is dark** — wind makes ripples, ripples reflect radar, oil flattens the ripples.
 3. **What VV and VH are** — two radar polarisations, two input channels; VV carries most of the
    oil signal.
-4. **What IoU is** — overlap divided by combined area, and why accuracy is meaningless when oil
-   is 1% of pixels.
+4. **What IoU is** — overlap divided by combined area, and why accuracy is meaningless when oil is 1% of pixels.
 5. **Why patch metrics flatter and whole-scene metrics are honest** — the patch sampler only
    looks where the oil already is.
 6. **What a hindcast is and why it gives a region, not a point** — uncertainty grows every step

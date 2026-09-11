@@ -20,10 +20,6 @@ import { createMap, mapLegend } from "../mapview.js";
 import { baseRasters, slickLayers, driftLayers, originLayers, vesselLayers, C } from "../layers.js";
 import { stackBar } from "../chart.js";
 
-export const LEDE =
-  "Synthetic vessel tracks scored against the estimated release zone and window. A ranking " +
-  "of who to ask first, not a finding of who did it.";
-
 /**
  * Component colours, reused by the score bars and the weight budget.
  *
@@ -80,22 +76,11 @@ export function render(ctx) {
     "div",
     { class: "stack" },
 
-    // -- the disclosure, standing on its own ------------------------------
-    // Rule 1 of this file is that every vessel says it is synthetic. That sentence used to
-    // sit inside a card titled "Before reading this ranking", where the card's own title,
-    // two metadata rows and four supporting bullets all competed with the one line that has
-    // to land. It now stands alone at the top; the supporting detail is a foldout at the
-    // bottom, which is a promotion for the sentence, not a demotion.
-    U.notice(caseDoc.ais?.disclaimer || "", {
-      kind: "synthetic",
-      strongPrefix: caseDoc.ais?.label || "Synthetic AIS.",
-    }),
-
     // -- the clause the statement was most prescriptive about -------------
     // "The irrelevant traffic is to be filtered out." So the funnel comes before the
     // shortlist: how ten vessels became two, then who the two are. It also means the
     // presenter's eye only ever travels down this screen.
-    filterCard(attribution),
+    filterCard(attribution, caseDoc.provenance?.aisLabel || caseDoc.ais?.label),
 
     // -- the conclusion ---------------------------------------------------
     verdictCard(selected, attribution),
@@ -129,15 +114,18 @@ export function render(ctx) {
 /**
  * How this feed was made and what its identifiers mean.
  *
- * The one mandated sentence is a `U.notice` at the top of the screen. What is left here is
- * the detail that makes it checkable rather than merely stated: the source string, the
- * column count, and what each fabricated field is and is not. Folded, because a reader who
- * has taken the notice at the top at face value does not need to be told four more times.
+ * The mandated one-line label is not here -- it is on the funnel card at the top of the
+ * screen, unfolded, because a reader must not have to open anything to learn the traffic is
+ * fabricated. What is here is everything that label implies and does not say: the
+ * generator's disclaimer, the source string, the column count, and what each fabricated
+ * field is and is not. Folded, because a reader who has taken the label at face value does
+ * not need to be told four more times.
  */
 function feedCard(caseDoc) {
   const ais = caseDoc.ais || {};
   const schema = ais.schema || {};
   const source = caseDoc.provenance?.aisSource || schema.label;
+  const aisLabel = caseDoc.provenance?.aisLabel || ais.label;
   return U.foldout(
     "About this synthetic feed",
     { id: "disclosure", hint: source },
@@ -147,9 +135,13 @@ function feedCard(caseDoc) {
       // Two separate facts, deliberately shown as two rows: this feed is fabricated, and it
       // is fabricated in the format the problem statement names. The second is what makes
       // the first replaceable -- a real MarineCadastre extract loads through the same reader.
-      source
+      source || aisLabel
         ? U.rows(
-            U.row("AIS source", source, { mono: true, title: schema.note || "" }),
+            // The label is stated in full on the funnel card at the top of this screen, so
+            // the row here carries only the part the key does not already say -- a row
+            // reading "AIS mode / AIS mode: ..." says it twice.
+            aisLabel ? U.row("AIS mode", aisLabel.replace(/^AIS mode:\s*/i, "")) : null,
+            source ? U.row("AIS source", source, { mono: true, title: schema.note || "" }) : null,
             schema.header
               ? U.row("Schema", `${schema.header.length} columns · ${schema.format || "AIS"}`, {
                   title: schema.header.join(", "),
@@ -160,6 +152,9 @@ function feedCard(caseDoc) {
       h(
         "ul",
         { class: "bullets" },
+        // The generator's own disclaimer, in full. The row above carries the mandated
+        // one-line label; this is the sentence that says what the label means.
+        ais.disclaimer ? h("li", null, h("span", null, ais.disclaimer)) : null,
         h("li", null, h("span", null, ais.identifierNote || "")),
         h("li", null, h("span", null, ais.nameNote || "")),
         ais.imoNote ? h("li", null, h("span", null, ais.imoNote)) : null,
@@ -231,14 +226,20 @@ function weightsCard(attribution) {
  * vessels stay in the table below rather than disappearing, so the filter itself can be
  * checked against the rule stated on this card.
  */
-function filterCard(attribution) {
+function filterCard(attribution, aisLabel) {
   const funnel = attribution.filtering;
   if (!funnel) return null;
   const steps = [
     {
       label: "AIS reports ingested",
       value: F.int(funnel.aisReports),
-      sub: `${F.int(funnel.vesselsSeen)} distinct vessels in the feed`,
+      // The mandated one-line label, verbatim, on the stat that counts the reports it
+      // describes. It used to ride in the badge strip at the top of every screen; with that
+      // strip gone this is where it has to be, because a disclosure folded behind a
+      // disclosure triangle is not a disclosure.
+      sub: [`${F.int(funnel.vesselsSeen)} distinct vessels in the feed`, aisLabel]
+        .filter(Boolean)
+        .join(" · "),
     },
     {
       label: "In the release window",
@@ -365,7 +366,8 @@ function mapCard(ctx, caseDoc, candidates, selectedMmsi) {
     });
     map.setRasters(baseRasters(caseDoc, ctx.caseId, { kind: "vv", opacity: 0.75 }));
     paint();
-    map.fitContent(0.1);
+    // The tracks and the slick, not the whole acquisition around them.
+    map.fitFindings();
     ctx.onCleanup(() => map.destroy());
   });
 

@@ -16,10 +16,6 @@ import * as U from "../ui.js";
 import { lineChart, strip } from "../chart.js";
 import { C } from "../layers.js";
 
-export const LEDE =
-  "How each number on this product was produced, measured on held-out data, with the " +
-  "figures that flatter it and the figures that do not shown side by side.";
-
 export function render(ctx) {
   const { state, caseDoc } = ctx;
   const metrics = state.metrics;
@@ -252,7 +248,10 @@ function honestyCard(m) {
       U.stat({
         label: "Patch IoU, held-out test",
         value: F.metric(patch.iou, 4),
-        sub: `${F.int(m.patchScale?.protocol?.cacheSplits?.test?.patches)} patches of 128 px, sampled around labelled oil`,
+        // The cache holds more test patches than the evaluation budget uses, so this reads the
+        // number actually scored rather than the number cached. They differ, and captioning a
+        // metric with the wrong population is how a figure becomes indefensible.
+        sub: `${F.int(m.patchScale?.dataUsage?.test?.used)} patches of 128 px, sampled around labelled oil`,
       }),
       U.stat({
         label: "Whole-scene IoU, pooled",
@@ -1296,7 +1295,6 @@ function datasetCard(ctx, caseDoc) {
     h(
       "div",
       { class: "stack stack--tight" },
-      U.provenanceBadges(caseDoc),
       U.rows(
         U.row("Imagery", caseDoc?.provenance?.satellite, { stack: true }),
         U.row(

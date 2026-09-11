@@ -3,6 +3,11 @@
 The build is done. Winning now depends on delivery. This document is the pitch strategy, the
 deck, and the demo script.
 
+> **In plain words:** the product is finished — what's left is how you talk about it. This file has
+> the deck outline, the demo script, who says what, and what to do when something breaks live. The
+> one line that matters most: **say less than you want to.** The five sentences to memorise are in
+> [document 12](12-PLAIN-LANGUAGE.md) §12.9.
+
 Confirm your round's exact format and time limit on the day — SIH formats vary. Everything below
 is written so it can be cut down or stretched without losing the spine.
 
@@ -86,9 +91,13 @@ Rehearse this until it needs no thought. Server already running, browser already
 Command centre, `Live API` badge already green, **and the case picker set to `00223 · demo`**.
 Never start a server in front of judges.
 
-There is a second reason to have the API up. With it running there are two standing disclosure
-rows; offline there are three, and the extra one pushes the four numbered answers below the fold
-on a 1440 × 900 laptop. API up, the headline and all four answers are on screen without scrolling.
+There is a second reason to have the API up: the top-right badge reads **Live API** with a green
+dot, and you can say "that green dot means a real HTTP call just succeeded" instead of explaining
+why it says *Offline demo*. Nothing sits between a page title and its first card — no strip, no
+description line — so the headline and all four numbered answers are above the fold on a
+1440 × 900 laptop either way. Each data condition is stated on the card it belongs to: the AIS
+label on the Vessels funnel, the forcing label on Drift's *Forcing* fold, the mask source on
+Imagery's *Detection* card and in Overview's *Provenance* fold.
 
 **If you are cut short**, drop the boundary-editing sub-beat on Slick and shorten Imagery to one
 slider drag. Do **not** drop the spill-age card or the filtering funnel: those are the two beats
@@ -229,8 +238,9 @@ Also point at the label — and if you have the laptop online, this is the momen
 `/api/cases/demo/ais.csv` in a second tab:
 
 > "AIS mode: synthetic demonstration data. The problem statement explicitly permits synthetic
-> AIS where real historic data isn't available, and it's labelled on every screen that touches
-> it. What isn't synthetic is the format — that's the 17-column MarineCadastre schema the
+> AIS where real historic data isn't available, and it's labelled right there under the first
+> number on this screen. What isn't synthetic is the format — that's the 17-column MarineCadastre
+> schema the
 > statement names as the format authority, header identical to a real daily extract. You can
 > download it from the app and diff it yourself. Swapping in a licensed feed is a file drop."
 
@@ -245,7 +255,7 @@ of judgement — in about eighty seconds.
 > figures are **0.58 pooled and 0.69 averaged per scene**, and our single worst scene is 0.046 —
 > a near-total miss, and it's on this screen. The dataset contains no labelled algal blooms or
 > low-wind zones, so we went and got 2,290 published look-alike patches and scored ourselves on
-> them: **on a 340-patch sample our U-Net alone alarms on 305 of them.** A dedicated screen removes
+> them: **on a 340-patch sample our U-Net alone alarms on 288 of them.** A dedicated screen removes
 > about seven in ten of those dark regions, which is an improvement and not a solution. All of that
 > ships in the product, not just in the pitch."
 

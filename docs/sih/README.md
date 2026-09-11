@@ -1,7 +1,22 @@
 # SpillTrace — SIH 2026 team documents
 
-Eight documents. Read 1–6 in order once, then use 2, 3, 5 and 6 as reference. Document 8 is the long
-teaching reference behind all of them.
+Fourteen documents plus one diagram. **If you have one evening and you're presenting: memorise 13,
+then read 14, 12, 9 and 10.** The rest are reference — read 1–6 in order some time, and use 2, 3, 5, 6
+as lookup.
+
+## The short version
+
+| # | Document | Read it when |
+|---|---|---|
+| **13** | **[The two-minute speech](13-THE-TWO-MINUTE-SPEECH.md)** | **memorise this one.** ~300 words covering the problem, the build, the numbers and what's honest about it, plus the four follow-ups that come straight after and what never to say |
+| **14** | **[The demo walkthrough](14-THE-DEMO-WALKTHROUGH.md)** | **what you say after "let me show you."** The spoken script for driving the UI live, screen by screen, with each screen explained as one stage of the pipeline — click cues, word counts and what to cut when you're short on time |
+| **12** | **[The whole project in plain language](12-PLAIN-LANGUAGE.md)** | **first.** Every term explained like you're new — SAR, dB, IoU, U-Net, hindcast, forcing, look-alike. Read this before anything else |
+| **9** | **[The architecture, for presenting](09-ARCHITECTURE-FOR-PRESENTING.md)** | you're doing the technical architecture segment. What we use, what we rejected, why, and the evaluation criteria mapped to our material |
+| **10** | **[The UI walkthrough](10-UI-WALKTHROUGH.md)** | **the night before.** Every card, button, switch, toggle, badge and fold-out on all six screens, in order, with what each one shows and what to say if you're asked |
+| **11** | **[The datasets](11-DATASETS.md)** | anyone asks about the data. What's in each dataset, what it's for, what we did with it, and exactly what synthetic data we generated and how |
+| **architecture.html** | **[The architecture diagram](architecture.html)** | open it in a browser. Full-width, self-contained, no internet needed — green chips are what we use, struck-through grey are what we rejected. Built to be read at a glance, not zoomed into |
+
+## The long version
 
 | # | Document | Read it when |
 |---|---|---|

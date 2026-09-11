@@ -19,10 +19,6 @@ import { createMap, mapLegend, haversineKm } from "../mapview.js";
 import { baseRasters, slickLayers, driftLayers, originLayers, C } from "../layers.js";
 import { lineChart, stackBar } from "../chart.js";
 
-export const LEDE =
-  "A backward hindcast to an estimated release zone and a forward forecast from the " +
-  "observed slick, both as particle clouds with an explicit uncertainty envelope.";
-
 /** Scrubber frame interval. Slow enough to read the clock, fast enough to feel continuous. */
 const FRAME_MS = 110;
 
@@ -353,7 +349,8 @@ function mapCard(ctx, caseDoc, direction, run) {
     });
     map.setRasters(baseRasters(caseDoc, ctx.caseId, { kind: "vv", opacity: 0.8 }));
     paint();
-    map.fitContent(0.1);
+    // The corridor and the origin zone are the subject here, not the acquisition.
+    map.fitFindings();
     ctx.onCleanup(() => {
       if (timer) clearInterval(timer);
       map.destroy();

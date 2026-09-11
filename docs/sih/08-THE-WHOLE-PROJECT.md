@@ -111,9 +111,12 @@ are the reason the product is defensible.
    *"Priority candidate for investigation."* A test asserts that "guilty", "culprit" and
    "responsible party" appear nowhere in the generated report.
 2. **It never presents synthetic data as real.** The AIS feed carries
-   `"AIS mode: Synthetic demonstration data"` in the case document and the Vessels screen prints it
-   as a standalone notice before anything else. Drift forcing carries its own label, and wind and
-   currents are labelled *separately*, because either can be real on its own.
+   `"AIS mode: Synthetic demonstration data"` in the case document, and the Vessels screen prints it
+   verbatim on the first card, under the count of reports it describes. The generator's full
+   disclaimer — *"These vessel
+   tracks are fabricated for demonstration…"* — is in the **About this synthetic feed** fold on the
+   Vessels screen, in the case JSON and in the PDF report. Drift forcing carries its own label, and
+   wind and currents are labelled *separately*, because either can be real on its own.
 3. **It never fabricates a number it could not measure.** The spill-age card prints the arithmetic
    that shows the age is *unresolvable* for this scene rather than inventing a midpoint. The Method
    screen ships the **worst** single scene the model was evaluated on.
@@ -196,8 +199,7 @@ patch as oil is useless operationally, because it will cry wolf on every calm mo
 **What we do about it.** After the model produces a mask, a separate classical screen
 (`spilltrace_ml/lookalike.py`) proposes every dark region in the scene and measures **seven
 scale-invariant features** on each — contrast against the surrounding water, edge sharpness, shape
-compactness, texture, and so on. Scale-invariant matters: they are *ratios*, so they do not change if
-the image resolution changes.
+compactness, texture, and so on. Scale-invariant matters: they are *ratios*, so they do not change if the image resolution changes.
 
 The measured performance, from `run_lookalike_eval.py`:
 
@@ -210,8 +212,8 @@ The measured performance, from `run_lookalike_eval.py`:
 - The archive groups those patches into **17 look-alike families**. Our rejection rate ranges from
   **96.2%** on the easiest family to **31.5%** on the hardest. That range is the honest finding: we
   can say *which kinds* of false alarm we handle and which still defeat us.
-- For comparison, the U-Net alone raises an alarm on **305 of 340** sampled look-alike patches at
-  threshold 0.8. The screen is doing real work.
+- For comparison, the U-Net alone raises an alarm on **288 of 340** sampled look-alike patches at
+  the scene threshold of 0.7. The screen is doing real work.
 
 **Say "reduces false alarms", never "solves look-alikes."** And note what the screen deliberately
 does *not* do: it separates oil-like from not-oil-like. It does not name the phenomenon. No rejected
@@ -222,8 +224,7 @@ patch is ever called "algae" or "low wind", because we did not measure that and 
 A **classifier** answers "is there oil in this image?" — one label per image. Useless here: you
 cannot compute an area, a perimeter or a centroid from a yes.
 
-**Segmentation** answers the question per pixel: "is *this* pixel oil?" The output is a mask the same
-size as the input. From a mask you can measure everything.
+**Segmentation** answers the question per pixel: "is *this* pixel oil?" The output is a mask the same size as the input. From a mask you can measure everything.
 
 **U-Net** is the standard architecture for this (Ronneberger, Fischer & Brox, MICCAI 2015). The shape
 is an encoder that halves the resolution repeatedly while learning what things are, then a decoder
@@ -465,7 +466,14 @@ Concretely, on every screen:
 
 - The **conclusion** is the first thing on the page — a hero figure, or a summary card of four stats.
 - Anything the **problem statement requires us to disclose** (the AIS is synthetic; the forcing is
-  synthetic) is a bare notice at the top level, not buried in a card with a title competing with it.
+  synthetic) is stated on the card that uses it, in plain text: the mandated AIS label sits under
+  the reports-ingested figure on the Vessels funnel, the forcing label on Drift's *Forcing* fold.
+  This
+  has been through three forms — first three tinted prose banners, then a row of small pills under
+  every page title, now a line on the card itself. Each move cut repetition, never substance: the
+  required wording survives verbatim — `AIS mode: Synthetic demonstration data` — and the paragraph
+  explaining *what the label means* lives on the Method screen, in the exported report and in these
+  documents.
 - The **diagnostics and provenance** — weights, thresholds, numerics, generator internals, quality
   flags — moved into `<details>` foldouts. Each foldout's summary line keeps its headline fact
   visible while closed, so nothing is hidden, it is one click away.
@@ -616,21 +624,29 @@ They are comparable, which is exactly why neither can be dropped.**
 
 **In render order** ([vessels.js:48](../../apps/web/app/screens/vessels.js:48)):
 
-1. **The synthetic-AIS notice, standing alone.** Not inside a card. First thing on the screen.
-2. **The filter funnel** — how 10 vessels became 2. This comes *before* the shortlist deliberately,
-   because the PS clause is "the irrelevant traffic is to be filtered out."
-3. **The verdict card** — the top candidate and its score.
-4. The map with the tracks.
-5. Two columns: the ranking table, and the evidence for the selected vessel.
-6. Folded: the weights, the full explanation text, track-quality defects, the generator's own intent,
+1. **The filter funnel** — how 10 vessels became 2, and the screen's first card. Its first figure,
+   *AIS reports ingested*, carries `AIS mode: Synthetic demonstration data` verbatim on the line
+   beneath it, so the mandated label is the first data condition a reader meets on the one screen
+   where it matters most. The funnel comes *before* the shortlist deliberately, because the PS
+   clause is "the irrelevant traffic is to be filtered out."
+2. **The verdict card** — the top candidate and its score.
+3. The map with the tracks.
+4. Two columns: the ranking table, and the evidence for the selected vessel.
+5. Folded: the weights, the full explanation text, track-quality defects, the generator's own intent,
    and the feed disclosure detail.
+
+> **Changed from an earlier build.** This screen used to say the same thing three times: a tinted
+> banner above the funnel, the pill strip under the page title, and the "About this synthetic feed"
+> fold. The banner and the strip are both gone. The mandated label now sits on the funnel card —
+> unfolded, verbatim, no click — and the full disclosure detail is still in the fold.
 
 **What to say (60 seconds).**
 
-> "First line on this screen, before anything else: **the AIS is synthetic**. We don't have a licensed
-> feed. What we do have is the exact 17-column MarineCadastre schema the problem statement names — we
-> downloaded a real daily extract and matched the header byte for byte, so swapping in a real feed is
-> a file path, not a rewrite.
+> "Before anything else, the line under the first figure on this screen: **the AIS is synthetic**.
+> We don't
+> have a licensed feed. What we do have is the exact 17-column MarineCadastre schema the problem
+> statement names — we downloaded a real daily extract and matched the header byte for byte, so
+> swapping in a real feed is a file path, not a rewrite.
 >
 > Now the funnel: **10 vessels, 8 filtered out** — one was outside the release window, seven were 33
 > to 73 kilometres away. Two remain. And every exclusion is **kept and auditable**, not deleted.
@@ -1292,15 +1308,15 @@ module, and the browser does the rest. Same-origin only: **no analytics, no web 
 | File | Lines | What it does |
 |---|---|---|
 | `index.html` | 38 | four CSS links, one `<script type="module" src="app/main.js">`, an inline SVG favicon, and a `<noscript>` that tells you where the JSON is |
-| `app/main.js` | 655 | **the bootstrap.** `SCREENS` (the six-entry table), `frame()` / `brand()` / `topbar()` / `sidenav()` build the chrome, `context(route)` builds the `ctx` object every screen receives, `render()` swaps the active screen, `boot()` starts it. Also `loadCase`, `selectCase`, `runAnalysis`, `cancelAnalysis`, `dispatchIncidentEmail`, `pageHeader`, `caseSelector`, `disclosures` |
+| `app/main.js` | 607 | **the bootstrap.** `SCREENS` (the six-entry table), `frame()` / `brand()` / `topbar()` / `sidenav()` build the chrome, `context(route)` builds the `ctx` object every screen receives, `render()` swaps the active screen, `boot()` starts it. Also `loadCase`, `selectCase`, `runAnalysis`, `cancelAnalysis`, `dispatchIncidentEmail`, `pageHeader` (title and actions — nothing between the title and the first card), `caseSelector` |
 | `app/dom.js` | 278 | **the framework, in 278 lines.** `h(tag, props, ...children)` builds real DOM nodes — no virtual DOM, no diffing. `mount`, `append`, `frag`, `icon`, `trapFocus` (modal accessibility), `announce` (the toasts), `debounce`, `raf` |
 | `app/state.js` | 138 | one store. `get`, `set(patch)`, `subscribe(fn)`, `load(name, loader)` for async slices with a status key, `annotation`/`annotate` for the analyst's notes, `resetSelection` |
 | `app/router.js` | 75 | a hash router. `parse`, `current`, `href`, `go`, `setParams`, `onRoute`, `start`. **Every view is a URL** |
 | `app/api.js` | 362 | the API client **with an offline fallback**. `apiMode()` reports live or offline; `probe()` decides which. `health`, `metrics`, `scenes`, `cases`, `loadCase`, `imageIndex`, `report`, `reportPdfUrl`, `dispatchEmail`, `imageUrl`, `csvUrl`. `submitDetect`/`submitDrift` + `runJob`/`awaitJob`/`jobStatus`/`cancelJob` for the polling loop |
-| `app/ui.js` | 709 | **the component library.** See below |
+| `app/ui.js` | 640 | **the component library.** See below |
 | `app/format.js` | 176 | every number the UI prints goes through here. `km2`, `km`, `pct`, `num`, `int`, `metric`, `lat`, `lon`, `coord`, `utc`, `hours`, `seconds`, `bytes`, `bearing`, `axis`, `clip`, `slug`. `DASH` and `isMissing` are the missing-value contract — **a missing value renders as an em dash, never as 0** |
 | `app/icons.js` | 55 | `ICONS` and `BRAND_MARK` as SVG path strings. Authored here **so `h(..., {html})` never receives API data** — that is the XSS boundary |
-| `app/mapview.js` | 752 | the map: a canvas, an equirectangular projection, no tile server. `createMap(container, options)`, `mapLegend(items)`, `haversineKm(a, b)` |
+| `app/mapview.js` | 828 | the map: a canvas, an equirectangular projection, no tile server. `createMap(container, options)`, `mapLegend(items)`, `haversineKm(a, b)`. The map **frames itself**: `fit(bounds, pad)`, `fitContent()`, `fitFindings(pad)` and `refit()`, with `measure()` reading the laid-out canvas size *before* every fit — the fix for maps that opened at a 2000 km view of a 16 km scene |
 | `app/layers.js` | 433 | **the one place that turns a case document into map primitives.** `C` (colours), `Z` (z-order), `raster`, `baseRasters`, `slickRings`, `slickLayers`, `driftLayers`, `originLayers`, `vesselLayers`, `sceneVectors` |
 | `app/chart.js` | 212 | `lineChart`, `strip`, `stackBar` — hand-built SVG |
 | `app/charts.js` | 310 | the richer set: `lineChart`, `distributionStrip`, `histogram`, `sparkline`, `stackedBar` |
@@ -1316,12 +1332,12 @@ module, and the browser does the rest. Same-origin only: **no analytics, no web 
 | `stat`, `metric` | the four-across figure blocks |
 | `card(title, {hint, note, flush, sunken, id, actions}, ...body)` | the standard container. **Takes `actions`** |
 | `foldout(title, {hint, note, open, id}, ...body)` | a `<details>`. `hint` keeps the headline visible while closed. **Does *not* take `actions`** — this is the mistake to avoid when editing a screen |
-| `notice(text, {kind, strongPrefix})` | the standalone disclosure line |
+| `notice(text, {kind, strongPrefix})` | a tinted one-sentence card. Used **inside** dialogs, folds and "what this does not tell you" cards, where one line genuinely has to be read before the reader acts — not as a page-top banner |
 | `limitList(items)` | the "what this does not tell you" list. **Splits each string at its first `". "`** into claim and qualifier — keep that shape when editing `LIMITS` |
 | `badge`, `chip`, `bar`, `scoreRing`, `legend`, `segmented`, `button`, `field`, `dialog` | the small pieces |
 | `rows`, `row(key, value, {mono, stack, muted})` | key/value lists |
 | `loadingState`, `missingState`, `failedState`, `emptyState`, `stateSwitch(status, value, render, options)` | **the four load states, handled uniformly.** Every screen starts with a `stateSwitch`, which is why nothing ever renders half a case |
-| `provenanceBadges`, `runFooter`, `disclosureBar` | the provenance strip |
+| `runFooter(caseDoc)` | the footer that stamps every screen with pipeline version, run time and status. There is no longer a `provenanceBadges` — the standing label strip it built was removed, and each data condition is now stated on the card that uses it |
 | `skeleton` | the loading placeholder |
 
 ### The six screens
@@ -1330,11 +1346,11 @@ Each exports exactly two things: a `LEDE` string and `render(ctx)`.
 
 | File | Lines | Screen | Its own helpers |
 |---|---|---|---|
-| `screens/command.js` | 420 | Overview | hero, four answer cards, locator, shortlist, folded acquisition/provenance/processing, limits |
+| `screens/command.js` | 421 | Overview | hero, four answer cards, locator, shortlist, folded acquisition/provenance/processing, limits |
 | `screens/satellite.js` | 551 | Imagery | `viewer`, `controls`, `tilesCard`, `detectionCard`, `lookalikeCard`, folded `analystCard`, `georeferenceCard` |
-| `screens/slick.js` | 1095 | Slick | `boundaryCard`, `regionsCard`, `regionDetailCard`, `screeningCard`, `verdictBadge`, folded `methodCard`/`qualityCard`. Also exports `ringAreaKm2` and `simplifyRing` for the boundary editor |
-| `screens/drift.js` | 864 | Drift | `mapCard` (with the scrubber), `originCard`, `spillAgeCard`, `forecastCard`, `forcingNotice`, folded `spreadCard`/`outcomesCard`/`forcingCard`/`numericsCard`, `caveatCard` |
-| `screens/vessels.js` | 803 | Vessels | `filterCard` (the funnel), `verdictCard`, `mapCard`, `rankingCard`, `evidenceCard`, folded `weightsCard`/`explanationCard`/`trackQualityCard`/`generatorCard`/`feedCard` |
+| `screens/slick.js` | 1098 | Slick | `boundaryCard`, `regionsCard`, `regionDetailCard`, `screeningCard`, `verdictBadge`, folded `methodCard`/`qualityCard`. Also exports `ringAreaKm2` and `simplifyRing` for the boundary editor |
+| `screens/drift.js` | 865 | Drift | `mapCard` (with the scrubber), `originCard`, `spillAgeCard`, `forecastCard`, `forcingNotice`, folded `spreadCard`/`outcomesCard`/`forcingCard`/`numericsCard`, `caveatCard` |
+| `screens/vessels.js` | 807 | Vessels | `filterCard` (the funnel, and where the mandated AIS label is stated), `verdictCard`, `mapCard`, `rankingCard`, `evidenceCard`, folded `weightsCard`/`explanationCard`/`trackQualityCard`/`generatorCard`/`feedCard` |
 | `screens/methodology.js` | 1367 | Method | `pipelineCard`, `honestyCard`, `baselineCard`, `perSceneCard`, `lookAlikeCard`, `limitationsCard`, folded `lookAlikeDetailCard`/`scaleCard`/`thresholdCard`/`protocolCard`/`trainingCard`/`samplesCard`, plus `datasetCard`/`reproduceCard` |
 
 ### The styles
@@ -1342,8 +1358,8 @@ Each exports exactly two things: a `LEDE` string and `render(ctx)`.
 | File | Lines | What it holds |
 |---|---|---|
 | `styles/tokens.css` | 186 | the design tokens. **A light, quiet instrument: soft grey canvas, white cards, large radius, diffuse shadow, nothing saturated in the chrome. Everything saturated on the screen is data** |
-| `styles/base.css` | 553 | reset, typography, the app frame |
-| `styles/components.css` | 1964 | cards, stats, badges, buttons, tables, tabs, the sheet, the load states |
+| `styles/base.css` | 531 | reset, typography, the app frame |
+| `styles/components.css` | 1913 | cards, stats, badges, buttons, tables, tabs, the sheet, the load states |
 | `styles/screens.css` | 646 | screen-specific layout. The three imagery surfaces — map, viewer, thumbnail — are **near-black inside an otherwise light interface**, because a greyscale SAR tile has no colour to separate it from the page |
 
 ---

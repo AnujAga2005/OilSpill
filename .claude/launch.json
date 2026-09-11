@@ -12,6 +12,12 @@
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": ["-m", "http.server", "8787", "--directory", "dist"],
       "port": 8787
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "http.server", "8791", "--directory", "docs/sih"],
+      "port": 8791
     }
   ]
 }

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpillTrace — technical architecture</title>
+<style>
+  :root {
+    --bg: #f6f6f8;
+    --panel: #ffffff;
+    --ink: #14161a;
+    --ink-2: #4a4f57;
+    --ink-3: #838a94;
+    --line: #dfe2e7;
+    --use: #0b6b3a;
+    --use-bg: #e8f5ee;
+    --no: #7a818c;
+    --no-bg: #f0f1f4;
+    --oil: #b3541e;
+    --drift: #1d5f9e;
+    --shadow: 0 1px 2px rgba(16, 18, 22, .06), 0 8px 24px rgba(16, 18, 22, .06);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: clamp(14px, 2.2vw, 34px);
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: clamp(13px, 1.02vw, 17px);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 { font-size: clamp(19px, 1.7vw, 30px); letter-spacing: -.02em; margin: 0 0 4px; }
+  h2 {
+    font-size: clamp(13px, 1.02vw, 16px); letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-3); margin: clamp(22px, 2.4vw, 40px) 0 12px; font-weight: 600;
+  }
+  p.lede { color: var(--ink-2); margin: 0 0 6px; max-width: 92ch; }
+  .hint { color: var(--ink-3); font-size: .9em; }
+
+  /* ---------- the layer stack ---------- */
+  .stack { display: flex; flex-direction: column; gap: 0; }
+
+  .layer {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: clamp(11px, 1.15vw, 18px) clamp(13px, 1.3vw, 22px);
+    display: grid;
+    grid-template-columns: minmax(11ch, 0.9fr) minmax(0, 3.4fr);
+    gap: clamp(10px, 1.4vw, 26px);
+    align-items: start;
+  }
+  .layer + .arrow { height: clamp(20px, 2.1vw, 34px); }
+  .layer__what { min-width: 0; }
+  .layer__name { font-weight: 650; letter-spacing: -.01em; font-size: 1.12em; }
+  .layer__path { font-family: var(--mono); font-size: .84em; color: var(--ink-3); margin-top: 2px; word-break: break-word; }
+  .layer__role { color: var(--ink-2); font-size: .95em; margin-top: 6px; }
+  .layer__body { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+
+  /* ---------- arrows between layers ---------- */
+  .arrow { position: relative; display: flex; align-items: center; justify-content: center; }
+  .arrow::before {
+    content: ""; position: absolute; left: 50%; top: 0; bottom: 0;
+    width: 2px; background: var(--line); transform: translateX(-1px);
+  }
+  .arrow::after {
+    content: ""; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 8px solid var(--line);
+  }
+  .arrow__label {
+    position: relative; z-index: 1; background: var(--bg);
+    padding: 1px 10px; font-size: .84em; color: var(--ink-3);
+    font-family: var(--mono); text-align: center; max-width: 92%;
+  }
+
+  /* ---------- big-bang feedback loop ---------- */
+  .loop {
+    grid-column: 1 / -1; margin-top: 8px; border-top: 1px dashed var(--line);
+    padding-top: 9px; color: var(--ink-3); font-size: .9em;
+  }
+
+  /* ---------- the used / not-used chips ---------- */
+  .picks { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+  .pick {
+    display: inline-flex; align-items: baseline; gap: 6px;
+    border-radius: 999px; padding: 3px 11px 3px 9px;
+    font-size: .88em; line-height: 1.35; border: 1px solid transparent;
+  }
+  .pick--use { background: var(--use-bg); border-color: #bfe2cd; color: var(--use); font-weight: 600; }
+  .pick--no { background: var(--no-bg); border-color: var(--line); color: var(--no); text-decoration: line-through; text-decoration-thickness: 1px; }
+  .pick__tag {
+    font-size: .78em; letter-spacing: .04em; text-transform: uppercase;
+    font-weight: 600; opacity: .75;
+  }
+  .pick--use .pick__tag::before { content: "use"; }
+  .pick--no .pick__tag::before { content: "not"; }
+
+  /* ---------- little inline boxes for sub-systems ---------- */
+  .boxes { display: grid; gap: 7px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .box {
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px;
+    background: #fcfcfd; min-width: 0;
+  }
+  .box__name { font-weight: 620; font-size: .98em; }
+  .box__file { font-family: var(--mono); font-size: .8em; color: var(--ink-3); }
+  .box__note { color: var(--ink-2); font-size: .88em; margin-top: 3px; }
+  .box--oil { border-left: 3px solid var(--oil); }
+  .box--drift { border-left: 3px solid var(--drift); }
+  .box--common { border-left: 3px solid #6b7a8f; }
+  .box--preview { border-left: 3px solid #7a6da8; }
+
+  /* ---------- tables ---------- */
+  table { border-collapse: collapse; width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .82em; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); font-weight: 600; background: #fafafb; }
+  tr:last-child td { border-bottom: 0; }
+  td.num { font-family: var(--mono); white-space: nowrap; text-align: right; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: clamp(14px, 1.6vw, 26px); align-items: start; }
+
+  /* ---------- data flow strip ---------- */
+  .flow { display: grid; gap: 7px; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
+  .stage {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 10px; box-shadow: var(--shadow); min-width: 0;
+  }
+  .stage__n { font-size: .74em; color: var(--ink-3); font-family: var(--mono); }
+  .stage__name { font-weight: 620; font-size: .94em; margin-top: 1px; }
+  .stage__note { color: var(--ink-2); font-size: .85em; margin-top: 3px; }
+  .stage__time { margin-top: 6px; font-family: var(--mono); font-size: .84em; color: var(--ink-3); }
+  .bar { height: 3px; border-radius: 2px; background: var(--line); margin-top: 5px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--drift); }
+  .stage--long .bar > i { background: var(--oil); }
+
+  .callout {
+    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--use);
+    border-radius: 12px; padding: 12px 16px; box-shadow: var(--shadow); margin-top: 12px;
+  }
+  .callout b { font-weight: 650; }
+  footer { margin-top: clamp(26px, 3vw, 46px); color: var(--ink-3); font-size: .88em; border-top: 1px solid var(--line); padding-top: 12px; }
+
+  @media (max-width: 760px) {
+    .layer { grid-template-columns: 1fr; }
+    body { font-size: 14px; }
+    /* The four-column tables cannot fit a phone. Let the table itself scroll
+       sideways rather than pushing the whole page wide. */
+    table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table > thead, table > tbody { display: table; width: 100%; min-width: 560px; }
+    th, td { padding: 7px 9px; }
+    .cols { grid-template-columns: 1fr; }
+    .flow { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<h1>SpillTrace — how the system is built</h1>
+<p class="lede">
+  Every box below is a real program in the repository. <b>Green</b> tags are what we use.
+  <span style="text-decoration:line-through">Struck-through grey</span> tags are what we deliberately
+  did <b>not</b> use, and they are on the diagram on purpose — the reason is the interesting part.
+</p>
+<p class="hint">
+  This page is one file with no internet connection needed. If it is on a projector, press
+  <span style="font-family:var(--mono)">Ctrl/⌘ +</span> to fill the screen — it is built to be read
+  at a glance, not zoomed into.
+</p>
+
+<h2>The layer stack</h2>
+
+<div class="stack">
+
+  <!-- DASHBOARD -->
+  <div class="layer">
+    <div class="layer__what">
+      <div class="layer__name">The dashboard</div>
+      <div class="layer__path">apps/web/</div>
+      <div class="layer__role">Six screens. Renders a finished case and starts new jobs. Computes nothing itself.</div>
+    </div>
+    <div class="layer__body">
+      <div class="picks">
+        <span class="pick pick--use"><span class="pick__tag"></span>Plain JS, ES modules</span>
+        <span class="pick pick--use"><span class="pick__tag"></span>Hand-written SVG charts</span>
+        <span class="pick pick--use"><span class="pick__tag"></span>Equirectangular map</span>
+        <span class="pick pick--no"><span class="pick__tag"></span>React / Vue</span>
+        <span class="pick pick--no"><span class="pick__tag"></span>Vite / Webpack</span>
+        <span class="pick pick--no"><span class="pick__tag"></span>MapLibre / basemap tiles</span>
+      </div>
+      <div class="layer__note hint">
+        The source files <i>are</i> the shipped files. There is no build step, so there is nothing to
+        fail on demo day. The satellite image is the basemap — we refuse to draw a slick on a map we
+        cannot align it to.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span class="arrow__label">HTTP — “build me a case for scene 00223”</span></div>
+
+  <!-- API -->
+  <div class="layer">
+    <div class="layer__what">
+      <div class="layer__name">The API</div>
+      <div class="layer__path">services/api/spilltrace_api/server.py</div>
+      <div class="layer__role">Accepts a job, queues it, reports progress, serves the finished case.</div>
+    </div>
+    <div class="layer__body">
+      <div class="picks">
+        <span class="pick pick--use"><span class="pick__tag"></span>Python http.server</span>
+        <span class="pick pick--use"><span class="pick__tag"></span>Threaded, HTTP/1.1 keep-alive</span>
+        <span class="pick pick--use"><span class="pick__tag"></span>In-memory job queue</span>
+        <span class="pick pick--use"><span class="pick__tag"></span>202 + polling</span>
+        <span class="pick pick--no"><span class="pick__tag"></span>FastAPI / Flask</span>
+        <span class="pick pick--no"><span class="pick__tag"></span>Celery / Redis</span>
+        <span class="pick pick--no"><span class="pick__tag"></span>An ORM</span>
+      </div>
+      <div class="layer__note hint">
+        Nineteen routes, one content-negotiation decision, no ORM. A full case is about a minute of
+        NumPy, so long work is a <b>job</b>, not a request: the client gets a job id and polls, and
+        the job carries its own progress log so the dashboard names the current stage instead of
+        spinning. Reads never compute.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span class="arrow__label">case.py runs the ten stages in order</span></div>
+
+  <!-- PIPELINE -->
+  <div class="layer">
+    <div class="layer__what">
+      <div class="layer__name">The pipeline</div>
+      <div class="layer__path">services/api/spilltrace_api/case.py</div>
+      <div class="layer__role">The orchestrator. Calls everything below, in order, and writes the case.</div>
+    </div>
+    <div class="layer__body">
+      <div class="boxes">
+        <div class="box box--common">
+          <div class="box__name">Common</div>
+          <div class="box__file">services/common/</div>
+          <div class="box__note">Our own readers for the four data formats, plus geometry on a real sphere.</div>
+        </div>
+        <div class="box box--oil">
+          <div class="box__name">Machine learning</div>
+          <div class="box__file">services/ml/</div>
+          <div class="box__note">The U-Net, the training loop, the metrics, the look-alike screen.</div>
+        </div>
+        <div class="box box--drift">
+          <div class="box__name">Drift</div>
+          <div class="box__file">services/drift/</div>
+          <div class="box__note">Currents and wind, the particle engine, synthetic AIS, scoring.</div>
+        </div>
+        <div class="box box--preview">
+          <div class="box__name">Previews</div>
+          <div class="box__file">services/ml/spilltrace_ml/preview.py</div>
+          <div class="box__note">Writes the PNG images the dashboard shows, from the same arrays.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span class="arrow__label">one JSON file per scene</span></div>
+
+  <!-- RESULT -->
+  <div class="layer">
+    <div class="layer__what">
+      <div class="layer__name">The result</div>
+      <div class="layer__path">data/processed/cases/*.json</div>
+      <div class="layer__role">Every number, polygon and label the six screens display.</div>
+    </div>
+    <div class="layer__body">
+      <div class="picks">
+        <span class="pick pick--use"><span class="pick__tag"></span>JSON files on disk</span>
+        <span class="pick pick--use"><span class="pick__tag"></span>Auditable, greppable, diffable</span>
+        <span class="pick pick--no"><span class="pick__tag"></span>PostgreSQL</span>
+        <span class="pick pick--no"><span class="pick__tag"></span>Cloud object storage</span>
+      </div>
+      <div class="layer__note hint">
+        You can open the case file in any text editor and read it. That is the point — every figure
+        on screen can be traced to a line in this file.
+      </div>
+    </div>
+  </div>
+
+  <div class="loop">
+    <b>The one idea that makes the rest make sense:</b> the API is the only thing that computes; the
+    dashboard is a renderer. That is why the same number appears identically on the Command centre,
+    on the Slick screen and in the exported JSON — there is exactly one source for each of them, and
+    it is a file on disk.
+  </div>
+</div>
+
+<h2>What runs in each part, and what we refused</h2>
+<div class="cols">
+  <table>
+    <thead><tr><th>Concern</th><th>Our choice</th><th>Rejected</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Neural network</td><td>NumPy U-Net, backward pass written by hand</td><td>PyTorch / TensorFlow</td><td>7 MB checkpoint, full control, gradients verified by finite differences</td></tr>
+      <tr><td>File readers</td><td>Hand-written PNG, GeoTIFF, NetCDF-4/HDF5, BEAM-DIMAP</td><td>rasterio / xarray / netCDF4</td><td>Removes GDAL — the hardest package in this stack to install</td></tr>
+      <tr><td>Geometry</td><td>Our own spherical maths</td><td>shapely / pyproj</td><td>Flat-plane maths would bias areas at these latitudes</td></tr>
+      <tr><td>Morphology</td><td>OpenCV where it fits, ours elsewhere</td><td>scipy / scikit-image</td><td>One extra package instead of two</td></tr>
+      <tr><td>Web server</td><td>Standard library</td><td>FastAPI / Flask</td><td>Zero install risk on a machine we do not control</td></tr>
+      <tr><td>Frontend</td><td>Vanilla ES modules</td><td>React / Vite</td><td>No build step to fail the morning of the demo</td></tr>
+      <tr><td>Database</td><td>JSON on disk</td><td>PostgreSQL</td><td>Auditable and diffable; one case per scene is our scale</td></tr>
+      <tr><td>Job queue</td><td>In-process queue</td><td>Celery / Redis</td><td>No broker, no second process to start</td></tr>
+      <tr><td>AIS</td><td>Synthetic, labelled on every screen</td><td>Pretending it is real</td><td>Real AIS for these dates is unavailable to us</td></tr>
+      <tr><td>Drift forcing</td><td>Real CMEMS + ERA5 where they overlap; deterministic synthetic where they do not, labelled</td><td>Interpolating recent data and calling it 2015</td><td>That would be fabricating evidence</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="callout">
+  <b>The sentence that covers the whole table.</b> Every choice trades convenience for operability.
+  That is the right trade for a system that has to run in front of judges, on a laptop, with no
+  internet and no install step.
+</div>
+
+<h2>What happens when you press a button</h2>
+<p class="lede">
+  Ten stages, in order, for one scene. The times are real seconds measured on the demo case
+  (scene <span style="font-family:var(--mono)">00223</span>), on the machine that built it.
+</p>
+
+<div class="flow" style="margin-top:12px">
+  <div class="stage stage--long">
+    <div class="stage__n">01</div><div class="stage__name">Decode</div>
+    <div class="stage__note">Read the scene and its reference mask, and convert the radar numbers into decibels.</div>
+    <div class="stage__time">9.69 s</div><div class="bar"><i style="width:96%"></i></div>
+  </div>
+  <div class="stage stage--long">
+    <div class="stage__n">02</div><div class="stage__name">Detect</div>
+    <div class="stage__note">The U-Net scores every pixel; the threshold turns scores into a mask.</div>
+    <div class="stage__time">5.67 s</div><div class="bar"><i style="width:56%"></i></div>
+  </div>
+  <div class="stage">
+    <div class="stage__n">03</div><div class="stage__name">Geometry</div>
+    <div class="stage__note">Pixels to a real area, perimeter and outline on the globe.</div>
+    <div class="stage__time">1.94 s</div><div class="bar"><i style="width:19%"></i></div>
+  </div>
+  <div class="stage">
+    <div class="stage__n">04</div><div class="stage__name">Screening</div>
+    <div class="stage__note">Which dark regions are oil, and which are look-alikes.</div>
+    <div class="stage__time">1.79 s</div><div class="bar"><i style="width:18%"></i></div>
+  </div>
+  <div class="stage">
+    <div class="stage__n">05</div><div class="stage__name">Forcing</div>
+    <div class="stage__note">Find real current and wind fields covering this place and time, or fall back and say so.</div>
+    <div class="stage__time">0.03 s</div><div class="bar"><i style="width:1%"></i></div>
+  </div>
+  <div class="stage">
+    <div class="stage__n">06</div><div class="stage__name">Backward</div>
+    <div class="stage__note">Run the particles back in time to the release window and origin zone.</div>
+    <div class="stage__time">0.26 s</div><div class="bar"><i style="width:3%"></i></div>
+  </div>
+  <div class="stage">
+    <div class="stage__n">07</div><div class="stage__name">Forward</div>
+    <div class="stage__note">Run them ahead to where the slick is going.</div>
+    <div class="stage__time">0.25 s</div><div class="bar"><i style="width:3%"></i></div>
+  </div>
+  <div class="stage">
+    <div class="stage__n">08</div><div class="stage__name">AIS</div>
+    <div class="stage__note">Generate the synthetic vessel tracks for the window, seeded and labelled.</div>
+    <div class="stage__time">0.19 s</div><div class="bar"><i style="width:2%"></i></div>
+  </div>
+  <div class="stage">
+    <div class="stage__n">09</div><div class="stage__name">Scoring</div>
+    <div class="stage__note">Score each track against the release zone and window, with the reasons.</div>
+    <div class="stage__time">0.08 s</div><div class="bar"><i style="width:1%"></i></div>
+  </div>
+  <div class="stage">
+    <div class="stage__n">10</div><div class="stage__name">Previews</div>
+    <div class="stage__note">Write the PNG images the dashboard shows.</div>
+    <div class="stage__time">0.22 s</div><div class="bar"><i style="width:3%"></i></div>
+  </div>
+</div>
+
+<div class="callout" style="border-left-color:var(--oil)">
+  <b>Total: 20.1 seconds.</b> Stages 1 and 2 are nine tenths of it, and that is why detection is the
+  stage worth optimising and the other eight are not. It also sets the honest expectation for the
+  planned upload screen: a scene goes in, the pipeline runs on this machine, the case appears in the
+  picker a few minutes later for a scene larger than ours.
+</div>
+
+<h2>The one conversion that matters — “back conversion”</h2>
+<div class="cols">
+  <div>
+    <p class="lede">
+      A Sentinel-1 product does not ship backscatter. It ships <b>digital numbers</b> — arbitrary
+      integers whose meaning depends on the calibration of that particular acquisition. Two scenes
+      taken on different days are not comparable until both are converted to physical units.
+    </p>
+    <p class="lede">
+      So before the model sees anything, every scene is converted to <b>decibels</b> (dB), using the
+      calibration and thermal-noise vectors that travel inside the product. The file name itself
+      records the chain: <span style="font-family:var(--mono);font-size:.9em">Orb_NR_Cal_Spk_TC_dB</span>
+      — orbit-corrected, noise-removed, calibrated, speckle-filtered, terrain-corrected, in decibels.
+    </p>
+  </div>
+  <div>
+    <div class="callout" style="margin-top:0;border-left-color:var(--oil)">
+      <b>Why it matters out loud:</b> if you feed a network raw digital numbers from one satellite and
+      decibels from another, it learns the wrong thing — it learns the difference between the two
+      files instead of the difference between oil and water. Converting to dB first is what makes one
+      model valid across 270 acquisitions from 2015 to 2019.
+    </div>
+  </div>
+</div>
+
+<h2>Where the data comes from, and what we invented</h2>
+<div class="cols">
+  <table>
+    <thead><tr><th>Input</th><th>Status</th><th>What it is</th></tr></thead>
+    <tbody>
+      <tr><td>SAR imagery</td><td><b>Real</b></td><td>270 Sentinel-1 acquisitions, 2015–2019, 24 regions</td></tr>
+      <tr><td>Reference masks</td><td><b>Real</b></td><td>The dataset's own published labels</td></tr>
+      <tr><td>Ocean currents</td><td><b>Real where it overlaps</b></td><td>CMEMS reanalysis; otherwise deterministic synthetic, labelled on screen</td></tr>
+      <tr><td>Wind</td><td><b>Real where it overlaps</b></td><td>ERA5; same rule and the same label</td></tr>
+      <tr><td>Vessel tracks</td><td><b>Synthetic</b></td><td>Generated from a real AIS schema, seeded, labelled on every screen</td></tr>
+      <tr><td>Look-alike archive</td><td><b>Real, external</b></td><td>A published archive we never trained on, credited by DOI and licence</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  SpillTrace · SIH 26143 · every number on this page was read out of the project's own output files.
+</footer>
+
+</body>
+</html>
