@@ -389,12 +389,12 @@ Two stored cases share the same scene and the same slick figures: `00223` and `d
 | Candidates ranked | **10** |
 | Top candidate | **90.3 / 100** — `SYNTHETIC DEMO ALPHA`, band *"Strong geometric and temporal overlap – review first"* |
 
-> **Present the `demo` case. Never present `00053`.** `demo` and `00223` are the same scene with
-> identical figures, so either is safe. `00053` is not: it was generated on 2026-09-04, before the
-> retrain, by a superseded checkpoint, and its scene is not in the current train/val/test split at
-> all — so we cannot say the model never trained on it, and its 223.19 km² headline cannot be
-> defended. Use the case picker next to *Export JSON* to select `demo` before judges arrive, or
-> delete `data/processed/cases/00053.*` and rebuild so it cannot be clicked by accident.
+> **Present the case the picker labels `00223 · demo`.** That is scene `00223`, and every figure in
+> this section is measured on it. The old `00053` case — generated on 2026-09-04, before the
+> retrain, by a superseded checkpoint, on a scene that is not in the current train/val/test split at
+> all, whose 223.19 km² headline could not be defended — has been deleted from the store, so it can
+> no longer be clicked by accident. Anything else in the picker was built by
+> `scripts/build_cases.py`, which refuses non-test scenes, so it is safe to open if a judge asks.
 >
 > Confidence is deliberately **not** on the Command centre. A mean probability over the pixels the
 > model already decided were oil is close to 100% by construction — it measures how decisive the

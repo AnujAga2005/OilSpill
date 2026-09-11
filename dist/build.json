@@ -1,23 +1,23 @@
 {
   "pipelineVersion": "spilltrace-0.1.0",
-  "generatedUtc": "2026-09-10T13:43:43Z",
+  "generatedUtc": "2026-09-10T16:57:56Z",
   "note": "A verified copy of apps/web. No bundler, no minifier and no content hashing: the interface is plain ES modules and runs from source. Cache behaviour comes from the server's Cache-Control headers, not from filenames.",
   "totals": {
-    "files": 59,
-    "bytes": 4216319
+    "files": 53,
+    "bytes": 3085934
   },
   "byExtension": {
     ".png": {
-      "files": 28,
-      "bytes": 2481944
+      "files": 22,
+      "bytes": 1353338
     },
     ".json": {
       "files": 7,
-      "bytes": 1326928
+      "bytes": 1325145
     },
     ".js": {
       "files": 19,
-      "bytes": 334730
+      "bytes": 334734
     },
     ".css": {
       "files": 4,
@@ -71,8 +71,8 @@
     },
     {
       "path": "app/main.js",
-      "bytes": 20650,
-      "sha256": "6a0eb481575c3269d94f326db93a14ad66148605512463dfb809cf537f0126b3"
+      "bytes": 20654,
+      "sha256": "031b4f12977da958804a2c6fbc7fe6dd359a90c564f7ff941f695e34004207d5"
     },
     {
       "path": "app/mapview.js",
@@ -131,8 +131,8 @@
     },
     {
       "path": "demo/cases.json",
-      "bytes": 2771,
-      "sha256": "ee47883ec623c135943f7b7d9d341fda129c28f90d7b084a83765d4b618165f3"
+      "bytes": 938,
+      "sha256": "1d7aaf6e91befb53b909d940e68265514b8ab28f735ba1b3135f77909bb47b76"
     },
     {
       "path": "demo/eval/test_0013_iou000.png",
@@ -216,8 +216,8 @@
     },
     {
       "path": "demo/health.json",
-      "bytes": 1256,
-      "sha256": "edb494452cc5a72b43b94baeb580f0d2315117ad5681d70190f92f279097161c"
+      "bytes": 1313,
+      "sha256": "f9d4f2f1cb402d569853bcc816113e99b02c9ed63acca257886f85c513875e98"
     },
     {
       "path": "demo/images-demo.json",
@@ -228,36 +228,6 @@
       "path": "demo/metrics.json",
       "bytes": 188488,
       "sha256": "78a4db517d47973466daeecb2cb13a3c20071e820f4f51fdcd7e3929d685147b"
-    },
-    {
-      "path": "demo/previews/00053_comparison.png",
-      "bytes": 390934,
-      "sha256": "388671019416b9ab3d7cc4bef4dc1678711b45f65d35927a11460cd4a20ddc9a"
-    },
-    {
-      "path": "demo/previews/00053_mask.png",
-      "bytes": 13179,
-      "sha256": "2bc507b334b6337726cccb65e0bb0ed413c9e70240858a993e846446c77d6ded"
-    },
-    {
-      "path": "demo/previews/00053_prediction.png",
-      "bytes": 12340,
-      "sha256": "ccb8db1b16150716c619d9415e23a2f4785015a9ec0dc4e57760dfa60b571bb1"
-    },
-    {
-      "path": "demo/previews/00053_probability.png",
-      "bytes": 202177,
-      "sha256": "1e9950d1d2cae41ccf8539fdad95769344be297ec10e7a3ed4b2532f1f968f35"
-    },
-    {
-      "path": "demo/previews/00053_vh.png",
-      "bytes": 255141,
-      "sha256": "7f8c2684250e8a43ae9c37ea17559c9a07f37eef3b45dd7ca434c11891ac9b56"
-    },
-    {
-      "path": "demo/previews/00053_vv.png",
-      "bytes": 254835,
-      "sha256": "ecc8f911da75518ce3ee45c7fd30876c94949d2d8d212de5b4b1342d8209e9f7"
     },
     {
       "path": "demo/previews/00223_comparison.png",
@@ -296,8 +266,8 @@
     },
     {
       "path": "demo/scenes.json",
-      "bytes": 175611,
-      "sha256": "38230938584c7f6e9f15516d105eea7c38d0238d3f0e388c58899433976b8178"
+      "bytes": 175604,
+      "sha256": "95cbf837dbd84ecf5df1873e761f6bc345c3d8ed08ebc147dad5b0c3b3467e13"
     },
     {
       "path": "index.html",

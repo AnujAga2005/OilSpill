@@ -139,8 +139,9 @@ One screenshot. Use **Screen 5 · Vessel attribution** with the traffic-filterin
 breakdown visible — the densest single view of PS clause (c), and the screen no other team will
 have. Caption it: **6 screens · 776 tests passing · runs offline.**
 
-Use the `demo` case, never `00053`. `00053` predates the retrain and its scene is not in the current
-train/val/test split, so nothing it shows can be defended in the Q&A that follows.
+Screenshot the case the picker labels `00223 · demo`. The old `00053` case predated the retrain and
+sat on a scene outside the current split, so nothing it showed could be defended in the Q&A that
+follows; it has been deleted from the store.
 
 ---
 

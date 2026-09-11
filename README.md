@@ -100,13 +100,13 @@ The Sentinel-1 source rasters are about **91 GB** and are excluded by
 | `data/processed/cache/` | 242 MB | patch cache, rebuilt by `run_preprocess.py` |
 | `.venv/` | 277 MB | virtualenv |
 
-**What still works after a clone:** the API, all six dashboard screens, the stored `demo` and
-`00223` cases with their preview imagery, and the entire test suite. The trained model
-(`models/unet_vv_vh.npz`, 7 MB) is committed, so inference works.
+**What still works after a clone:** the API, all six dashboard screens, the stored `demo` case with
+its preview imagery, and the entire test suite. The trained model (`models/unet_vv_vh.npz`, 7 MB) is
+committed, so inference works. Extra test-split cases for the picker are built on demand with
+`scripts/build_cases.py`.
 
-> The picker also still lists `00053`. Do not demo it — it was generated on 2026-09-04 by a
-> superseded pre-retrain checkpoint, and its scene is not in the current train/val/test split at
-> all. Delete `data/processed/cases/00053.*` and rebuild if you want the picker clean.
+> The superseded pre-retrain `00053` case — built on 2026-09-04 on a scene that is not in the
+> current train/val/test split — has been deleted, so the picker can no longer offer it.
 
 **What needs the dataset:** re-running the audit, rebuilding the patch cache, and retraining.
 

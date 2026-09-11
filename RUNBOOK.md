@@ -65,9 +65,9 @@ Also worth trying:
 - **Print** — the layout has a print stylesheet; the dark imagery stages get a hairline
   border and cards avoid page breaks.
 - Resize the window narrow, or open it on your phone over the LAN, to see the mobile layout.
-- The case picker next to *Export JSON* switches between the stored cases. Use `demo` (scene
-  `00223`). **`00053` predates the retrain and its scene is not in the current split** — don't
-  present it; delete `data/processed/cases/00053.*` and rebuild if you want it gone from the picker.
+- The case picker next to *Export JSON* switches between the stored cases. Present
+  `00223 · demo`. The other entries are held-out test scenes built by `scripts/build_cases.py`,
+  which refuses anything the model trained on, so any of them is safe to open if a judge asks.
 
 ---
 
