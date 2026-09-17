@@ -51,6 +51,39 @@ ERA5_GLOB = "era5_wind*.nc"
 DATA_DIR = REPO_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
+
+# Where an operator's own files land when they come in over HTTP, kept deliberately apart
+# from IMAGE_DIR and MASK_DIR: those hold the supplied dataset the model was trained and
+# evaluated against, and an upload must never be able to add to, shadow or overwrite it.
+# Separate directories make that a property of the layout rather than of a check somewhere.
+UPLOAD_DIR = Path(os.environ.get("SPILLTRACE_UPLOAD_DIR", DATA_DIR / "uploads"))
+UPLOAD_IMAGE_DIR = UPLOAD_DIR / "scenes"
+UPLOAD_MASK_DIR = UPLOAD_DIR / "masks"
+UPLOAD_FORCING_DIR = UPLOAD_DIR / "forcing"
+
+#: Per-file ceilings for an upload, in bytes. A Sentinel-1 GRD patch in this dataset is
+#: ~43 MB and its mask ~4 MB; a one-day ERA5 wind subset is a few MB; the supplied CMEMS
+#: product is ~370 MB. The caps are generous multiples of those, not guesses at a limit:
+#: they exist so a request cannot fill the disk, and the request is refused from the
+#: Content-Length header before any bytes are read.
+UPLOAD_MAX_BYTES: dict[str, int] = {
+    "scene": 512 * 1024 * 1024,
+    "mask": 128 * 1024 * 1024,
+    "era5": 256 * 1024 * 1024,
+    "cmems": 1024 * 1024 * 1024,
+    "ais": 512 * 1024 * 1024,
+}
+
+#: The file extension each upload slot accepts. Checked against the declared name, and --
+#: for everything except AIS -- against the file's own magic bytes once it has landed, so
+#: a renamed file is rejected by what it is rather than by what it claims to be.
+UPLOAD_SUFFIXES: dict[str, tuple[str, ...]] = {
+    "scene": (".tif", ".tiff"),
+    "mask": (".tif", ".tiff"),
+    "era5": (".nc", ".nc4"),
+    "cmems": (".nc", ".nc4"),
+    "ais": (".csv",),
+}
 CACHE_DIR = PROCESSED_DIR / "cache"
 SPLITS_PATH = PROCESSED_DIR / "splits.json"
 AUDIT_JSON = PROCESSED_DIR / "audit.json"
@@ -85,6 +118,14 @@ LABEL_SATELLITE = "Satellite imagery: Supplied Sentinel-1 SAR dataset"
 LABEL_PREDICTION = "Segmentation mask: Model prediction"
 LABEL_REFERENCE = "Reference mask: Supplied ground truth"
 LABEL_AIS = "AIS mode: Synthetic demonstration data"
+#: Set instead of LABEL_AIS when a real MarineCadastre extract was supplied. The scorer
+#: copies whichever label the feed carries, so this propagates to the Vessels screen, the
+#: provenance block and the incident report without any of them deciding it themselves.
+LABEL_AIS_REAL = "AIS mode: Operator-supplied MarineCadastre extract"
+#: Set instead of LABEL_SATELLITE when the scene came in over the upload endpoint rather
+#: than from the audited dataset. Nothing about the model changes; what changes is that
+#: the input is outside the distribution the reported accuracy was measured on.
+LABEL_SATELLITE_UPLOAD = "Satellite imagery: Operator-supplied scene, outside the evaluated dataset"
 LABEL_DRIFT_CMEMS = "Drift forcing: CMEMS data"
 LABEL_DRIFT_SYNTHETIC = "Drift forcing: Synthetic scenario data"
 # Wind and currents come from different products and either can be real on its own, so

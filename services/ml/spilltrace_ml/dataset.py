@@ -61,6 +61,9 @@ class Scene:
     band_source: dict[str, int]
     nodata: float | None
     group_key: str | None
+    #: How ``band_source`` was arrived at, in words. Published because a mapping read from
+    #: a header and one assumed from the dataset's convention carry different weight.
+    band_basis: str = ""
     header: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -75,8 +78,27 @@ class Scene:
         return float(1.0 - self.invalid.mean())
 
 
-def resolve_band_indices(header: dimap.DimapHeader | None, band_count: int) -> dict[str, int]:
-    """Map ``VV``/``VH`` to raster band indices for one scene."""
+#: Band orders an operator can declare for a scene whose file does not name its bands.
+#: Values are the raster index of each polarisation.
+BAND_ORDERS: dict[str, dict[str, int]] = {
+    "vh-vv": {"VH": 0, "VV": 1},
+    "vv-vh": {"VV": 0, "VH": 1},
+}
+
+
+def resolve_band_indices(
+    header: dimap.DimapHeader | None,
+    band_count: int,
+    declared: str | None = None,
+) -> tuple[dict[str, int], str]:
+    """Map ``VV``/``VH`` to raster band indices, and say how the mapping was decided.
+
+    The second element of the return is the basis, because the three ways of arriving at
+    a mapping are not equally trustworthy and the difference has to survive into the case
+    document. A DIMAP header *names* its bands. A declaration is an operator's word. The
+    fallback is a guess taken from the supplied dataset: if a scene's bands are the other
+    way round, every pixel is scored with VV and VH swapped and nothing looks wrong.
+    """
     resolved: dict[str, int] = {}
     if header is not None:
         for pol in CHANNEL_ORDER:
@@ -84,11 +106,29 @@ def resolve_band_indices(header: dimap.DimapHeader | None, band_count: int) -> d
             if index is not None and index < band_count:
                 resolved[pol] = index
     if len(resolved) == len(CHANNEL_ORDER):
-        return resolved
+        return resolved, "band names read from the product's DIMAP header"
+
+    if declared:
+        key = str(declared).strip().lower()
+        if key not in BAND_ORDERS:
+            raise PreprocessError(
+                f"unknown band order {declared!r}; expected one of "
+                f"{', '.join(sorted(BAND_ORDERS))}"
+            )
+        order = BAND_ORDERS[key]
+        if band_count < len(order):
+            raise PreprocessError(
+                f"band order {key!r} needs {len(order)} bands; the file has {band_count}"
+            )
+        return dict(order), f"band order {key} declared by the operator; the file does not name its bands"
+
     # Fall back to the order observed in the supplied dataset (VH, then VV) only
     # when the DIMAP names are unavailable, and only if the band count fits.
     if band_count >= 2:
-        return {"VH": 0, "VV": 1}
+        return {"VH": 0, "VV": 1}, (
+            "assumed VH then VV, the order of the supplied dataset; this file names no "
+            "bands and no order was declared"
+        )
     raise PreprocessError(
         f"cannot resolve VV/VH from {band_count} band(s) and header {header}"
     )
@@ -98,8 +138,14 @@ def load_scene(
     image_path: str | Path,
     mask_path: str | Path | None = None,
     want_mask: bool = True,
+    band_order: str | None = None,
 ) -> Scene:
-    """Decode one image (and optionally its mask) into a :class:`Scene`."""
+    """Decode one image (and optionally its mask) into a :class:`Scene`.
+
+    ``band_order`` is only consulted when the file carries no DIMAP header to name its
+    bands, which is the case for a plain GeoTIFF an operator exports themselves. A header,
+    when present, always wins over a declaration.
+    """
     image_path = Path(image_path)
     with GeoTiff(str(image_path)) as tif:
         meta = tif.meta
@@ -115,7 +161,7 @@ def load_scene(
     if meta.geo.transform is None:
         raise PreprocessError(f"{image_path.name} has no geotransform")
 
-    indices = resolve_band_indices(header, pixels.shape[0])
+    indices, band_basis = resolve_band_indices(header, pixels.shape[0], band_order)
     channels = np.stack([pixels[indices[pol]] for pol in CHANNEL_ORDER]).astype(
         np.float32, copy=False
     )
@@ -152,6 +198,7 @@ def load_scene(
         acquired_start=dimap.iso_utc(header.scene_start) if header else None,
         acquired_stop=dimap.iso_utc(header.scene_stop) if header else None,
         band_source=indices,
+        band_basis=band_basis,
         nodata=nodata,
         group_key=header.group_key if header else None,
         header=header.to_dict() if header else {},

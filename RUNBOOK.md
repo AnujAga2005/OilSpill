@@ -21,7 +21,9 @@ activate the virtualenv.
 .venv/bin/python scripts/run_api.py
 ```
 
-Then open **http://localhost:8765** in a browser.
+Then open **http://localhost:8765** in a browser. It opens on **New analysis**, which asks for a
+scene of your own; **Load previous saved cases** goes to the stored ones. A link that names a case
+— `http://localhost:8765/#/?case=00223` — skips the intake screen and opens that case directly.
 
 That single process is both the API and the dashboard. It prints:
 
@@ -47,11 +49,12 @@ immediately.
 
 ## 2. Walk through the dashboard
 
-Five case screens and one reference screen, in the order an analyst would use them. The left
-sidebar on desktop, the tab bar on a phone.
+An intake screen, five case screens and one reference screen, in the order an analyst would use
+them. The left sidebar on desktop, the tab bar on a phone.
 
 | # | Screen | What to do on it |
 |---|--------|------------------|
+| — | **New analysis** | Where the app opens with the API up. One panel, in the order you work in it: five upload slots (only the SAR scene is required), then four fields — a **required case id** (suggested from the filename), an optional analysis name, the acquisition instant and the band order — then **Run the pipeline**, which processes the scene and lands you on the Command centre. **Load previous saved cases** skips straight to the stored ones — see §6c. |
 | 1 | **Command centre** | Read the headline slick area, then the four numbered answers below it — *how large*, *when released*, *how old*, *how many vessels*. Each one links to the screen that shows its working. Acquisition, provenance and stage timings are folded away underneath; click a heading to open one. Click **Open investigation** to start the walkthrough. |
 | 2 | **Imagery** | Switch **band** between VV and VH. Switch **overlay** between prediction, reference mask and agreement. Drag the split handle on the before/after viewer. Toggle the layer switches. Click any thumbnail in *All layers*. **Run detection again** re-segments the scene. |
 | 3 | **Slick** | Read the measured extent and the per-region table. Click a row to see that region's detail. Press **Edit boundary** and drag a handle — the analyst ring is stored separately from the model ring and measured with the same spherical formula. Export **GeoJSON** or **CSV**. |
@@ -158,6 +161,20 @@ Full route list:
 | POST | `/api/cases/<id>/vessels` | rescore candidates |
 | GET | `/api/jobs` · `/api/jobs/<id>` · `/api/jobs/<id>/result` | job queue |
 | POST | `/api/jobs/<id>/cancel` | cancel a job |
+| POST | `/api/cases/<id>/report` · `/api/cases/<id>/dispatch` | the printable report, and emailing it |
+| GET | `/api/uploads` | what the operator has staged, and which slots are filled |
+| POST | `/api/uploads?kind=&name=` | **store one file.** The body is the file itself, not JSON — `kind` is one of `scene`, `mask`, `era5`, `cmems`, `ais` |
+| POST | `/api/uploads/clear` | delete every stored upload |
+
+The upload route is the one that does not take a JSON body, so `curl --data-binary` is the way in:
+
+```bash
+curl -s -X POST "http://localhost:8765/api/uploads?kind=scene&name=my_scene.tif" --data-binary @my_scene.tif
+```
+
+It refuses before reading where it can: an oversized `Content-Length` earns a **413** and a wrong
+extension a **400**, both decided from the headers rather than after a 43 MB transfer. A file that
+passes those and then fails its magic-byte check is a 400 too, but that one costs you the upload.
 
 Run the API without the dashboard:
 
@@ -293,6 +310,39 @@ from the [Copernicus Marine Service](https://marine.copernicus.eu), keep the
 `cmems_mod_glo_phy_*.nc` naming (or point `SPILLTRACE_CMEMS` at it), and rebuild. The overlap
 check re-runs on its own; there is no flag to force it, by design.
 
+### 6c. Or hand the file to the interface instead
+
+Everything above puts a file on disk where the pipeline finds it at startup. There is a second
+route that needs no shell and no restart: the **New analysis** screen — where the app opens, and one
+click from the Command centre's *Analyse your own scene →* row. It has a slot for each product — SAR scene, reference mask, ERA5 wind, CMEMS currents, AIS extract —
+and only the scene is required.
+
+Two things to know before using it on stage:
+
+* **The slots are independent, not a bundle.** Supplying ERA5 alone is a real improvement; you do
+  not need the 370 MB CMEMS product to get the better half of the physics.
+* **Every file is re-checked against that scene**, exactly as a file on disk would be. One that
+  does not overlap in space or time is reported with the reason on the case's own Forcing card.
+  There is no silent downgrade to synthetic, and no flag to force an overlap that isn't there.
+
+A bare GeoTIFF exported by hand carries less than the dataset's own products do, so the form asks
+for two things the file may not state: the **acquisition instant** (every forcing lookup and the
+whole release window are positioned against it) and the **band order** (with no header to name
+them, a scene stored VV-first would be scored with the polarisations swapped). The case records
+whether the time was read from the product or typed by an operator — the two are never presented
+as the same thing.
+
+Uploads land in `data/uploads/`, which is gitignored and separate from `Oil/` and `Mask_oil/`. An
+uploaded scene can never overwrite or shadow a supplied one: the case is stored under an id you
+choose, and an id that already names a case is refused with a 409 rather than replaced. The form's
+**Clear** control removes every uploaded file, so you can take your own data off the machine after
+a demo without opening a shell.
+
+**Which file to put in it** is a question with a wrong answer — most scenes in `Oil/` were used to
+train the model, so uploading one proves nothing. [`docs/sih/15-TEST-DATA.md`](docs/sih/15-TEST-DATA.md)
+names five held-out scenes to use instead, a sixth that fails on purpose, and what each optional slot
+will accept.
+
 ---
 
 ## 7. The incident report, and emailing it
@@ -330,15 +380,44 @@ To actually send, copy the template and fill it in:
 cp .env.example .env
 ```
 
-Two variables matter more than the rest:
+`.env` is gitignored and is read at import time by `services/common/spilltrace_common/config.py`,
+which only sets variables that are not already in the environment — so a shell `export` always
+wins over the file.
 
-- `SPILLTRACE_ALERT_RECIPIENTS` — an allowlist of addresses, or `@domain` entries. **Required
-  before anything is sent.** The dispatch endpoint has no authentication in front of it, so
-  without an allowlist the server refuses instead of relaying mail to arbitrary addresses.
+For Gmail, the whole setup is six lines. Gmail refuses your ordinary account password over SMTP,
+so you need an **App Password**: turn on 2-Step Verification at
+`myaccount.google.com/security`, then generate one at `myaccount.google.com/apppasswords` and
+paste that 16-character string — not your login password — into `.env`:
+
+```
+SPILLTRACE_SMTP_HOST=smtp.gmail.com
+SPILLTRACE_SMTP_PORT=587
+SPILLTRACE_SMTP_USERNAME=you@gmail.com
+SPILLTRACE_SMTP_PASSWORD=your-16-character-app-password
+SPILLTRACE_SMTP_STARTTLS=1
+SPILLTRACE_EMAIL_FROM=you@gmail.com
+```
+
+Then flip the dry-run flag off and restart the API, which re-reads `.env` on start:
+
+```
+SPILLTRACE_EMAIL_DRY_RUN=0
+```
+
+Other providers are the same shape with a different host: Outlook/Office 365 is
+`smtp.office365.com:587`, Zoho is `smtp.zoho.in:587`. If a provider wants implicit TLS on port
+465 instead of STARTTLS, set `SPILLTRACE_SMTP_SSL=1`, `SPILLTRACE_SMTP_STARTTLS=0` and
+`SPILLTRACE_SMTP_PORT=465`.
+
+Two more variables are worth knowing:
+
 - `SPILLTRACE_EMAIL_DRY_RUN=1` — keeps it in dry run even once SMTP works. Leave it set until
-  you have read a `.eml` and are happy with it.
-
-`.env` is gitignored. For Gmail use an App Password, never the account password.
+  you have opened a `.eml` in Mail and are happy with what it says.
+- `SPILLTRACE_ALERT_RECIPIENTS` — **optional, and empty by default.** Left empty, a report goes
+  to whatever addresses the responder types into the dashboard. Setting it *narrows* that to a
+  list of the only addresses mail may reach — plain addresses, or `@domain` entries for a whole
+  domain. Worth setting on a machine whose port other people can see, because the dispatch
+  endpoint has no authentication of its own.
 
 `reportlab` is the project's only optional dependency, and it needs a working Pillow. If the
 import fails, that one route answers **503 with the exact install command** and the rest of the
@@ -379,13 +458,13 @@ asserts that on every run.
 .venv/bin/python -m pytest
 ```
 
-776 tests, about 42 seconds. Add `-v` for names, or point it at one file:
+893 tests, about 28 seconds. Add `-v` for names, or point it at one file:
 
 ```bash
 .venv/bin/python -m pytest tests/test_api.py -v
 ```
 
-With `reportlab` and Pillow both installed — which is the state of this machine — **all 776 pass
+With `reportlab` and Pillow both installed — which is the state of this machine — **all 876 pass
 and nothing skips**. Without them, the dozen or so tests that render a real PDF report as
 **skipped** instead, and turn themselves back on the moment the import works. Everything the
 report *says* — every drift figure, every score component, the limitations, the absence of

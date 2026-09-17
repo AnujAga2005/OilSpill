@@ -62,7 +62,7 @@ sentences on stage even if the exact wording deserts you.
 | 4 | **The demo numbers** | 26.9 km², 12 patches, 9.6 km origin radius, 10 → 2 vessels. |
 | 5 | **The accuracy** | 0.693 IoU, 35 held-out scenes, +0.093 over baseline, *we publish the lower number*. |
 | 6 | **The honest part** | Synthetic AIS · the forcing refusal · never "guilty" · age unresolvable here. |
-| 7 | **The close** | 776 tests, fully offline, "let me show you." |
+| 7 | **The close** | 893 tests, fully offline, "let me show you." |
 
 **Rehearse against a clock.** Two minutes is a normal pace. If you land at 1:40 you are rushing —
 the numbers in beats 4 and 5 are the ones that get swallowed, and those are the two beats the
@@ -139,7 +139,7 @@ or in this repository, none of them typed into a slide.
 | +0.093 over baseline, the leak fix | Method screen, **Split protocol** fold |
 | Age unresolvable, 6.563 km drift vs 9.604 km spread | Drift screen, **Estimated spill age** card |
 | The CMEMS refusal — product covers the sea, nearest timestep 3,975 days off | Drift screen, **Forcing** fold ("nearest product time is 3975.3 days from the acquisition, beyond the 24 h tolerance") |
-| 776 tests | `.venv/bin/python -m pytest` — about 42 seconds |
+| 893 tests | `.venv/bin/python -m pytest` — about 28 seconds |
 
 See also: [document 4](04-HOW-TO-PITCH.md) for the six-minute demo, and
 [document 5](05-EXPLAINING-TO-JUDGES.md) for the long-form answers to hard questions.

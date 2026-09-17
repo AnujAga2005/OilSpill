@@ -1,7 +1,7 @@
 /** Minimal hyperscript. No framework, because none is reachable from this sandbox.
  *
  * `h(tag, props, ...children)` builds real DOM nodes. Screens return a node and the
- * router swaps it in; there is no virtual DOM and no diffing, which for six screens
+ * router swaps it in; there is no virtual DOM and no diffing, which for seven screens
  * that each re-render on case change is the simpler correct thing.
  *
  * Text is set through `textContent`, never `innerHTML`, so a string that arrived from

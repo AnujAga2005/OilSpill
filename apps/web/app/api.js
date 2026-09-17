@@ -11,7 +11,10 @@
  *   `runJob` polls with backoff and forwards the job's own progress log so the caller
  *   can name the current stage instead of spinning.
  * * **No credentials.** There is nothing to authenticate against and no key anywhere in
- *   this bundle; requests are same-origin `fetch` with no headers beyond content type.
+ *   this bundle; requests are same-origin with no headers beyond content type.
+ *
+ * One call breaks the `fetch` pattern: `upload()` uses `XMLHttpRequest`, because a
+ * several-hundred-megabyte file needs a progress event and `fetch` has none.
  */
 
 const FIXTURE_BASE = "./demo";
@@ -225,8 +228,111 @@ export function csvUrl(caseId) {
     : `/api/cases/${encodeURIComponent(caseId)}/report?format=csv`;
 }
 
-// -- jobs -------------------------------------------------------------------
+// -- uploads ----------------------------------------------------------------
 
+/** What the server currently holds, and the rules each slot enforces. */
+export const uploadState = () => get("/api/uploads", null);
+
+/** Delete every stored upload. Returns `{removed, uploads}`. */
+export const clearUploads = () => post("/api/uploads/clear", {});
+
+/**
+ * Name a stored case, and optionally describe it.
+ *
+ * Presentation only: the run is already on disk, and this writes what a person calls it so
+ * the case list can show that instead of an id. Returns the case's refreshed summary, which
+ * is the same shape the list is built from.
+ *
+ * @param {string} caseId
+ * @param {{label?: string|null, description?: string|null}} fields
+ */
+export const saveCaseLabel = (caseId, fields) =>
+  post(`/api/cases/${encodeURIComponent(caseId)}/label`, fields);
+
+/**
+ * Send one file to one slot.
+ *
+ * `XMLHttpRequest` rather than `fetch`, for one reason: a CMEMS product is around
+ * 370 MB, and `fetch` has no upload-progress event. Without one the interface can only
+ * say "uploading" for a minute and a half, which is indistinguishable from a hang. The
+ * body is the `File` itself, not multipart -- the server streams the raw bytes to disk
+ * and takes the slot and the operator's filename from the query string, so there is no
+ * boundary to parse and nothing is buffered in memory on either side.
+ *
+ * @param {"scene"|"mask"|"era5"|"cmems"|"ais"} kind
+ * @param {File} file
+ * @param {(fraction: number) => void} [onProgress] - 0..1, or called with NaN when the
+ *   browser cannot compute a total
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<object>} `{upload, uploads, slots, note}`
+ */
+export function upload(kind, file, onProgress, signal) {
+  if (mode === "offline") {
+    return Promise.reject(
+      new ApiError(
+        "the API is not reachable, so there is nowhere to send a file. The bundled demo " +
+          "case is still available for review.",
+        { url: "/api/uploads" },
+      ),
+    );
+  }
+  const url =
+    `/api/uploads?kind=${encodeURIComponent(kind)}` +
+    `&name=${encodeURIComponent(file?.name || "")}`;
+
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", url, true);
+    // Octet-stream, deliberately: the body is the file's bytes and nothing else.
+    request.setRequestHeader("Content-Type", "application/octet-stream");
+    request.responseType = "text";
+
+    const abort = () => request.abort();
+    signal?.addEventListener("abort", abort, { once: true });
+    const done = () => signal?.removeEventListener("abort", abort);
+
+    request.upload.onprogress = (event) => {
+      onProgress?.(event.lengthComputable ? event.loaded / event.total : NaN);
+    };
+    request.onerror = () => {
+      done();
+      setMode("offline");
+      reject(new ApiError("the upload did not reach the API", { url }));
+    };
+    request.onabort = () => {
+      done();
+      reject(new DOMException("cancelled", "AbortError"));
+    };
+    request.onload = () => {
+      done();
+      let payload = null;
+      try {
+        payload = JSON.parse(request.responseText);
+      } catch {
+        payload = null;
+      }
+      if (request.status === 201) {
+        setMode("live");
+        onProgress?.(1);
+        resolve(payload);
+        return;
+      }
+      // The server's own message names the file and the reason -- "the bytes in this
+      // file are not a TIFF", "capped at 512 MB". Replacing it with a status code would
+      // throw away the only part an operator can act on.
+      reject(
+        new ApiError(payload?.error || `${request.status} from ${url}`, {
+          status: request.status,
+          payload,
+          url,
+        }),
+      );
+    };
+    request.send(file);
+  });
+}
+
+// -- jobs -------------------------------------------------------------------
 export const submitDetect = (scene, options) =>
   post(`/api/cases/${encodeURIComponent(scene)}/detect`, options);
 

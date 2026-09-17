@@ -79,7 +79,7 @@ Ten steps. Here's what each one does in plain words, and how long it really take
 | # | Step | What it does in plain words | Time |
 |---|---|---|---|
 | 1 | **Decode** | Open the satellite file, read the two radar images, and convert the raw numbers into real physical units (§12.5). | **9.7 s** |
-| 2 | **Detect** | Run our neural network over the picture. It gives every pixel a probability of being oil. Apply the 0.65 cutoff. Now we have a mask — a black-and-white shape. | **5.7 s** |
+| 2 | **Detect** | Run our neural network over the picture. It gives every pixel a probability of being oil. Apply the 0.70 cutoff (the whole-scene operating point). Now we have a mask — a black-and-white shape. | **5.7 s** |
 | 3 | **Geometry** | Convert that shape into real numbers: how many square kilometres, how long is the edge, where is the centre, which way is it stretched. Requires spherical maths (§12.6). | 1.9 s |
 | 4 | **Screening** | For each dark region, decide: oil or look-alike? Or "too close to call, flag it for a human". | 1.8 s |
 | 5 | **Forcing** | Look for real ocean current and wind data covering this place and date. Use it if it exists; otherwise build a labelled synthetic stand-in. | 0.03 s |

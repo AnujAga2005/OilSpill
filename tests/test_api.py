@@ -26,6 +26,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from spilltrace_api import case as case_mod
 from spilltrace_api import jobs as jobs_mod
 from spilltrace_api import server as server_mod
 from spilltrace_api import store as store_mod
@@ -463,6 +464,129 @@ class TestCaseReads:
         response = get("/api/cases/demo/images?kind=vv", api_only=True)
         assert response.status == 404
         assert b"passwd" not in response.body or b"not on disk" in response.body
+
+
+# ---------------------------------------------------------------------------
+# Naming a stored case
+# ---------------------------------------------------------------------------
+
+class TestCaseLabel:
+    """`POST /api/cases/<id>/label` writes what a person calls a run, and nothing else.
+
+    The whole point of the endpoint is that it is inert: the case is already on disk, it was
+    computed from a request key that does not mention the name, and renaming it must not be
+    able to move a single number. So these tests check two things in roughly equal measure --
+    that the name arrives where the case list reads it, and that everything around it is
+    untouched.
+    """
+
+    def test_a_name_reaches_the_summary_the_case_list_is_built_from(self, store):
+        store.save("demo", sample_case())
+        response = post(
+            "/api/cases/demo/label",
+            {"label": "Malta channel, morning pass"},
+            api_only=True,
+        )
+        assert response.status == 200
+        assert response.json()["label"] == "Malta channel, morning pass"
+        assert store.summaries()[0]["label"] == "Malta channel, morning pass"
+
+    def test_a_description_can_be_written_with_it_or_on_its_own(self, store):
+        store.save("demo", sample_case())
+        post("/api/cases/demo/label", {"label": "Morning pass"}, api_only=True)
+        post(
+            "/api/cases/demo/label",
+            {"description": "Re-run after the ERA5 file arrived."},
+            api_only=True,
+        )
+        payload = store.load("demo")
+        assert payload["label"] == "Morning pass"
+        assert payload["description"] == "Re-run after the ERA5 file arrived."
+
+    def test_naming_a_case_changes_nothing_that_was_measured(self, store):
+        """Every other key comes back byte-identical, because none of them are its business."""
+        before = sample_case()
+        store.save("demo", before)
+        post("/api/cases/demo/label", {"label": "Whatever it is called"}, api_only=True)
+        after = store.load("demo")
+        assert {k: v for k, v in after.items() if k != "label"} == before
+
+    def test_an_empty_string_clears_the_field_rather_than_storing_one(self, store):
+        """The case list falls back to the id, so a cleared name has to be absent, not "".
+
+        A stored empty string would render as a blank option in the picker -- present,
+        selectable and saying nothing.
+        """
+        store.save("demo", sample_case())
+        post("/api/cases/demo/label", {"label": "Temporary"}, api_only=True)
+        post("/api/cases/demo/label", {"label": "  "}, api_only=True)
+        assert "label" not in store.load("demo")
+        assert store.summaries()[0]["label"] is None
+
+    def test_newlines_are_collapsed_because_this_lands_in_one_line_of_a_dropdown(self, store):
+        store.save("demo", sample_case())
+        payload = post(
+            "/api/cases/demo/label", {"label": "Malta\nchannel\t pass"}, api_only=True
+        ).json()
+        assert payload["label"] == "Malta channel pass"
+
+    def test_a_name_longer_than_the_cap_is_refused_and_nothing_is_written(self, store):
+        store.save("demo", sample_case())
+        response = post(
+            "/api/cases/demo/label",
+            {"label": "x" * (server_mod.LABEL_MAX + 1)},
+            api_only=True,
+        )
+        assert response.status == 400
+        assert str(server_mod.LABEL_MAX) in response.json()["error"]
+        assert "label" not in store.load("demo")
+
+    def test_a_description_longer_than_the_cap_is_refused(self, store):
+        store.save("demo", sample_case())
+        response = post(
+            "/api/cases/demo/label",
+            {"description": "x" * (server_mod.DESCRIPTION_MAX + 1)},
+            api_only=True,
+        )
+        assert response.status == 400
+        assert "description" not in store.load("demo")
+
+    @pytest.mark.parametrize("value", [7, ["a"], {"a": 1}, True])
+    def test_a_name_that_is_not_a_string_is_refused(self, store, value):
+        store.save("demo", sample_case())
+        response = post("/api/cases/demo/label", {"label": value}, api_only=True)
+        assert response.status == 400
+        assert "must be a string" in response.json()["error"]
+
+    def test_a_request_that_names_neither_field_is_refused(self, store):
+        """Silently succeeding at nothing would show as a saved name that never appears."""
+        store.save("demo", sample_case())
+        response = post("/api/cases/demo/label", {"note": "hello"}, api_only=True)
+        assert response.status == 400
+
+    def test_an_unknown_case_is_a_404_and_creates_nothing(self, store, runner):
+        response = post("/api/cases/nothing_here/label", {"label": "x"}, api_only=True)
+        assert response.status == 404
+        assert not store.exists("nothing_here")
+
+    def test_an_unsafe_case_id_is_refused_by_the_route_before_the_handler(self):
+        assert server_mod.route("/api/cases/../../etc/label") == ("unknown", None)
+
+    def test_the_label_route_is_not_swallowed_by_the_case_route(self):
+        """Both patterns match `/api/cases/<something>`; order is what separates them."""
+        assert server_mod.route("/api/cases/demo/label") == ("case_label", "demo")
+        assert server_mod.route("/api/cases/demo") == ("case", "demo")
+
+    def test_a_name_is_not_part_of_the_request_key(self):
+        """Renaming a run must not change its seed, its cache identity or its result.
+
+        This is why `label` is excluded from `CaseRequest.key()`: the key is what decides
+        whether a stored case can be reused, and two runs that differ only in what they are
+        called are the same run.
+        """
+        plain = case_mod.CaseRequest(scene="scene_00053")
+        named = case_mod.CaseRequest(scene="scene_00053", label="Morning pass")
+        assert plain.key() == named.key()
 
 
 class TestEvalImages:

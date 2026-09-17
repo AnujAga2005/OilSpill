@@ -26,17 +26,21 @@ from __future__ import annotations
 import math
 import time
 from dataclasses import dataclass, field, replace
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
 import numpy as np
 
 from spilltrace_common import config as C
+from spilltrace_common import cmems as cmems_mod
+from spilltrace_common import era5 as era5_mod
 from spilltrace_common.geotiff import Affine
 from spilltrace_drift import age as age_mod
 from spilltrace_drift import ais as ais_mod
 from spilltrace_drift import engine as drift_engine
 from spilltrace_drift import forcing as forcing_mod
+from spilltrace_drift import realais as realais_mod
 from spilltrace_drift import scoring as scoring_mod
 from spilltrace_ml import dataset as dataset_mod
 from spilltrace_ml import geometry as geometry_mod
@@ -82,12 +86,72 @@ class CaseRequest:
     previews: bool = True
     seed: int = C.DriftConfig().seed
 
+    # -- operator-supplied inputs ------------------------------------------
+    # All optional, all None for every case built from the audited dataset. Each one is a
+    # path to a file that arrived through the upload endpoint; each is resolved and
+    # overlap-checked independently, so supplying one does not change how the others are
+    # decided. None means "look in the usual place", which is what the pipeline did
+    # before any of these existed.
+    scene_upload: Path | None = None
+    mask_upload: Path | None = None
+    era5_upload: Path | None = None
+    cmems_upload: Path | None = None
+    ais_upload: Path | None = None
+
+    #: Acquisition instant for an uploaded scene whose GeoTIFF carries no DIMAP header.
+    #: The drift cannot run without one: every forcing lookup and the whole release window
+    #: are positioned against it. Recorded alongside `acquired_source` so a reader can
+    #: always tell a timestamp that was read from the product from one a person typed.
+    acquired_utc: str | None = None
+
+    #: Band order for an uploaded scene, when the operator knows it and the file does not
+    #: say. `dataset.resolve_band_indices` falls back to the order observed in the
+    #: supplied dataset (VH first) when there is no header, which is a guess; a scene
+    #: whose bands are the other way round would be scored with VV and VH swapped and
+    #: nothing would look obviously wrong. "vh-vv" | "vv-vh" | None to leave it to the file.
+    band_order: str | None = None
+
+    #: What the operator calls this run. Presentation only: the case list shows it instead
+    #: of the id. Deliberately absent from `key()` -- renaming a case must not change its
+    #: seed, its cache identity, or a single number in it.
+    label: str | None = None
+
     def key(self) -> str:
         """Stable identity for this request, used to seed the synthetic generators."""
         parts = [self.scene, self.detector, str(self.particles), str(self.seed)]
         if self.horizon_hours is not None:
             parts.append(f"h{self.horizon_hours:g}")
+        # An uploaded input changes the result, so it has to change the key: two cases
+        # built from the same scene name with and without a real wind file are different
+        # cases and must not share a seed or a cache entry.
+        for label, path in (
+            ("s", self.scene_upload),
+            ("m", self.mask_upload),
+            ("e", self.era5_upload),
+            ("c", self.cmems_upload),
+            ("a", self.ais_upload),
+        ):
+            if path is not None:
+                parts.append(f"{label}{Path(path).stem}")
+        if self.acquired_utc:
+            parts.append(f"t{self.acquired_utc}")
+        if self.band_order:
+            parts.append(f"b{self.band_order}")
         return ":".join(parts)
+
+    @property
+    def uploaded(self) -> bool:
+        """True when any part of this case came from an operator rather than the dataset."""
+        return any(
+            path is not None
+            for path in (
+                self.scene_upload,
+                self.mask_upload,
+                self.era5_upload,
+                self.cmems_upload,
+                self.ais_upload,
+            )
+        )
 
 
 @dataclass
@@ -116,7 +180,13 @@ class _Timer:
 
 
 def scene_paths(scene: str) -> tuple[Path, Path | None]:
-    """Resolve a scene id to its image and (if present) reference mask."""
+    """Resolve a scene id to its image and (if present) reference mask.
+
+    Only the audited dataset is searched. An operator-supplied scene does not get a name
+    in this namespace: it arrives as an explicit path on the request, because a lookup by
+    name is exactly the mechanism through which an upload could shadow a dataset scene.
+    See :func:`resolve_inputs`.
+    """
     name = str(scene).strip()
     if not name or "/" in name or "\\" in name or name.startswith("."):
         raise CaseError(f"invalid scene id {scene!r}")
@@ -125,6 +195,55 @@ def scene_paths(scene: str) -> tuple[Path, Path | None]:
         raise CaseError(f"scene {name} is not in {C.IMAGE_DIR}")
     mask = C.MASK_DIR / f"{name}.tif"
     return image, (mask if mask.exists() else None)
+
+
+def resolve_inputs(request: CaseRequest) -> tuple[Path, Path | None]:
+    """The image and mask this request should actually be built from.
+
+    An uploaded scene wins over the dataset lookup, and an uploaded mask wins over the
+    dataset's reference mask -- but only because the caller put a path on the request,
+    never because a name happened to match. A request carrying an uploaded scene is not
+    required to name a dataset scene at all.
+    """
+    if request.scene_upload is not None:
+        image = Path(request.scene_upload)
+        if not image.exists():
+            raise CaseError(f"the uploaded scene {image.name} is no longer on disk")
+        mask = Path(request.mask_upload) if request.mask_upload is not None else None
+        if mask is not None and not mask.exists():
+            raise CaseError(f"the uploaded mask {mask.name} is no longer on disk")
+        return image, mask
+
+    image, mask = scene_paths(request.scene)
+    if request.mask_upload is not None:
+        mask = Path(request.mask_upload)
+        if not mask.exists():
+            raise CaseError(f"the uploaded mask {mask.name} is no longer on disk")
+    return image, mask
+
+
+def _parse_operator_time(value: str) -> str:
+    """Validate an operator-typed acquisition instant into the pipeline's ISO form.
+
+    Accepts what a browser's ``datetime-local`` input produces as well as a full ISO
+    string with or without a trailing ``Z``. A value without a timezone is read as UTC,
+    which is stated on the form, because every other instant in this pipeline is UTC and
+    silently applying a machine's local offset would move the whole release window.
+    """
+    text = str(value).strip()
+    if not text:
+        raise CaseError("the acquisition time is empty")
+    candidate = text[:-1] if text.endswith("Z") else text
+    try:
+        parsed = datetime.fromisoformat(candidate)
+    except ValueError as exc:
+        raise CaseError(
+            f"{value!r} is not a usable acquisition time; expected something like "
+            "2020-05-01T02:11:00Z"
+        ) from exc
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def available_scenes(limit: int | None = None) -> list[str]:
@@ -327,7 +446,7 @@ def detect(
 
     if scene.mask is None:
         raise CaseError(
-            f"scene {scene.name} has no reference mask and no detector could produce one"
+            f"scene {request.scene} has no reference mask and no detector could produce one"
         )
     return {
         "mask": np.asarray(scene.mask, dtype=np.uint8),
@@ -701,6 +820,94 @@ def screen_scene(
     }
 
 
+def _envelope_bounds(
+    env: "ais_mod.EnvelopeTrack", pad_km: float = 25.0
+) -> list[float]:
+    """A lon/lat box covering the whole backward envelope, padded.
+
+    Used to cut a national AIS extract down before it is parsed. The pad is generous on
+    purpose: the box is a *read filter*, not a judgement. Scoring decides relevance from
+    the per-timestep envelope circles; this only keeps the reader from walking millions of
+    rows that could not possibly matter. A box that is too tight would silently drop a
+    vessel, which is the one failure mode worth spending a few extra kilometres to avoid.
+    """
+    lat_pad = pad_km / 111.32
+    mid_lat = (min(env.lats) + max(env.lats)) / 2.0
+    # Longitude degrees shrink with latitude; guard the cosine so a polar case does not
+    # produce an absurd pad.
+    lon_pad = pad_km / max(111.32 * math.cos(math.radians(mid_lat)), 1.0)
+    radius_lat = max(env.radii_km) / 111.32
+    radius_lon = max(env.radii_km) / max(111.32 * math.cos(math.radians(mid_lat)), 1.0)
+    return [
+        min(env.lons) - radius_lon - lon_pad,
+        min(env.lats) - radius_lat - lat_pad,
+        max(env.lons) + radius_lon + lon_pad,
+        max(env.lats) + radius_lat + lat_pad,
+    ]
+
+
+def _open_uploaded_forcing(
+    request: CaseRequest,
+) -> tuple[Any | None, Any | None, dict[str, Any]]:
+    """Open whichever forcing files the operator supplied, and note what happened.
+
+    Each slot is opened on its own. A CMEMS file that turns out to be unreadable does not
+    stop an ERA5 file from being used, and neither one stops the case: ``resolve_forcing``
+    receives ``None`` for that slot and falls back exactly as it does when nothing was
+    uploaded at all. What changes is that the fallback is *stated* -- the returned notes
+    carry the reason, so "your file was not used" never arrives as silence.
+
+    The readers are handed over unopened-by-the-resolver deliberately: the resolver only
+    closes handles it opened itself, so the caller keeps ownership of these and closes
+    them once the field has been built.
+    """
+    notes: dict[str, Any] = {}
+    surface = None
+    wind_reader = None
+
+    if request.cmems_upload is not None:
+        path = Path(request.cmems_upload)
+        entry: dict[str, Any] = {"file": path.name, "used": False}
+        try:
+            surface = cmems_mod.CmemsSurface(path)
+            entry["used"] = True
+            entry["product"] = surface.describe()
+            entry["note"] = (
+                "opened; whether the currents are actually used depends on the overlap "
+                "check below, which is the same check the supplied product goes through"
+            )
+        except Exception as exc:
+            surface = None
+            entry["error"] = f"{type(exc).__name__}: {exc}"
+            entry["note"] = (
+                "the uploaded currents file could not be read, so the drift falls back to "
+                "the forcing it would have used without it"
+            )
+        notes["cmems"] = entry
+
+    if request.era5_upload is not None:
+        path = Path(request.era5_upload)
+        entry = {"file": path.name, "used": False}
+        try:
+            wind_reader = era5_mod.Era5Wind(path)
+            entry["used"] = True
+            entry["product"] = wind_reader.describe()
+            entry["note"] = (
+                "opened; whether the wind is actually used depends on the overlap check "
+                "below"
+            )
+        except Exception as exc:
+            wind_reader = None
+            entry["error"] = f"{type(exc).__name__}: {exc}"
+            entry["note"] = (
+                "the uploaded wind file could not be read, so the drift falls back to the "
+                "wind it would have used without it"
+            )
+        notes["era5"] = entry
+
+    return surface, wind_reader, notes
+
+
 def build_case(
     request: CaseRequest,
     progress: Progress | None = None,
@@ -716,19 +923,34 @@ def build_case(
     timer = _Timer()
     started_all = time.perf_counter()
 
-    image_path, mask_path = scene_paths(request.scene)
+    image_path, mask_path = resolve_inputs(request)
 
     say(f"decoding {request.scene}")
     started = time.perf_counter()
-    scene = dataset_mod.load_scene(image_path, mask_path, want_mask=mask_path is not None)
+    scene = dataset_mod.load_scene(
+        image_path, mask_path, want_mask=mask_path is not None, band_order=request.band_order
+    )
     timer.record("decode", started, f"{scene.width}x{scene.height}, 2 bands")
 
     if scene.bounds is None:
-        raise CaseError(f"scene {scene.name} has no usable bounds")
+        raise CaseError(f"scene {request.scene} has no usable bounds")
     transform = Affine(*scene.transform)
     acquired = scene.acquired_start or scene.acquired_stop
+    # Where the instant came from, kept apart from the instant itself. A GeoTIFF with a
+    # DIMAP header states its own acquisition time; a bare one does not, and then the only
+    # source is the operator. Both produce a working case and they are not equally
+    # trustworthy, so the case says which one it had rather than presenting a typed value
+    # as though it had been read off the product.
+    acquired_source = "product header" if acquired else None
+    if acquired is None and request.acquired_utc:
+        acquired = _parse_operator_time(request.acquired_utc)
+        acquired_source = "operator-supplied"
     if acquired is None:
-        raise CaseError(f"scene {scene.name} carries no acquisition time")
+        raise CaseError(
+            f"scene {request.scene} carries no acquisition time. Every forcing lookup and "
+            "the whole release window are positioned against it, so it has to be supplied "
+            "with the scene."
+        )
 
     started = time.perf_counter()
     if detection is None:
@@ -782,7 +1004,8 @@ def build_case(
     timer.record("geometry", started, f"{published} slick(s)")
     if published == 0:
         raise CaseError(
-            f"no slick survived filtering on scene {scene.name}; nothing to drift or attribute"
+            f"no slick survived filtering on scene {request.scene}; nothing to drift or "
+            "attribute"
         )
 
     say("screening dark patches for look-alikes")
@@ -810,9 +1033,29 @@ def build_case(
 
     say("resolving drift forcing")
     started = time.perf_counter()
-    forcing, decision = forcing_mod.resolve_forcing(
-        scene.bounds, acquired, scene.name, close_surface=False
-    )
+    surface, wind_reader, supplied_notes = _open_uploaded_forcing(request)
+    try:
+        forcing, decision = forcing_mod.resolve_forcing(
+            scene.bounds,
+            acquired,
+            scene.name,
+            surface=surface,
+            close_surface=False,
+            wind_reader=wind_reader,
+            # The readers are closed below whatever happens, including when the overlap
+            # check rejects the file, so the resolver must not close them first.
+            close_wind_reader=False,
+        )
+    finally:
+        for reader in (surface, wind_reader):
+            close = getattr(reader, "close", None)
+            if callable(close):
+                try:
+                    close()
+                except Exception:
+                    pass
+    if supplied_notes:
+        decision["supplied"] = supplied_notes
     timer.record("forcing", started, decision.get("mode", "unknown"))
 
     drift_cfg = C.DriftConfig(particle_count=int(request.particles))
@@ -844,10 +1087,30 @@ def build_case(
         )
         timer.record("forward", started, f"{drift_cfg.horizon_hours:g} h")
 
-        say("generating synthetic AIS")
-        started = time.perf_counter()
-        feed = ais_mod.generate_ais(backward, request.key(), is_water=forcing.is_water)
-        timer.record("ais", started, f"{feed['counts']['vessels']} vessels")
+        if request.ais_upload is not None:
+            say("reading the supplied AIS extract")
+            started = time.perf_counter()
+            env = ais_mod.envelope_from_drift(backward)
+            feed = realais_mod.load_feed(
+                request.ais_upload,
+                env,
+                # The envelope, not the scene footprint. Oil seen inside the scene may have
+                # been released hours earlier and kilometres away, so a vessel worth
+                # considering can sit well outside the image. The hindcast is what defines
+                # where it could have been, which is why that is what the read is cut to.
+                bounds=_envelope_bounds(env),
+                is_water=forcing.is_water,
+            )
+            timer.record(
+                "ais",
+                started,
+                f"{feed['counts']['vessels']} vessel(s) from {Path(request.ais_upload).name}",
+            )
+        else:
+            say("generating synthetic AIS")
+            started = time.perf_counter()
+            feed = ais_mod.generate_ais(backward, request.key(), is_water=forcing.is_water)
+            timer.record("ais", started, f"{feed['counts']['vessels']} vessels")
     finally:
         close = getattr(forcing, "close", None)
         if callable(close):
@@ -869,6 +1132,14 @@ def build_case(
             # which case the renderer simply omits the heatmap instead of inventing one.
             probability=probability if detection["source"] != "reference" else None,
             out_dir=C.PREVIEW_DIR,
+            # Written under the case id, not the decoded file's stem: an uploaded scene's
+            # stem is a content hash, and the images endpoint looks them up by case.
+            name=request.scene,
+            label=(
+                C.LABEL_SATELLITE_UPLOAD
+                if request.scene_upload is not None
+                else C.LABEL_SATELLITE
+            ),
         )
         # The renderer returns bare filenames; record where they live so a caller can
         # resolve them without having to know which directory was passed in. Relative to
@@ -890,6 +1161,8 @@ def build_case(
         feed=feed,
         ranking=ranking,
         previews=previews,
+        acquired_utc=acquired,
+        acquired_source=acquired_source,
     )
     payload["timing"] = {
         "totalSeconds": round(time.perf_counter() - started_all, 3),
@@ -983,6 +1256,58 @@ def _region_of(scene: dataset_mod.Scene) -> str | None:
     return regions.region_label((south + north) / 2.0, (west + east) / 2.0)
 
 
+def _input_provenance(
+    request: CaseRequest,
+    scene: dataset_mod.Scene,
+    acquired_source: str | None,
+) -> dict[str, Any]:
+    """Where each of the five inputs came from, slot by slot.
+
+    One entry per slot whether or not it was filled, so the interface renders the same
+    five rows every time and an empty slot reads as "the dataset's own" rather than
+    disappearing. ``source`` is ``"dataset"`` or ``"operator"``; ``file`` is the stored
+    name and never an absolute path.
+    """
+
+    def slot(path: Path | None, dataset_note: str) -> dict[str, Any]:
+        if path is None:
+            return {"source": "dataset", "file": None, "note": dataset_note}
+        return {
+            "source": "operator",
+            "file": Path(path).name,
+            "note": "supplied through the upload endpoint for this case",
+        }
+
+    return {
+        "scene": {
+            **slot(request.scene_upload, "from the audited Sentinel-1 dataset"),
+            "bandBasis": scene.band_basis,
+            "acquiredSource": acquired_source,
+        },
+        "mask": slot(
+            request.mask_upload,
+            "the dataset's reference mask, where one exists for this scene",
+        ),
+        "era5": slot(
+            request.era5_upload,
+            "whatever ERA5 file is on disk, or none",
+        ),
+        "cmems": slot(
+            request.cmems_upload,
+            "the supplied CMEMS product, subject to its overlap check",
+        ),
+        "ais": slot(
+            request.ais_upload,
+            "generated synthetically for this case; no real vessel is involved",
+        ),
+        "note": (
+            "Every supplied file is checked against this scene on its own terms. A file "
+            "that does not overlap the scene in space or time is not used, and the reason "
+            "is recorded rather than the fallback happening quietly."
+        ),
+    }
+
+
 def assemble(
     *,
     request: CaseRequest,
@@ -996,18 +1321,30 @@ def assemble(
     ranking: dict[str, Any],
     previews: dict[str, Any] | None,
     screening: dict[str, Any] | None = None,
+    acquired_utc: str | None = None,
+    acquired_source: str | None = None,
 ) -> dict[str, Any]:
     """Shape the stage outputs into the frontend contract, adding nothing new."""
     primary = _largest_slick(geometry)
+    inputs = _input_provenance(request, scene, acquired_source)
 
     return {
-        "id": scene.name,
+        # The id the case is stored and served under, which is what the request asked for.
+        # For a dataset case that is the scene's own name; for an uploaded one it is the
+        # label the operator chose, and `scene.name` below is the stored filename instead.
+        "id": request.scene,
+        # What a person calls this run, when they gave it a name. Presentation only, and
+        # absent rather than empty when they did not.
+        **({"label": request.label} if request.label else {}),
         "pipelineVersion": C.PIPELINE_VERSION,
         "generatedUtc": C.utc_now_iso(),
         "requestKey": request.key(),
         "status": C.LABEL_STATUS,
         "scene": {
-            "name": scene.name,
+            # The label, matching `id`. The stored filename an uploaded scene actually has
+            # on disk is under `inputs.scene.file`, where it belongs: it is a storage
+            # detail, and putting a content hash in the header bar would help nobody.
+            "name": request.scene,
             "width": scene.width,
             "height": scene.height,
             "bounds": [round(float(value), 6) for value in scene.bounds or []],
@@ -1016,7 +1353,13 @@ def assemble(
             "transform": [float(value) for value in scene.transform],
             "acquiredStartUtc": scene.acquired_start,
             "acquiredStopUtc": scene.acquired_stop,
+            # The instant the whole pipeline actually ran against, which is the product's
+            # own when it has one and the operator's otherwise. Published beside its source
+            # so a typed time is never mistaken for one read off the product.
+            "acquiredUtc": acquired_utc,
+            "acquiredSource": acquired_source,
             "bandSource": scene.band_source,
+            "bandBasis": scene.band_basis,
             "nodata": scene.nodata,
             "productId": _product_field(scene, "raw"),
             "mission": _product_field(scene, "missionName"),
@@ -1028,9 +1371,15 @@ def assemble(
             "region": _region_of(scene),
             "regionNote": C.LABEL_REGION_APPROXIMATE,
             "hasReferenceMask": scene.mask is not None,
+            "isUpload": request.scene_upload is not None,
         },
+        "inputs": inputs,
         "provenance": {
-            "satellite": C.LABEL_SATELLITE,
+            "satellite": (
+                C.LABEL_SATELLITE_UPLOAD
+                if request.scene_upload is not None
+                else C.LABEL_SATELLITE
+            ),
             "aisMode": feed["mode"],
             "aisLabel": feed["label"],
             # The schema the feed conforms to, separate from whether it is real. These are
@@ -1049,6 +1398,10 @@ def assemble(
             "windMode": decision.get("windMode"),
             "detectionSource": detection["source"],
             "detectionLabel": detection["label"],
+            # True when any part of this case came from an operator rather than from the
+            # audited dataset. One boolean the interface can key on without having to
+            # inspect five slots.
+            "operatorSupplied": request.uploaded,
             "status": C.LABEL_STATUS,
         },
         "detection": detection,
@@ -1100,7 +1453,7 @@ def assemble(
         "vessels": ranking["candidates"],
         "attribution": ranking,
         "previews": previews,
-        "limits": LIMITS,
+        "limits": case_limits(feed=feed, uploaded_scene=request.scene_upload is not None),
     }
 
 
@@ -1119,3 +1472,38 @@ LIMITS = [
     "Look-alike screening separates oil-like from not-oil-like. It does not identify the "
     "phenomenon, so no rejected patch is called algae, low wind or a wake.",
 ]
+
+#: Replaces the first entry of :data:`LIMITS` when the vessels came out of a real file. The
+#: standing limit says no real vessel appears anywhere in the product, which stops being
+#: true the moment an operator supplies an extract -- and a limitation that has quietly
+#: become false is worse than none, because a reader who checks one and finds it wrong has
+#: no reason to trust the other four.
+LIMIT_AIS_REAL = (
+    "AIS traffic is real and unverified. Positions are as broadcast by the vessels "
+    "themselves and reproduced from the supplied file without alteration, so a gap, a "
+    "wrong position or a switched-off transponder passes straight through."
+)
+
+#: Added when any input arrived over the upload endpoint. The reported accuracy was
+#: measured on held-out patches of the audited dataset; an uploaded scene is outside it,
+#: and no number in this product says how the model behaves there.
+LIMIT_UPLOADED_SCENE = (
+    "This scene is outside the evaluated dataset. It was supplied by an operator rather "
+    "than drawn from the audited set the accuracy figures were measured on, so those "
+    "figures do not describe how the model performed here."
+)
+
+
+def case_limits(*, feed: dict[str, Any], uploaded_scene: bool) -> list[str]:
+    """The limitations this particular case carries.
+
+    :data:`LIMITS` describes a case built entirely from the audited dataset with synthetic
+    AIS, which every case was until an operator could supply their own inputs. Each entry
+    that a supplied input falsifies is replaced rather than left standing.
+    """
+    limits = list(LIMITS)
+    if feed.get("mode") == "real":
+        limits[0] = LIMIT_AIS_REAL
+    if uploaded_scene:
+        limits.insert(0, LIMIT_UPLOADED_SCENE)
+    return limits

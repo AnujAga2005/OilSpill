@@ -41,7 +41,7 @@ column on a projector, keep the clause and drop the *Evidence* line.
 | **Expected solution** *"An automated … model"* | **One command, ten stages, 20.1 s** on a laptop for a full 2048 × 2048 scene: decode 9.7 s · detect 5.7 s · geometry 1.9 s · look-alike screening 1.8 s · forcing 0.03 s · backward 0.26 s · forward 0.25 s · AIS 0.19 s · scoring 0.08 s · previews 0.22 s. Timings are measured on the run that produced the case and shown on Screen 1 under *Processing status* — click the heading to unfold the per-stage bars. |
 | **Expected solution** *"…**hindcasting** …"* | Their word, implemented literally: the same integrator runs **backward** to the origin and **forward** to the forecast, sharing one forcing field. |
 | **Expected solution** *"…ranks potential culprit vessel based on **spatio-temporal correlation** with AIS data."* | Correlation is spatio-*temporal* by construction: each AIS report is compared against where the oil is estimated to have been **at that report's own timestamp**, in units of the envelope radius at that timestamp — not against a static circle. That is why "present somewhere during a 24-hour window" earns **zero**. |
-| **Expected solution** *"A suitable **visual interface** is also to be developed."* | **Six screens**, responsive to 375 px, printable, and **zero JavaScript dependencies** — 398 KB of plain ES modules, no build step. Runs offline from a bundled seeded case. |
+| **Expected solution** *"A suitable **visual interface** is also to be developed."* | **Seven screens**, responsive to 375 px, printable, and **zero JavaScript dependencies** — 442 KB of plain ES modules, no build step. Runs offline from a bundled seeded case. |
 
 ---
 

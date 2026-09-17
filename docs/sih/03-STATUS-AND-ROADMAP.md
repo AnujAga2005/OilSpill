@@ -12,13 +12,13 @@ estimated or rounded up. If a figure appears on stage it should come from this p
 
 ## 3.1 One paragraph summary
 
-SpillTrace is a working ten-stage pipeline with a six-screen analyst dashboard. It takes a real
+SpillTrace is a working ten-stage pipeline with a seven-screen analyst dashboard. It takes a real
 Sentinel-1 SAR scene, segments the oil with a U-Net trained on this repository's 1,200 real
 image/mask pairs, measures the slick on a sphere, runs a Lagrangian particle simulation backwards
 to a probability envelope and forwards to a forecast, generates a clearly-labelled synthetic AIS
 fleet for that envelope, and ranks vessels on a transparent 100-point scale with every component
 and its evidence exposed. It runs offline on one laptop with two pipeline dependencies and no
-frontend dependencies at all. 776 automated tests pass.
+frontend dependencies at all. 893 automated tests pass.
 
 **Requirements (a), (b) and (c) of the problem statement are substantively satisfied**, clause by
 clause, in §3.7. One clause is not: the PS mentions EO (optical) imagery alongside SAR and we do
@@ -62,6 +62,7 @@ they are the timing of the very run that produced the demo numbers in §3.8.
 ```
 Oil/  Mask_oil/            the supplied dataset — 1,200 GeoTIFF pairs, never modified
 data/processed/            audit, patch cache, metrics, rendered cases
+data/uploads/              operator-supplied files — gitignored, outside the audited dataset
 models/                    unet_vv_vh.npz — the trained weights
 services/
   common/spilltrace_common/   config, GeoTIFF reader, NetCDF reader, seeds
@@ -69,14 +70,15 @@ services/
                               geometry.py (morphology, contours, spherical area),
                               preview.py (hand-written PNG encoder)
   drift/spilltrace_drift/     forcing.py, engine.py (particles), ais.py, scoring.py,
-                              age.py (the spill-age bound), marinecadastre.py (the AIS schema)
-  api/spilltrace_api/         server.py, jobs.py, case.py, store.py
-apps/web/                  the dashboard — 6 screens, vanilla ES modules, zero dependencies
+                              age.py (the spill-age bound), marinecadastre.py (the AIS schema),
+                              realais.py (a real extract → the feed the scorer reads)
+  api/spilltrace_api/         server.py, jobs.py, case.py, store.py, uploads.py
+apps/web/                  the dashboard — 7 screens, vanilla ES modules, zero dependencies
 scripts/                   run_audit, run_preprocess, run_train, run_scene_eval,
                            run_api, build_web
-tests/                     776 tests
+tests/                     893 tests
 dist/                      the offline static bundle
-docs/sih/                  these eight documents
+docs/sih/                  these fourteen documents
 RUNBOOK.md                 how to run everything
 KNOWN-ISSUES.md            open defects, honestly stated — read before quoting a number
 DATA_AUDIT.md              the generated dataset audit
@@ -325,7 +327,7 @@ Checked against the code, clause by clause.
 | **Hindcasting** ML model | ✅ | backward drift |
 | Backward **and** forward mapping | ✅ | both |
 | Ranks candidates by spatio-temporal correlation | ✅ | 100-point scale |
-| Suitable visual interface | ✅ | 6 screens, desktop + mobile + print |
+| Suitable visual interface | ✅ | 7 screens, desktop + mobile + print |
 | PS mentions SAR **and EO** imagery | ❌ | SAR only |
 
 ### The scoring scale, since (c) is the most prescriptive clause
@@ -352,10 +354,11 @@ implication about any individual vessel, and the reasoning string is shown on sc
 
 ## 3.8 The dashboard
 
-Six screens, in the order an analyst would use them.
+Seven screens, in the order an analyst would use them.
 
 | Screen | File | What it shows |
 |---|---|---|
+| **New analysis** | `analysis.js` | the intake screen, and the app's front door with a live API: one dark panel holding the five-slot upload form, the four fields and the run button, then what the run does, then the stored cases with a **Load previous saved cases** button. Computes nothing itself |
 | **Command centre** | `command.js` | headline area, then four numbered answers (extent, release window, age, vessels worth a look) each linking to its evidence; map, shortlist, and a folded audit trail of acquisition / provenance / stage timings |
 | **Imagery** | `satellite.js` | VV/VH switch, prediction vs reference vs agreement overlays, before/after split slider, all layers |
 | **Slick** | `slick.js` | measured extent, per-region table, **analyst boundary editing**, GeoJSON/CSV export |
@@ -440,7 +443,7 @@ Plus the ranking caveat, in full:
 .venv/bin/python -m pytest
 ```
 
-**776 tests, about 42 seconds, all passing, nothing skipped.**
+**893 tests, about 28 seconds, all passing, nothing skipped.**
 
 Everything is seeded and reproducible:
 
@@ -479,8 +482,15 @@ run on stage if anyone doubts it:
 .venv/bin/python -c "from spilltrace_drift import marinecadastre as MC; print(open('data/raw/AIS_2022_06_01.csv').readline().strip() == MC.HEADER_LINE)"
 ```
 
-Because the importer exists, switching to a live feed is a file drop rather than a rewrite.
-Covered by `tests/test_marinecadastre.py` and 7 route tests in `tests/test_api.py`.
+Because the importer exists, switching to a live feed is a file drop rather than a rewrite — and it
+is now literally a file drop: the New analysis screen takes a real MarineCadastre extract,
+and `services/drift/spilltrace_drift/realais.py` turns it into the feed the scorer consumes. That
+module exists because a parsed CSV is *not* the same shape as the synthetic feed, and the gap is not
+cosmetic: `score_completeness` defaults a missing cleaning block to full marks, so a gappy real feed
+would score **perfectly on data quality** — the one component whose whole job is to say the data is
+poor. The completeness figure is therefore measured against each vessel's own median reporting
+interval, not a constant borrowed from the generator. Covered by `tests/test_marinecadastre.py` and
+7 route tests in `tests/test_api.py`.
 
 **2. An explicit traffic-filtering funnel.** ✓ The rule existed in `IRRELEVANT_RADII`; what was
 missing was output. `scoring.py` now publishes `attribution.filtering` — counts on both sides of
@@ -557,6 +567,13 @@ padded footprint, NetCDF4 — is in **RUNBOOK.md §6a**, and CMEMS in §6b. Cove
 `tests/test_forcing_products.py`, which drive both readers through a fake NetCDF handle because
 nothing in the repository can *write* NetCDF-4.
 
+**And the download no longer has to be wired in by hand.** The New analysis screen takes an ERA5 or
+CMEMS file directly — separate slots, because they are separate products and either can be
+real on its own. ERA5 is the one to fetch first: a few MB against CMEMS's 370, and the bigger change
+to the drift, since the wind term is the same size as the current at this scene's anchor. Each file
+is re-checked against *this* scene's footprint and window on its own terms, so one that does not
+overlap is reported with the reason rather than quietly ignored.
+
 **6. Dataset identity — ✓ verified. One Indian scene — still open.** *(~1 day of the two spent.)*
 
 **The identity half is done, and the answer corrected a mistake of ours.** Our data is Part I of
@@ -588,9 +605,14 @@ that. Free, no account beyond a signup, roughly two hours:
    chain our files carry is `Orb_NR_Cal_Spk_TC_dB`: Apply-Orbit-File → ThermalNoiseRemoval →
    Calibration (σ⁰) → Speckle-Filter → Terrain-Correction (EPSG:4326) → LinearToFromdB. Export
    GeoTIFF with **VH as band 0 and VV as band 1**, the order `audit.py` detects by band name.
-4. Drop it in `Oil/` under any name, run `scripts/run_audit.py`, then analyse it through the app.
-   No mask is needed — a scene without one is a prediction-only case, which is exactly the real
-   operational situation.
+4. **Analyse it through the app's upload form** — the **New analysis** screen the app opens on → drop
+   the GeoTIFF in the SAR scene slot, keep or overwrite the case id it suggests from the filename,
+   type the acquisition instant from the product metadata, and run. No mask is needed: a scene
+   without one is a prediction-only case, which is exactly the real
+   operational situation. Uploads are stored outside the audited dataset and are never added to it,
+   so this costs nothing and changes no measured number. **Only if you want the scene to become a
+   permanent dataset member** do you drop it in `Oil/` and re-run `scripts/run_audit.py` — and that
+   re-runs the whole chain below it.
 
 Expect it to look *worse* than our test scenes, and say so: no reference mask, a different sea
 state, and a possible incidence-angle difference. **A weaker honest number on Indian water beats a
@@ -650,9 +672,11 @@ sends it over SMTP or writes an `.eml` beside the PDF, as a background job the d
 Two properties are worth stating out loud when a judge asks, because they are the difference
 between a demo and something you would let near a real inbox:
 
-- **It cannot be used as an open relay.** The endpoint has no authentication in front of it, so
-  real sending requires `SPILLTRACE_ALERT_RECIPIENTS` — an allowlist of addresses or `@domains`.
-  With it unset, nothing is ever sent to anyone.
+- **It can be locked down to named recipients.** The endpoint has no authentication in front of
+  it, so `SPILLTRACE_ALERT_RECIPIENTS` exists: set it to a list of addresses or `@domains` and
+  the server refuses anything outside that list. Left unset — the default — a report goes to
+  whatever addresses the responder types, which is what you want on a laptop and not what you
+  want on a machine whose port other people can reach.
 - **Dry run is the default.** With no SMTP host configured a clone writes a `.eml` file and says
   so, in the dialog *before* you commit and in the confirmation after. The button reads
   "Write .eml", not "Send report", when that is what will happen.

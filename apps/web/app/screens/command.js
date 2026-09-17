@@ -68,17 +68,27 @@ export function render(ctx) {
       value: F.km2(slick.totalAreaKm2),
       unit: "km²",
       sub: slick.slickCount
-        ? `Across ${F.int(slick.slickCount)} disconnected region${slick.slickCount === 1 ? "" : "s"} in the supplied ${scene.region || "scene"}, acquired ${F.utc(scene.acquiredStartUtc)}.`
+        ? `Across ${F.int(slick.slickCount)} disconnected region${slick.slickCount === 1 ? "" : "s"} in the supplied ${scene.region || "scene"}, acquired ${F.utc(scene.acquiredUtc || scene.acquiredStartUtc)}.`
         : "No slick was measured in this scene.",
       chips: [
         scene.mission
           ? U.chip(`${scene.mission} ${scene.mode || ""}`.trim(), { iconPath: ICONS.satellite })
           : null,
+        // A scene the operator supplied is outside the evaluated dataset, which is the one
+        // qualification that applies to every number on this screen at once.
+        scene.isUpload
+          ? U.chip("Operator-supplied scene", { tone: "synthetic", iconPath: ICONS.upload })
+          : null,
         U.chip(
           caseDoc.detection?.source === "model" ? "U-Net prediction" : "Supplied reference mask",
           { tone: caseDoc.detection?.source === "model" ? "oil" : "reference" },
         ),
-        U.chip("Synthetic AIS", { tone: "synthetic" }),
+        // Read off the feed rather than hardcoded: an uploaded AIS extract makes the word
+        // "synthetic" false, and a chip that stayed put would be the first thing a reader
+        // saw and the one thing on the screen that was wrong.
+        caseDoc.provenance?.aisMode === "real"
+          ? U.chip("Real AIS extract", { tone: "reference", iconPath: ICONS.ship })
+          : U.chip("Synthetic AIS", { tone: "synthetic" }),
         caseDoc.demo ? U.chip("Seeded offline case", { tone: "reference" }) : null,
       ].filter(Boolean),
       aside: [
@@ -98,6 +108,30 @@ export function render(ctx) {
         }),
       ].filter(Boolean),
     }),
+
+    // -- bring your own scene ---------------------------------------------
+    // One quiet row, directly under the headline, because this is the first question a
+    // visitor asks of a detection product -- "does it work on my data?" -- and an intake
+    // with no mention on the front page reads as something the product does not really
+    // offer. The form itself lives on its own screen: it has five slots and four fields,
+    // and unfolding all of that here would bury the four answers below it.
+    h(
+      "div",
+      { class: "inline no-print", style: { gap: "var(--s3)" } },
+      U.button("Analyse your own scene", {
+        kind: "quiet",
+        small: true,
+        iconPath: ICONS.upload,
+        iconAfter: ICONS.arrowRight,
+        onClick: () => ctx.navigate("/new"),
+        title: "Upload a Sentinel-1 scene and run this pipeline on it",
+      }),
+      h(
+        "span",
+        { class: "small muted" },
+        "SAR GeoTIFF required · wind, currents and AIS optional",
+      ),
+    ),
 
     // -- the investigation, in four numbered answers ----------------------
     // The same four figures as before, but read as a sequence a person could say out loud:
@@ -179,6 +213,7 @@ export function render(ctx) {
       "div",
       { class: "stack stack--tight" },
       acquisitionCard(caseDoc),
+      inputsCard(caseDoc),
       provenanceCard(caseDoc),
       processingCard(ctx, caseDoc),
     ),
@@ -190,7 +225,7 @@ export function render(ctx) {
 // -- cards ------------------------------------------------------------------
 
 function locatorCard(ctx, caseDoc) {
-  const holder = h("div", { style: { height: "clamp(260px, 38vh, 420px)" } });
+  const holder = h("div", { style: { height: "clamp(340px, 54vh, 620px)" } });
 
   // The map has a lifetime, so it is built after mount and torn down on navigation.
   requestAnimationFrame(() => {
@@ -199,11 +234,15 @@ function locatorCard(ctx, caseDoc) {
     const { rasters, vectors } = sceneVectors(caseDoc, ctx, {
       includeDrift: true,
       includeVessels: false,
+      // The one map in the app that colours regions by the look-alike verdict. It is the
+      // first thing anyone looks at, and "twelve orange rings" overstates what the
+      // pipeline actually concluded about six of them.
+      byVerdict: true,
     });
-    // This map is a locator, so it keeps more context than the working screens do - but
-    // it still frames the finding rather than the whole acquisition, which would show a
-    // 16 km scene with a slick too small to read.
-    map.setRasters(rasters).setVectors(vectors).fitFindings(0.42);
+    // A locator keeps a little context around the finding, but only a little: `fitFindings`
+    // frames the slick, the drift path and the origin zone together, and a larger pad than
+    // this spends the canvas on empty water rather than on the thing being located.
+    map.setRasters(rasters).setVectors(vectors).fitFindings(0.16);
     ctx.onCleanup(() => map.destroy());
   });
 
@@ -219,13 +258,119 @@ function locatorCard(ctx, caseDoc) {
     },
     holder,
     mapLegend([
-      { label: "Predicted slick", colour: "var(--oil)" },
+      { label: "Consistent with oil", colour: "var(--oil)" },
+      { label: "Uncertain — kept for review", colour: "var(--oil)", shape: "dash" },
+      { label: "Screened out as a look-alike", colour: "var(--lookalike)", shape: "dash" },
       caseDoc.scene?.hasReferenceMask
         ? { label: "Supplied reference mask", colour: "var(--reference)", shape: "dash" }
         : null,
       { label: "Backward drift to origin", colour: "var(--drift)" },
       { label: "Estimated origin zone", colour: "var(--reference)", shape: "dash" },
     ]),
+    verdictPanel(ctx, caseDoc),
+  );
+}
+
+/** Verdict -> the colour it is drawn in above, and what the verdict means in one line. */
+const VERDICT_ROWS = [
+  {
+    key: "accepted",
+    label: "Consistent with oil",
+    colour: "var(--oil)",
+    blurb: "dark, sharp-edged and elongated the way a film is",
+  },
+  {
+    key: "uncertain",
+    label: "Uncertain",
+    colour: "var(--oil)",
+    blurb: "between the two thresholds, so kept for a human to settle",
+  },
+  {
+    key: "rejected",
+    label: "Screened out as a look-alike",
+    colour: "var(--lookalike)",
+    blurb: "more consistent with something else dark on the water",
+  },
+  {
+    key: "unscreened",
+    label: "Not screened",
+    colour: "var(--text-tertiary)",
+    blurb: "no clear water around it to measure against, so no verdict",
+  },
+];
+
+/**
+ * Which of the drawn regions the look-alike screen calls oil, and which it does not.
+ *
+ * The screen has already run -- every published region carries a verdict in the case
+ * document, and the Slick screen shows the working. This is the one-glance version, sitting
+ * under the map so the colours have a key that carries counts and area rather than only a
+ * name. Area is summed from the regions themselves, not from `slick.totalAreaKm2`, because
+ * that total spans every published region regardless of verdict.
+ */
+function verdictPanel(ctx, caseDoc) {
+  const regions = caseDoc.geometry?.slicks || [];
+  const screening = caseDoc.screening;
+  if (!regions.length) return null;
+
+  const tally = new Map();
+  for (const region of regions) {
+    const key = region.screening?.label || "unscreened";
+    const entry = tally.get(key) || { count: 0, areaKm2: 0 };
+    entry.count += 1;
+    entry.areaKm2 += Number(region.areaKm2) || 0;
+    tally.set(key, entry);
+  }
+
+  // Nothing was screened: say that, rather than drawing a split that was never computed.
+  if (screening?.fitted === false || (tally.size === 1 && tally.has("unscreened"))) {
+    return h(
+      "p",
+      { class: "card__note" },
+      `The look-alike screen did not run on this case, so all ${F.int(regions.length)} ` +
+        "regions are drawn the same and none of them carries a verdict.",
+    );
+  }
+
+  const rows = VERDICT_ROWS.filter((row) => tally.has(row.key)).map((row) => {
+    const { count, areaKm2 } = tally.get(row.key);
+    return h(
+      "div",
+      { class: "verdict__row" },
+      h("span", { class: "verdict__swatch", style: { background: row.colour } }),
+      h(
+        "div",
+        { class: "verdict__text" },
+        h(
+          "div",
+          null,
+          h("span", { class: "verdict__count mono" }, F.int(count)),
+          h("span", null, ` ${count === 1 ? "region" : "regions"} · ${row.label}`),
+        ),
+        h("div", { class: "small muted" }, row.blurb),
+      ),
+      h("div", { class: "verdict__area mono" }, `${F.km2(areaKm2)} km²`),
+    );
+  });
+
+  return h(
+    "div",
+    { class: "verdict" },
+    h(
+      "div",
+      { class: "verdict__head small muted" },
+      `Of the ${F.int(regions.length)} regions drawn above, by the look-alike screen:`,
+    ),
+    rows,
+    screening?.components?.note
+      ? h("p", { class: "card__note" }, screening.components.note)
+      : null,
+    U.button("See the screen's working", {
+      kind: "quiet",
+      small: true,
+      iconAfter: ICONS.chevronRight,
+      onClick: () => ctx.navigate("/slick"),
+    }),
   );
 }
 
@@ -245,26 +390,107 @@ function acquisitionCard(caseDoc) {
   // The mission and the timestamp are the one line worth reading without opening the card:
   // they say which satellite pass every figure above was measured from. `scene.name` is a
   // patch index in this dataset ("00053") and would tell a reader nothing.
+  //
+  // `acquiredUtc` rather than `acquiredStartUtc`, because that is the instant the pipeline
+  // actually ran against: for a dataset scene the two are the same, and for an uploaded one
+  // with no product header only the first exists.
+  const acquired = scene.acquiredUtc || scene.acquiredStartUtc;
+  const typed = scene.acquiredSource === "operator-supplied";
   return U.foldout(
     "Acquisition",
     {
       id: "acq",
-      hint: `${scene.mission || F.DASH} · ${F.utc(scene.acquiredStartUtc)}`,
+      hint: `${scene.mission || (scene.isUpload ? "Operator-supplied" : F.DASH)} · ${F.utc(acquired)}`,
       note: scene.regionNote,
     },
     U.rows(
       U.row("Scene", scene.name, { mono: true }),
       U.row("Mission", `${scene.mission || F.DASH} · ${scene.mode || F.DASH} ${scene.productType || ""}`.trim()),
       U.row("Polarisations", (scene.polarisations || []).join(" / ")),
-      U.row("Acquired", F.utc(scene.acquiredStartUtc, { seconds: true }), { mono: true }),
+      U.row("Acquired", F.utc(acquired, { seconds: true }), { mono: true }),
+      // Which of the two it was. A time typed into a form and one read off the product both
+      // produce a working case and they are not equally trustworthy, so the row is always
+      // present rather than appearing only when something is wrong with it.
+      scene.acquiredSource
+        ? U.row(
+            "Time taken from",
+            typed ? "typed by the operator, read as UTC" : "the product's own header",
+            { stack: true, muted: !typed },
+          )
+        : null,
       U.row("Centre", F.latLon([
         (scene.bounds?.[0] + scene.bounds?.[2]) / 2,
         (scene.bounds?.[1] + scene.bounds?.[3]) / 2,
       ]), { mono: true }),
       U.row("Extent", `${scene.width} × ${scene.height} px`, { mono: true }),
       U.row("CRS", scene.crs, { mono: true }),
+      // Only worth a row when the bands were not named by a header: for every dataset scene
+      // it says the same thing, and a row that never varies is noise.
+      scene.bandBasis && !scene.bandBasis.startsWith("band names read")
+        ? U.row("Band order", scene.bandBasis, { stack: true })
+        : null,
       U.row("Reference mask", scene.hasReferenceMask ? "supplied" : "not supplied"),
       U.row("Product", F.clip(scene.productId, 44), { mono: true, stack: true, title: scene.productId }),
+    ),
+  );
+}
+
+/**
+ * Where each of the five inputs came from.
+ *
+ * Only rendered for a case that has any operator-supplied input: for a dataset case every
+ * row would read "from the audited dataset", which the Provenance card below already says
+ * in one line. When something *was* supplied, the five rows are the whole point — they say
+ * which figures on this screen rest on the audited data and which rest on a file the
+ * server had never seen before, and they say it slot by slot rather than as one verdict
+ * over the case.
+ */
+function inputsCard(caseDoc) {
+  const inputs = caseDoc.inputs;
+  if (!inputs) return null;
+  const slots = [
+    ["scene", "SAR scene"],
+    ["mask", "Reference mask"],
+    ["era5", "Wind"],
+    ["cmems", "Currents"],
+    ["ais", "AIS"],
+  ];
+  const supplied = slots.filter(([key]) => inputs[key]?.source === "operator");
+  if (!supplied.length) return null;
+
+  // The forcing stage re-checks each supplied file against this scene and records what it
+  // decided. A file that was uploaded but not used says so here, with the reason, rather
+  // than looking identical to one that was.
+  const decisions = caseDoc.forcing?.supplied || {};
+
+  return U.foldout(
+    "Inputs",
+    {
+      id: "inputs",
+      hint: `${supplied.length} of 5 operator-supplied`,
+      note: inputs.note,
+      open: true,
+    },
+    U.rows(
+      ...slots.map(([key, label]) => {
+        const slot = inputs[key] || {};
+        const operator = slot.source === "operator";
+        const decision = decisions[key];
+        // `used === false` is a real answer and `undefined` is "no decision was recorded
+        // for this slot", so the check is explicit rather than falsy.
+        const rejected = operator && decision && decision.used === false;
+        const detail = rejected
+          ? `${slot.file} — not used: ${decision.error || decision.note || "it does not apply to this scene"}`
+          : operator
+            ? slot.file
+            : slot.note;
+        return U.row(label, detail, {
+          stack: true,
+          muted: !operator,
+          mono: operator && !rejected,
+          title: operator ? slot.note : undefined,
+        });
+      }),
     ),
   );
 }

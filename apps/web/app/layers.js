@@ -16,6 +16,11 @@ export const C = {
   oil: "#ff8a4c",
   oilFill: "rgba(255, 138, 76, 0.22)",
   oilFaint: "rgba(255, 138, 76, 0.10)",
+  // A region the look-alike screen puts on the other side of the line. Neutral steel on
+  // purpose: "not oil" should not read as a second kind of finding, and every other hue on
+  // the locator already means something.
+  lookalike: "#8ea2b8",
+  lookalikeFill: "rgba(142, 162, 184, 0.13)",
   reference: "#5ec8ff",
   referenceFill: "rgba(94, 200, 255, 0.16)",
   agree: "#6ee7b7",
@@ -70,6 +75,11 @@ export function baseRasters(caseDoc, caseId, { kind = "vv", opacity = 0.9 } = {}
  * Rings for every published slick, exterior first then holes.
  * Prefers the GeoJSON the geometry stage wrote; falls back to `slick.outlines`, which is
  * what a `?lean=1` document carries.
+ *
+ * Each ring set carries its look-alike verdict when the document has one, so a caller can
+ * draw the screen's own answer instead of painting every region the same colour. The
+ * geojson path already has it in `properties.screening`; the lean path does not, so it is
+ * joined back by id against `geometry.slicks`.
  */
 export function slickRings(caseDoc) {
   const features = caseDoc?.geometry?.geojson?.features;
@@ -78,15 +88,20 @@ export function slickRings(caseDoc) {
       id: feature.properties?.id,
       areaKm2: feature.properties?.areaKm2,
       confidence: feature.properties?.confidence,
+      verdict: feature.properties?.screening?.label || null,
       rings: feature.geometry?.coordinates || [],
     }));
   }
   const outlines = caseDoc?.slick?.outlines;
   if (Array.isArray(outlines) && outlines.length) {
+    const verdicts = new Map(
+      (caseDoc?.geometry?.slicks || []).map((s) => [s.id, s.screening?.label || null]),
+    );
     return outlines.map((outline) => ({
       id: outline.id,
       areaKm2: outline.areaKm2,
       confidence: outline.confidence,
+      verdict: verdicts.get(outline.id) || null,
       rings: [outline.exterior, ...(outline.holes || [])].filter(
         (ring) => Array.isArray(ring) && ring.length > 2,
       ),
@@ -94,24 +109,53 @@ export function slickRings(caseDoc) {
   }
   const polygon = caseDoc?.slick?.polygon;
   if (Array.isArray(polygon) && polygon.length > 2) {
-    return [{ id: caseDoc.slick.id, areaKm2: caseDoc.slick.areaKm2, rings: [polygon] }];
+    return [
+      {
+        id: caseDoc.slick.id,
+        areaKm2: caseDoc.slick.areaKm2,
+        verdict: caseDoc.slick.screening?.label || null,
+        rings: [polygon],
+      },
+    ];
   }
   return [];
 }
 
-export function slickLayers(caseDoc, { fill = true, width = 1.5, pickable = false, z = Z.slick } = {}) {
-  return slickRings(caseDoc).map((slick) => ({
-    type: "polygon",
-    id: `slick:${slick.id}`,
-    kind: "slick",
-    rings: slick.rings,
-    stroke: C.oil,
-    fill: fill ? C.oilFill : null,
-    width,
-    z,
-    pickable,
-    label: `${slick.id} · ${fmt(slick.areaKm2)} km²`,
-  }));
+/**
+ * How one region is drawn once the look-alike verdict is allowed to matter.
+ *
+ * `accepted` keeps the amber a reader already associates with oil. `uncertain` is the same
+ * amber dashed, because it is still a published region and the screen declined to settle
+ * it. `rejected` goes steel and unfilled: drawn, because it is part of what the network
+ * published and hiding it would misstate the detection, but visibly not claimed as oil.
+ */
+const VERDICT_STYLE = {
+  accepted: { stroke: C.oil, fill: C.oilFill, dash: null },
+  uncertain: { stroke: C.oil, fill: C.oilFaint, dash: [6, 4] },
+  rejected: { stroke: C.lookalike, fill: null, dash: [3, 4] },
+};
+
+export function slickLayers(
+  caseDoc,
+  { fill = true, width = 1.5, pickable = false, z = Z.slick, byVerdict = false } = {},
+) {
+  return slickRings(caseDoc).map((slick) => {
+    // Default off, so the working screens keep drawing one detection in one colour.
+    const style = byVerdict ? VERDICT_STYLE[slick.verdict] : null;
+    return {
+      type: "polygon",
+      id: `slick:${slick.id}`,
+      kind: "slick",
+      rings: slick.rings,
+      stroke: style ? style.stroke : C.oil,
+      fill: style ? (fill ? style.fill : null) : fill ? C.oilFill : null,
+      dash: style ? style.dash : null,
+      width,
+      z,
+      pickable,
+      label: `${slick.id} · ${fmt(slick.areaKm2)} km²`,
+    };
+  });
 }
 
 // -- drift -------------------------------------------------------------------
@@ -381,6 +425,7 @@ export function sceneVectors(caseDoc, ctx, {
   includeVessels = false,
   driftDirection = "backward",
   selectedVessel = null,
+  byVerdict = false,
 } = {}) {
   const caseId = ctx?.caseId || caseDoc?.id;
   const rasters = baseRasters(caseDoc, caseId, { kind: baseKind, opacity: baseOpacity });
@@ -401,7 +446,7 @@ export function sceneVectors(caseDoc, ctx, {
       ...originLayers(caseDoc),
     );
   }
-  vectors.push(...slickLayers(caseDoc));
+  vectors.push(...slickLayers(caseDoc, { byVerdict }));
   if (includeVessels) {
     vectors.push(...vesselLayers(caseDoc, { selected: selectedVessel }));
   }

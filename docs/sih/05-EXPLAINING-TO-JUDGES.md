@@ -376,7 +376,7 @@ rather than imagining it is the whole chain.
 > `npm install`. Clone it and it runs offline."
 
 **"Is it tested?"**
-> "776 automated tests, about 42 seconds, all passing, nothing skipped. And the whole pipeline is
+> "893 automated tests, about 28 seconds, all passing, nothing skipped. And the whole pipeline is
 > seeded — run the
 > same case twice and every figure is byte-identical; only the timestamps change. That matters for
 > an evidentiary product: a result you can't reproduce is a result you can't defend."
@@ -406,7 +406,26 @@ rather than imagining it is the whole chain.
 > from CMEMS or INCOIS, the pipeline run per scene, and results pushed to an analyst queue with an
 > alert to the responder — Coast Guard or state pollution board. The alerting is the piece we
 > haven't built yet and it's high on our list, because right now the pipeline ends at a screen and
-> disaster management has to end at an action."
+> disaster management has to end at an action.
+>
+> The manual half of that is already there: an operator can drop a scene into the Command centre and
+> get the full case back. What's missing is the scheduler in front of it, not the analysis."
+
+**"Can I run my own scene through it?"**
+> "Yes — Command centre, *Analyse your own scene*. A Sentinel-1 GeoTIFF is the only required input.
+> Wind, currents and AIS are three separate optional slots, not a bundle: ERA5 wind alone is a real
+> improvement over our synthetic wind, and it's a few megabytes against CMEMS's 370.
+>
+> Two things are worth pointing at. First, **every file is re-checked against that scene's own
+> footprint and time window**, and one that doesn't overlap is reported with the reason — you never
+> get a silent downgrade to synthetic. Second, **uploads are stored outside the audited dataset and
+> never added to it**: our accuracy figures were measured on a held-out test split, and a scene from
+> elsewhere can't contaminate them. The case says so on its own limits card."
+
+If a judge supplies a file on the day, say what it can and cannot tell you:
+> "This is a live run on a scene the model has never seen, so treat the output as a demonstration
+> that the pipeline works end to end — not as a measured accuracy number. The measured numbers are
+> on the Method screen and they're from the audited test split."
 
 ### G. Impact and deployment
 
@@ -544,7 +563,7 @@ a vessel guilty — points the same way. That consistency is the pitch. Lean on 
 ## 5.8 Final checklist before you walk in
 
 - [ ] The three numbers, cold: **1,200 pairs / 240 acquisitions used, none spanning two splits** ·
-      **0.769 vs 0.676 IoU** · **776 tests · whole pipeline offline in 20 s**
+      **0.769 vs 0.676 IoU** · **893 tests · whole pipeline offline in 20 s**
 - [ ] The fourth number ready for probing: **0.584 pooled scene IoU** (mean per scene 0.693)
 - [ ] The PS sentence permitting synthetic AIS, quotable
 - [ ] The seven minimum concepts from document 2 §2.9

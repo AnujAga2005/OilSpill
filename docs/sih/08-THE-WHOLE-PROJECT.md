@@ -10,8 +10,8 @@ It has four parts, and they are meant to be read in order:
 |---|---|---|
 | **1 — The project** | the mental model: what goes in, what comes out, the ten stages | §8.1 – §8.5 |
 | **2 — The domain** | SAR, look-alikes, U-Net, IoU, drift physics, AIS, scoring | §8.6 – §8.16 |
-| **3 — The pitch** | the six screens as they exist today, and the eight-minute path | §8.17 – §8.25 |
-| **4 — Every file** | 88 source files: what each does, what it calls, what those calls do | §8.26 – §8.36 |
+| **3 — The pitch** | the seven screens as they exist today, and the eight-minute path | §8.17 – §8.25 |
+| **4 — Every file** | 93 source files: what each does, what it calls, what those calls do | §8.26 – §8.36 |
 
 Documents 1–7 in this folder are shorter and task-shaped: [1](01-THE-PROBLEM.md) is the problem
 statement, [2](02-WHAT-YOU-NEED-TO-KNOW.md) is a faster domain primer, [3](03-STATUS-AND-ROADMAP.md)
@@ -136,7 +136,7 @@ services/drift/       physics, AIS, scoring, spill age
 services/api/         the HTTP server, the case builder, the store, jobs, PDF, email
 apps/web/ the dashboard: index.html, four CSS files, 18 ES modules. No build step.
 scripts/              the command-line entry points — this is what you actually run
-tests/     776 tests
+tests/     893 tests
 dist/       the built, self-contained bundle: `python -m http.server` in it and it works
 docs/sih/ these documents
 ```
@@ -495,8 +495,8 @@ consequence for the demo: you can pre-open the exact state you want in a second 
 click fails, you navigate by URL instead of fumbling.
 
 The screen definitions live in one table at [main.js:29](../../apps/web/app/main.js:29) — path, title,
-short label, step number, icon, module, group. Six entries. Adding a screen is one entry plus one
-module.
+short label, step number, icon, module, group. Seven entries: the intake screen, five numbered case
+screens and Method. Adding a screen is one entry plus one module.
 
 ## 8.19 Screen 1 — Overview (`/`)
 
@@ -506,16 +506,23 @@ module.
    Central Mediterranean, acquired 4 August 2015", four chips (Sentinel-1A IW · U-Net prediction ·
    Synthetic AIS · Seeded offline case), and on the right a score ring: **90.3 / 100**, "Priority
    candidate · SYNTHETIC DEMO ALPHA", with an **Open investigation** button.
-2. Four **answer cards** in a row — the four questions the PS asks, each with its number and a link
+2. One quiet row — *"Analyse your own scene →"* plus the hint *"SAR GeoTIFF required · wind,
+   currents and AIS optional"*. It navigates to `/new`, where the form lives. First thing under the
+   headline because "does it work on my data?" is the first question a detection product is asked;
+   a row rather than a form, because the four answers below it are what a judge came to see.
+
+3. Four **answer cards** in a row — the four questions the PS asks, each with its number and a link
    to the screen that proves it:
    - ① largest slick **15.76 km²** → Imagery
    - ② release window **24 h** → Drift
    - ③ age **unresolvable** → Drift
    - ④ vessels **2 of 10** → Ranking
-3. The area-method sentence (how the km² was computed).
-4. A two-column block: the locator map, and the candidate shortlist.
-5. Folded: acquisition, provenance, processing.
-6. **"What this does not tell you"** — the five limits, always open.
+4. The area-method sentence (how the km² was computed).
+5. A two-column block: the locator map — regions coloured by look-alike verdict, a six-entry legend
+   and, under it, the oil / look-alike split (**4 accepted · 2 uncertain · 6 rejected** of twelve,
+   with the km² for each) — and the candidate shortlist.
+6. Folded: acquisition, provenance, processing.
+7. **"What this does not tell you"** — the five limits, always open.
 
 **What to say (about 45 seconds).**
 
@@ -746,7 +753,7 @@ apps/web/ →  (HTTP only, never imports Python)  ┘
 Five real modules. Everything else in the project sits on top of these, and none of them import
 anything from the project.
 
-### `config.py` (313 lines) — the single source of truth
+### `config.py` (354 lines) — the single source of truth
 
 Every path, seed, label and tunable in the project. Nothing else hard-codes a directory.
 
@@ -881,7 +888,7 @@ input channels (VV, VH), one output channel (oil probability).
 
 **Calls:** `nn`.
 
-### `dataset.py` (438 lines) — scenes, splits and patches
+### `dataset.py` (485 lines) — scenes, splits and patches
 
 | Function | What it does |
 |---|---|
@@ -988,7 +995,7 @@ annotation boxes.
 **This is our cross-domain evidence.** A screen fitted on one dataset and evaluated on a completely
 different published one is a much stronger claim than a held-out split of the same data.
 
-### `preview.py` (313 lines) — the PNG writer
+### `preview.py` (322 lines) — the PNG writer
 
 `write_png(path, image, alpha)` writes a PNG by hand — `_chunk(tag, payload)` builds the chunks with
 their CRCs. `downsample` / `downsample_max` reduce 2048² to something a browser can hold (max-pooling
@@ -1107,7 +1114,37 @@ produces the same ships every time.
 
 **Calls:** `config`, `marinecadastre`.
 
-### `scoring.py` (758 lines) — explainable attribution
+### `realais.py` (375 lines) — a real extract, turned into a feed the scorer can read
+
+New with the operator upload. `marinecadastre.py` *reads* a real file; `ais.py` *fabricates* one;
+this module is the bridge, and it exists because the two shapes are not the same. Three fields the
+scorer needs are absent from a parsed CSV, and **each one fails in a different direction if left
+missing**:
+
+| Field | Why a parsed CSV cannot just be passed through |
+|---|---|
+| `cleaning` | feeds the data-completeness component. `score_completeness` defaults a missing block to `reportCompleteness = fieldCompleteness = 1.0` — so a gappy real feed would score **full marks for data quality**, from the one component whose whole job is to say the data is poor |
+| `typeKey` | real AIS carries a numeric ship-and-cargo code, not this project's category keys, so the code is mapped through the `typeRelevance`/`typeRationale` fallback `score_type` already documents |
+| `track` | the map polyline. Absent, a vessel is scored but cannot be drawn |
+
+| Symbol | What it does |
+|---|---|
+| `RealAisError` | the one refusal type; the endpoint turns it into a stated reason, never a silent downgrade |
+| `_type_fields(vessel)` | the ship-and-cargo code → relevance and rationale |
+| `_clean(reports, max_speed_kn=45.0)` | the cleaning pass, and where the completeness figure is **measured rather than assumed** |
+| `load_feed(path, env, *, bounds, min_reports, limit, is_water)` | **the entry point.** `env` is the backward-drift envelope; its window padded by `WINDOW_PAD_HOURS` (2 h) is the time filter applied during the read |
+
+The completeness number is the part worth saying out loud. The synthetic cleaner knows its own
+reporting interval because it generated it. A real feed's interval varies with vessel class, speed
+and receiver coverage, so each vessel's **own median observed interval** is used as the expectation
+— which makes "90% complete" mean *one report in ten is missing relative to how often this vessel
+was actually reporting*, a statement about the file rather than a constant borrowed from the
+generator. Where the file is silent — no speed, no course, no type code — the field stays `None` and
+the completeness score falls. That is the intended consequence, not something to paper over.
+
+**Calls:** `config`, `marinecadastre`, `ais` (for `EnvelopeTrack`).
+
+### `scoring.py` (770 lines) — explainable attribution
 
 | Function | What it does |
 |---|---|
@@ -1132,15 +1169,19 @@ simulate`.
 
 ## 8.30 `services/api/spilltrace_api/` — the server and the case builder
 
-### `case.py` (1121 lines) — the orchestrator
+### `case.py` (1501 lines) — the orchestrator
 
 **If you read one file, read this one.** It is the ten stages, in order, in one function.
 
 | Symbol | What it does |
 |---|---|
-| `CaseRequest` | the inputs: scene, detector, thresholds, particle count, seeds. `.key()` hashes them, so identical requests reuse stored results |
+| `CaseRequest` | the inputs: scene, detector, thresholds, particle count, seeds — **plus the five upload slots** (`scene_upload`, `mask_upload`, `era5_upload`, `cmems_upload`, `ais_upload`) and the two fields a headerless GeoTIFF cannot supply, `acquired_utc` and `band_order`. `.key()` hashes them all, so identical requests reuse stored results **and an uploaded input changes the key** — two cases with the same scene name but different files are never confused. `.uploaded` is true when any part came from an operator |
 | `Stage`, `_Timer` | `timer.record(name, started, note)` is where the ten timings come from |
-| `scene_paths(scene)`, `available_scenes(limit)` | locate a scene's image and mask |
+| `scene_paths(scene)`, `available_scenes(limit)` | locate a scene's image and mask. **Only the audited dataset is searched** — an operator scene gets no dataset name, which is exactly the mechanism by which an upload could otherwise shadow a dataset scene |
+| `resolve_inputs(request)` | **which image and mask this case actually runs on.** An uploaded scene wins over the dataset lookup and an uploaded mask over the dataset mask — by explicit request, never because a name happened to match |
+| `_parse_operator_time(value)` | validate a typed acquisition instant. The case records whether the time was *read from the product* or *typed by an operator*; the two are never presented as the same thing |
+| `_open_uploaded_forcing(request)` | **opens each supplied forcing file on its own terms.** An unreadable CMEMS file does not stop an ERA5 file being used, and neither stops the case: `resolve_forcing` gets `None` for that slot and falls back exactly as it would have with nothing uploaded — but the fallback is **stated**, because the returned notes carry the reason. "Your file was not used" never arrives as silence |
+| `_input_provenance(...)`, `slot(path, dataset_note)` | one provenance row per input: dataset or operator, and for an operator file the stated reason if it did not apply |
 | `_load_checkpoint()` | load `unet_vv_vh.npz` once |
 | `_pad_scene`, `_tile_origins` | tile a 2048² scene for inference with overlap |
 | `infer_probability(...)` | run the U-Net tile by tile and stitch a full-scene probability map |
@@ -1152,6 +1193,7 @@ simulate`.
 | `_largest_slick`, `_polygon_of`, `_all_outlines`, `_km`, `_product_field`, `_region_of` | shaping helpers |
 | `assemble(...)` | **stage outputs → the frontend contract, adding nothing new.** Every key the dashboard reads is defined here |
 | `LIMITS` | the five limit sentences, at the bottom of the file, each written as *claim, full stop, qualifier* because `U.limitList` splits on that first full stop |
+| `case_limits(*, feed, uploaded_scene)` | **the limits for *this* case, not the general ones.** `LIMITS` describes a case built entirely from the audited dataset with synthetic AIS — which every case was until an operator could supply inputs. An entry a supplied input **falsifies is replaced rather than left standing**: a real AIS feed swaps the synthetic-AIS line for `LIMIT_AIS_REAL`, and an uploaded scene prepends `LIMIT_UPLOADED_SCENE`, because the published accuracy was measured on the audited test split and does not describe a scene from elsewhere |
 
 **The call chain inside `build_case`, in order** — this is the whole product in fifteen lines:
 
@@ -1174,13 +1216,14 @@ preview_mod.render_scene_previews(...)          → timer.record("previews")
 assemble(...)  ← and age_mod.estimate(backward) is called inside it
 ```
 
-**Calls:** `config`, `geotiff`, `age`, `ais`, `engine`, `forcing`, `scoring`, `dataset`, `geometry`,
-`lookalike`, `preview`, `model`, `store`.
+**Calls:** `config`, `cmems`, `era5`, `geotiff`, `age`, `ais`, `realais`, `engine`, `forcing`,
+`scoring`, `dataset`, `geometry`, `lookalike`, `preview`, `model`, `store`.
 
-### `server.py` (1007 lines) — the HTTP API, on the standard library
+### `server.py` (1171 lines) — the HTTP API, on the standard library
 
-`ROUTES` at [server.py:76](../../services/api/spilltrace_api/server.py:76) is a tuple of
-`(name, regex)` pairs, and `route(path)` returns `(endpoint, parameter)`. The full surface:
+`ROUTES` at [server.py:81](../../services/api/spilltrace_api/server.py:81) is a tuple of
+`(name, regex)` pairs, and `route(path)` returns `(endpoint, parameter)`. Twenty-one routes. The
+full surface:
 
 | Method | Path | Handler | Returns |
 |---|---|---|---|
@@ -1197,15 +1240,27 @@ assemble(...)  ← and age_mod.estimate(backward) is called inside it
 | GET | `/api/cases/{id}/report` | `_report` | the PDF |
 | GET | `/api/eval/{file}.png` | `_eval_image` | evaluation imagery |
 | GET | `/api/jobs/{id}`, `/api/jobs/{id}/result` | `_job`, `_job_result` | job polling |
+| GET | `/api/uploads` | `_upload_state` | what is staged, the slot rules, the caps |
+| POST | `/api/uploads?kind=&name=` | `_upload` | **stream one operator file to disk, verify it** |
+| POST | `/api/uploads/clear` | `uploads.clear` | delete every staged file |
 | POST | `/api/cases/{id}/detect`, `/drift` | `_submit` | queue a run, return a job id |
 | POST | `/api/cases/{id}/dispatch` | `_dispatch` | email the report |
 | POST | `/api/jobs/{id}/cancel` | | cancel |
 | GET | anything else | `_static` | the dashboard files |
 
+The one POST that carries a file rather than JSON is `/api/uploads`: `BINARY_POST_ROUTES` lists it,
+and `do_POST` dispatches it **before** the body is parsed, so a 43 MB GeoTIFF is streamed to disk
+rather than read into memory and rejected as "not a JSON object". The upload machinery itself —
+size caps, the magic-byte check, the content-hash naming, path-traversal refusal — is in
+`uploads.py`, below.
+
 `SpillTraceHandler` extends `BaseHTTPRequestHandler`. `_send`, `_json`, `_fail` are the response
 helpers; `_case_or_404` is the lookup; `_public_result` strips anything that should not leave the
-host. `ApiOnlyHandler` is the same without static serving — used by `build_web.py` to call the API
-**in-process**, which matters because localhost is not reachable from the build sandbox.
+host. `_upload` also owns `_drain`, which reads and discards a rejected body so the keep-alive
+connection stays usable for the next request. `ApiOnlyHandler` is the same without static serving —
+used by `build_web.py` to call the API **in-process**, which matters because localhost is not
+reachable from the build sandbox.
+
 
 `pick_demo_scene()` chooses which scene the demo case is built from. **There is no override
 parameter** — it picks, deterministically, from what is available. `build_demo(force, particles)`
@@ -1232,6 +1287,37 @@ as the worker). `JobCancelled` is the cooperative cancellation signal.
 Why it exists: a detection takes 20 seconds and an HTTP request should not block for 20 seconds. The
 dashboard submits, gets a job id, and polls.
 
+### `uploads.py` (359 lines) — the one door for an unaudited file
+
+Everything the pipeline normally consumes comes from the audited dataset on disk. This module is the
+single door through which a file that was **not** audited can get in, so every check lives here
+rather than being spread across the endpoints. Four rules shape it, and each is a property of the
+code, not a habit that could be forgotten:
+
+- **Uploads never join the dataset.** They land under `config.UPLOAD_DIR` — a separate, gitignored
+  tree from `IMAGE_DIR`/`MASK_DIR`. An upload cannot add to, shadow, or overwrite a supplied scene,
+  because it is never written where one would be looked for.
+- **The declared name is never trusted.** The stored filename is a content hash plus a sanitised
+  stem; the client's string is kept only as a label. A name with a separator, a `..`, or a leading
+  dot cannot build a path outside the tree, because it is not used to build the path at all.
+- **The file is identified by what it is.** `suffix_for` checks the extension against an allow-list
+  *before* the body is read; `_verify_magic` checks the leading bytes *after* it lands — a `.tif`
+  that is not a TIFF and a `.nc` that is not HDF5 are refused, and the partial file removed. A
+  classic NetCDF-3 file gets its own message telling the operator to re-save as NetCDF-4.
+- **Same bytes, same id.** The id is the content hash, so re-uploading a file the server already
+  holds is idempotent.
+
+`check_length` enforces the per-slot cap from `Content-Length` before a byte is read; `UploadTooLarge`
+is its own `UploadError` subclass so the handler can answer **413** for size and **400** for
+everything else. `store` streams the body to a staging file beside its destination (so the rename
+stays on one filesystem), hashes as it goes, and refuses a body that arrives short. `resolve`,
+`describe`, `listing` and `clear` are the read side. Five slots: `scene` (required), `mask`, `era5`,
+`cmems`, `ais`.
+
+**Calls:** `config`. **Tested by** `tests/test_uploads.py` (100 tests), whose docstring states the
+four "what cannot happen" claims it defends — including a keep-alive pipelining test proving a
+refused upload does not desync the request behind it.
+
 ### `reports.py` (868 lines) — the incident PDF
 
 `generate_incident_report(...)` builds the document. `_reportlab()` imports reportlab **lazily** and
@@ -1246,11 +1332,14 @@ candidate for investigation" is present.
 
 **Calls:** `config`.
 
-### `dispatch.py` (347 lines) — email
+### `dispatch.py` (354 lines) — email
 
-`dispatch_case_email(...)` generates the report and sends it. `parse_recipients`,
-`allowed_recipients`, and **`_check_allowlist`** — mail only goes to addresses on an explicit
-allowlist, so a demo cannot spray a real inbox. `_smtp_config`, `_smtp_host`, `_sender`, `_env_bool`
+`dispatch_case_email(...)` generates the report and sends it. `parse_recipients` validates and
+de-duplicates the addresses a responder typed; by default the report goes to all of them.
+`allowed_recipients` and **`_check_allowlist`** are the optional lock: set
+`SPILLTRACE_ALERT_RECIPIENTS` to a list of addresses or `@domain` entries and anything outside it
+is refused before a PDF is even built, which is what you want on a machine whose port other people
+can reach. `_smtp_config`, `_smtp_host`, `_sender`, `_env_bool`
 read credentials **from `.env`, which is gitignored**; there is no password anywhere in the tree.
 `dispatch_mode()` reports which mode is active — `.eml` file, or real SMTP — and the UI shows it.
 `build_email`, `_default_body`, `_case_summary`, `_shorten` compose the message; `send_email` sends
@@ -1269,11 +1358,12 @@ it.
 | `run_train.py` (88) | `... scripts/run_train.py` | Phase 3. Calls `train.train()`. Writes the checkpoint and `metrics.json` |
 | `run_scene_eval.py` (228) | `... scripts/run_scene_eval.py` | Whole-scene evaluation, not 128 px patches. `threshold_grid`, `confusion`, `scores`, `aggregate`, `evaluate_split`. Writes `scene_metrics.json` — this is where 0.584 pooled / 0.693 mean / 0.046 worst come from |
 | `run_lookalike_eval.py` (917) | `... scripts/run_lookalike_eval.py` | The look-alike evidence. In-domain cross-validation (`cross_validate`, `grouped_folds`), cross-domain on DARTIS (`collect_dartis_rows`, `screen_on_dartis`), and the U-Net comparison (`detector_on_dartis`). Writes `lookalike_metrics.json` |
+| `refresh_lookalike_detector.py` (144) | `... scripts/refresh_lookalike_detector.py` | **Recomputes only the detector half of `lookalike_metrics.json`** — half an hour instead of the full three. `run_lookalike_eval.py --detector` produces two independent halves, and only the detector half depends on the checkpoint: the screen half's region proposer is the classical dark-region finder, which retraining cannot move. This script exists because the retrain on the acquisition-grouped split left the stored detector block describing a model that no longer existed, quoting a threshold of 0.8 while citing a `scene_metrics.json` that now says 0.70 |
 | `fetch_dartis2019.py` (284) | `... scripts/fetch_dartis2019.py --limit N` | Downloads the DARTIS archive from PANGAEA. `resolve_index`, `read_index`, `collapse_to_patches`, `fetch`, `report_manifest` |
 | `run_api.py` (61) | `.venv/bin/python scripts/run_api.py` | **Starts the API and dashboard on :8765.** `--build-demo` runs the pipeline once and stores the case |
 | `build_cases.py` (220) | `... scripts/build_cases.py --list` | **Pre-builds stored cases for other scenes**, so they appear in the dashboard's picker. `--list` shows every test scene with its IoU; `--test-split --limit N` builds the top N. **Refuses train/val scenes unless `--allow-any`**, because their scores beat the published accuracy |
 | `make_report.py` (62) | `... scripts/make_report.py demo` | Generates the PDF from the command line, optionally dispatching it |
-| `build_web.py` (494) | `... scripts/build_web.py` | **The production build.** See below |
+| `build_web.py` (508) | `... scripts/build_web.py` | **The production build.** See below |
 
 ### `build_web.py` in detail
 
@@ -1293,8 +1383,8 @@ It does five things, in order, and any one of them can fail the build:
 5. **Assert the bundle is clean.** `check_bundle_contents()` fails the build if `dist/` contains raw
    datasets, absolute host paths, or anything credential-shaped.
 
-`report(manifest)` prints the summary: **59 files, 4,117 KB** in total, of which the dashboard itself
-is **397.9 KB across 24 JS/CSS/HTML files** — the rest is preview PNGs and the offline fixtures.
+`report(manifest)` prints the summary: **54 files, 3,037.5 KB** in total, of which the interface itself
+is **420.9 KB across 25 JS/CSS/HTML files** — the rest is preview PNGs and the offline fixtures.
 
 ---
 
@@ -1308,19 +1398,20 @@ module, and the browser does the rest. Same-origin only: **no analytics, no web 
 | File | Lines | What it does |
 |---|---|---|
 | `index.html` | 38 | four CSS links, one `<script type="module" src="app/main.js">`, an inline SVG favicon, and a `<noscript>` that tells you where the JSON is |
-| `app/main.js` | 607 | **the bootstrap.** `SCREENS` (the six-entry table), `frame()` / `brand()` / `topbar()` / `sidenav()` build the chrome, `context(route)` builds the `ctx` object every screen receives, `render()` swaps the active screen, `boot()` starts it. Also `loadCase`, `selectCase`, `runAnalysis`, `cancelAnalysis`, `dispatchIncidentEmail`, `pageHeader` (title and actions — nothing between the title and the first card), `caseSelector` |
+| `app/main.js` | 775 | **the bootstrap.** `SCREENS` (the seven-entry table), `frame()` / `brand()` / `topbar()` / `sidenav()` build the chrome, `context(route)` builds the `ctx` object every screen receives, `render()` swaps the active screen, `boot()` starts it. Also `loadCase`, `selectCase`, `runAnalysis`, `cancelAnalysis`, `dispatchIncidentEmail`, `nameCase`, `pageHeader` (title and actions — nothing between the title and the first card), `caseSelector`. The intake gate is here too: `sawIntake`/`markIntakeSeen`/`openSavedCases`/`maybeOpenIntake`, four lines of `sessionStorage` that send a fresh visit to `/new` **only** when the API is live, the route is bare and no case was asked for |
 | `app/dom.js` | 278 | **the framework, in 278 lines.** `h(tag, props, ...children)` builds real DOM nodes — no virtual DOM, no diffing. `mount`, `append`, `frag`, `icon`, `trapFocus` (modal accessibility), `announce` (the toasts), `debounce`, `raf` |
 | `app/state.js` | 138 | one store. `get`, `set(patch)`, `subscribe(fn)`, `load(name, loader)` for async slices with a status key, `annotation`/`annotate` for the analyst's notes, `resetSelection` |
 | `app/router.js` | 75 | a hash router. `parse`, `current`, `href`, `go`, `setParams`, `onRoute`, `start`. **Every view is a URL** |
-| `app/api.js` | 362 | the API client **with an offline fallback**. `apiMode()` reports live or offline; `probe()` decides which. `health`, `metrics`, `scenes`, `cases`, `loadCase`, `imageIndex`, `report`, `reportPdfUrl`, `dispatchEmail`, `imageUrl`, `csvUrl`. `submitDetect`/`submitDrift` + `runJob`/`awaitJob`/`jobStatus`/`cancelJob` for the polling loop |
+| `app/api.js` | 468 | the API client **with an offline fallback**. `apiMode()` reports live or offline; `probe()` decides which. `health`, `metrics`, `scenes`, `cases`, `loadCase`, `loadCaseLean`, `imageIndex`, `report`, `reportPdfUrl`, `dispatchEmail`, `imageUrl`, `evalImageUrl`, `csvUrl`. `submitDetect`/`submitDrift` + `runJob`/`awaitJob`/`jobStatus`/`cancelJob` for the polling loop. `uploadState`/`clearUploads`/`upload` for the operator upload, `saveCaseLabel` for naming a finished case — and `upload()` is **the one call that is not `fetch`**: it uses `XMLHttpRequest` for `request.upload.onprogress`, because `fetch` has no upload-progress event and a 370 MB CMEMS file would otherwise show ninety seconds of "uploading" that is indistinguishable from a hang |
 | `app/ui.js` | 640 | **the component library.** See below |
 | `app/format.js` | 176 | every number the UI prints goes through here. `km2`, `km`, `pct`, `num`, `int`, `metric`, `lat`, `lon`, `coord`, `utc`, `hours`, `seconds`, `bytes`, `bearing`, `axis`, `clip`, `slug`. `DASH` and `isMissing` are the missing-value contract — **a missing value renders as an em dash, never as 0** |
-| `app/icons.js` | 55 | `ICONS` and `BRAND_MARK` as SVG path strings. Authored here **so `h(..., {html})` never receives API data** — that is the XSS boundary |
+| `app/icons.js` | 60 | `ICONS` and `BRAND_MARK` as SVG path strings. Authored here **so `h(..., {html})` never receives API data** — that is the XSS boundary |
 | `app/mapview.js` | 828 | the map: a canvas, an equirectangular projection, no tile server. `createMap(container, options)`, `mapLegend(items)`, `haversineKm(a, b)`. The map **frames itself**: `fit(bounds, pad)`, `fitContent()`, `fitFindings(pad)` and `refit()`, with `measure()` reading the laid-out canvas size *before* every fit — the fix for maps that opened at a 2000 km view of a 16 km scene |
-| `app/layers.js` | 433 | **the one place that turns a case document into map primitives.** `C` (colours), `Z` (z-order), `raster`, `baseRasters`, `slickRings`, `slickLayers`, `driftLayers`, `originLayers`, `vesselLayers`, `sceneVectors` |
+| `app/layers.js` | 478 | **the one place that turns a case document into map primitives.** `C` (colours, including `lookalike`), `Z` (z-order), `raster`, `baseRasters`, `slickRings`, `slickLayers`, `driftLayers`, `originLayers`, `vesselLayers`, `sceneVectors`. `slickLayers` takes an opt-in `byVerdict` flag — off everywhere but the locator map, where the twelve regions are drawn in the colour of their look-alike verdict rather than all in oil orange |
 | `app/chart.js` | 212 | `lineChart`, `strip`, `stackBar` — hand-built SVG |
 | `app/charts.js` | 310 | the richer set: `lineChart`, `distributionStrip`, `histogram`, `sparkline`, `stackedBar` |
 | `app/exporters.js` | 273 | `candidatesCsv`, `slicksCsv`, `patchesCsv`, `driftCsv`, `downloadCsv`, `downloadJson`, `exportName`, `printPage` |
+| `app/upload.js` | 519 | **the operator upload form, on the New analysis screen.** `uploadPanel(ctx)` returns the whole form as one node — *Files*, then *Details*, then the button, in that order and in that one box, because a case id is required to run and a required field below the button that needs it is a form that lies about its own order. `SLOTS` is the five-entry table (scene required, mask/ERA5/CMEMS/AIS each optional and each **independent** — not a bundle, so ERA5 alone is a real improvement over the synthetic wind); each entry carries a one-line `note` the card shows and a full `hint` it carries as a tooltip, because five cards that each explain themselves in a paragraph push the button that uses them off the screen. `slotRow` renders one slot, `fields` the four controls, `send` streams one file, `run` starts the pipeline, `clearAll` empties the upload directory. `BAND_ORDERS` is the VH/VV toggle, needed because a bare GeoTIFF has no header to name its bands and a scene stored the other way round would be scored with the polarisations swapped. **`form` is at module scope on purpose**: the screen re-renders on every store change and a running job pushes progress about twice a second, so closure state would discard a chosen file halfway through a run. The whole form is **disabled when `apiMode()` is offline** — there is no server to receive the file, and it prints the command that starts one |
 
 ### `ui.js`, the components you will see referenced everywhere
 
@@ -1340,38 +1431,40 @@ module, and the browser does the rest. Same-origin only: **no analytics, no web 
 | `runFooter(caseDoc)` | the footer that stamps every screen with pipeline version, run time and status. There is no longer a `provenanceBadges` — the standing label strip it built was removed, and each data condition is now stated on the card that uses it |
 | `skeleton` | the loading placeholder |
 
-### The six screens
+### The seven screens
 
 Each exports exactly two things: a `LEDE` string and `render(ctx)`.
 
 | File | Lines | Screen | Its own helpers |
 |---|---|---|---|
-| `screens/command.js` | 421 | Overview | hero, four answer cards, locator, shortlist, folded acquisition/provenance/processing, limits |
-| `screens/satellite.js` | 551 | Imagery | `viewer`, `controls`, `tilesCard`, `detectionCard`, `lookalikeCard`, folded `analystCard`, `georeferenceCard` |
-| `screens/slick.js` | 1098 | Slick | `boundaryCard`, `regionsCard`, `regionDetailCard`, `screeningCard`, `verdictBadge`, folded `methodCard`/`qualityCard`. Also exports `ringAreaKm2` and `simplifyRing` for the boundary editor |
-| `screens/drift.js` | 865 | Drift | `mapCard` (with the scrubber), `originCard`, `spillAgeCard`, `forecastCard`, `forcingNotice`, folded `spreadCard`/`outcomesCard`/`forcingCard`/`numericsCard`, `caveatCard` |
-| `screens/vessels.js` | 807 | Vessels | `filterCard` (the funnel, and where the mandated AIS label is stated), `verdictCard`, `mapCard`, `rankingCard`, `evidenceCard`, folded `weightsCard`/`explanationCard`/`trackQualityCard`/`generatorCard`/`feedCard` |
-| `screens/methodology.js` | 1367 | Method | `pipelineCard`, `honestyCard`, `baselineCard`, `perSceneCard`, `lookAlikeCard`, `limitationsCard`, folded `lookAlikeDetailCard`/`scaleCard`/`thresholdCard`/`protocolCard`/`trainingCard`/`samplesCard`, plus `datasetCard`/`reproduceCard` |
+| `screens/analysis.js` | 218 | New analysis | the intake screen and the app's front door with a live API. An inverted panel holding the whole form — title, three chips, then `uploadPanel` from `app/upload.js` inside the same dark box — followed by two ordinary cards: `pipelineCard`, the four named stages of what the run does, and `savedCasesCard`, the six most recent stored cases as rows plus a **Load previous saved cases** button. What you fill in is in the panel; what merely explains the run is in the cards below it. Computes nothing itself; the form hands its job to `ctx.runAnalysis`, the same path the Command Centre's foldout used. Offline, `pipelineCard` is not rendered at all — there is no run to describe |
+| `screens/command.js` | 644 | Overview | hero, one quiet **Analyse your own scene →** row, four answer cards, locator (`byVerdict` colouring, six-entry legend, `verdictPanel` under the map), shortlist, folded acquisition/inputs/provenance/processing, limits |
+| `screens/satellite.js` | 547 | Imagery | `viewer`, `controls`, `tilesCard`, `detectionCard`, `lookalikeCard`, folded `analystCard`, `georeferenceCard` |
+| `screens/slick.js` | 1094 | Slick | `boundaryCard`, `regionsCard`, `regionDetailCard`, `screeningCard`, `verdictBadge`, folded `methodCard`/`qualityCard`. Also exports `ringAreaKm2` and `simplifyRing` for the boundary editor |
+| `screens/drift.js` | 861 | Drift | `mapCard` (with the scrubber), `originCard`, `spillAgeCard`, `forecastCard`, `forcingNotice`, folded `spreadCard`/`outcomesCard`/`forcingCard`/`numericsCard`, `caveatCard` |
+| `screens/vessels.js` | 805 | Vessels | `filterCard` (the funnel, and where the mandated AIS label is stated), `verdictCard`, `mapCard`, `rankingCard`, `evidenceCard`, folded `weightsCard`/`explanationCard`/`trackQualityCard`/`generatorCard`/`feedCard` |
+| `screens/methodology.js` | 1365 | Method | `pipelineCard`, `honestyCard`, `baselineCard`, `perSceneCard`, `lookAlikeCard`, `limitationsCard`, folded `lookAlikeDetailCard`/`scaleCard`/`thresholdCard`/`protocolCard`/`trainingCard`/`samplesCard`, plus `datasetCard`/`reproduceCard` |
 
 ### The styles
 
 | File | Lines | What it holds |
 |---|---|---|
-| `styles/tokens.css` | 186 | the design tokens. **A light, quiet instrument: soft grey canvas, white cards, large radius, diffuse shadow, nothing saturated in the chrome. Everything saturated on the screen is data** |
+| `styles/tokens.css` | 194 | the design tokens. **A light, quiet instrument: soft grey canvas, white cards, large radius, diffuse shadow, nothing saturated in the chrome. Everything saturated on the screen is data** |
 | `styles/base.css` | 531 | reset, typography, the app frame |
-| `styles/components.css` | 1913 | cards, stats, badges, buttons, tables, tabs, the sheet, the load states |
-| `styles/screens.css` | 646 | screen-specific layout. The three imagery surfaces — map, viewer, thumbnail — are **near-black inside an otherwise light interface**, because a greyscale SAR tile has no colour to separate it from the page |
+| `styles/components.css` | 2029 | cards, stats, badges, buttons, tables, tabs, the sheet, the load states |
+| `styles/screens.css` | 1148 | screen-specific layout, including the intake panel's slot cards and its dark-ground form controls. The three imagery surfaces — map, viewer, thumbnail — are **near-black inside an otherwise light interface**, because a greyscale SAR tile has no colour to separate it from the page |
 
 ---
 
-## 8.33 `tests/` — 776 tests
+## 8.33 `tests/` — 893 tests
 
-`.venv/bin/python -m pytest` → **776 passed in ~42 s**. Nothing skipped.
+`.venv/bin/python -m pytest` → **893 passed in ~28 s**. Nothing skipped.
 
 | File | Lines | What it guards |
 |---|---|---|
-| `test_api.py` | 1024 | every route, every error path, the path-traversal guard |
-| `test_incident_features.py` | 1033 | the PDF, **and the accusatory-language ban** |
+| `test_api.py` | 1148 | every route, every error path, the path-traversal guard, and that naming a case changes nothing else in it |
+| `test_incident_features.py` | 1062 | the PDF, **and the accusatory-language ban** |
+| `test_uploads.py` | 876 | **operator uploads** — the size caps, the magic-byte check, path-traversal refusal, and that a refused upload does not desync the connection behind it |
 | `test_scoring.py` | 696 | the six components and the funnel |
 | `test_ais.py` | 557 | the synthetic generator's determinism |
 | `test_lookalike.py` | 546 | the screen, its features, its folds |
@@ -1426,11 +1519,13 @@ hard-codes them.
 
 | You changed | Re-run | Because |
 |---|---|---|
-| anything in `services/` or `scripts/` | `pytest` | 776 tests, 42 seconds, no excuse |
+| anything in `services/` or `scripts/` | `pytest` | 893 tests, 28 seconds, no excuse |
 | the dataset, or `Oil/`/`Mask_oil/` contents | `run_audit.py` → `run_preprocess.py` → `run_train.py` → `run_scene_eval.py` | every downstream artefact derives from the audit |
 | `PreprocessConfig` (patch size, `max_scenes`) | the full chain above | the cache and the split both change |
 | the model or `TrainConfig` | `run_train.py` → `run_scene_eval.py` → rebuild the demo | `metrics.json` and `scene_metrics.json` both move |
 | `lookalike.py` or the DARTIS set | `run_lookalike_eval.py` | `lookalike_metrics.json` |
+| only the checkpoint, and you need the look-alike numbers to match it | `refresh_lookalike_detector.py` | the detector half alone depends on the checkpoint — half an hour rather than three |
+| the upload endpoint, `uploads.py` or `realais.py` | `pytest tests/test_uploads.py` then a live upload against `run_api.py` | the refusal paths are HTTP-level: a refused body that is not drained desyncs the next request on the same keep-alive connection, and only a socket-level test sees it |
 | any pipeline stage | `run_api.py --build-demo` | the stored case and its timings |
 | anything in `apps/web/` | `build_web.py` | it verifies the JS, the imports, the CSS classes and the bundle |
 | a number in a doc | check it against `apps/web/demo/case-demo.json` | prose goes stale; the case document does not |
@@ -1449,10 +1544,14 @@ Said plainly, because a weakness a judge finds that you concealed discounts ever
 1. **No Indian-water validation.** 0 of the 1,200 dataset scenes fall in 65–95 °E, 5–25 °N. One
    Sentinel-1 scene over the Gulf of Kutch closes it, and [RUNBOOK.md](../../RUNBOOK.md) has the SNAP
    processing chain.
-2. **The AIS is synthetic.** Real schema, fabricated content.
+2. **The AIS is synthetic.** Real schema, fabricated content. The New analysis screen accepts a real
+   MarineCadastre extract and `realais.py` will score it, but **no real extract ships with the
+   repository**, so every case you can open without supplying one is synthetic.
 3. **The forcing on the demo scene is synthetic in pattern** — the magnitude is measured from CMEMS
    over that footprint, but no CMEMS or ERA5 product in the repository covers 3–5 August 2015 in the
-   Central Mediterranean. RUNBOOK §6 has the ERA5 download recipe for exactly that window.
+   Central Mediterranean. RUNBOOK §6 has the ERA5 download recipe for exactly that window, and an
+   operator with that file can now supply it on the New analysis screen rather than re-running the
+   pipeline by hand.
 4. **Accuracy is a held-out test-set score, not a field-validated detection rate.** The split is
    clean; the sea is not a test set.
 5. **The look-alike screen does not name the phenomenon.** Oil-like versus not-oil-like, and nothing

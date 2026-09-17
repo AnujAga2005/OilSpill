@@ -4,12 +4,14 @@ Standard library only, like the rest of the API. SMTP credentials are read from
 the environment so they never reach source control, and the PDF that a responder
 would open in the dashboard is the same file attached here.
 
-Two deliberate safety properties, because `POST /api/cases/<id>/dispatch` has no
-authentication in front of it:
+Two things about who a report can reach, because `POST /api/cases/<id>/dispatch`
+has no authentication in front of it:
 
-  * **Recipients are allowlisted.** Without `SPILLTRACE_ALERT_RECIPIENTS` the
-    dispatcher refuses to *send*, so an open port cannot be turned into an open
-    relay that mails arbitrary strangers from the configured account.
+  * **Any valid address, by default.** A responder types the recipients and the
+    dispatcher sends there. `SPILLTRACE_ALERT_RECIPIENTS` is optional and only
+    ever *narrows* that: set it to a list of addresses or `@domain` entries and
+    anything outside the list is refused, which is what you want on a machine
+    whose port other people can reach.
   * **Dry run is the default whenever SMTP is not configured.** A fresh clone
     writes a .eml beside the PDF and reports `sent: false` instead of raising, so
     the demo path works with no secrets on disk at all.
@@ -68,24 +70,21 @@ def parse_recipients(value: Any) -> list[str]:
 
 
 def allowed_recipients() -> list[str]:
-    """The configured allowlist: bare addresses and/or `@domain` entries."""
+    """The configured restriction, if there is one: addresses and/or `@domain` entries."""
     return _split(os.environ.get("SPILLTRACE_ALERT_RECIPIENTS", ""))
 
 
 def _check_allowlist(recipients: list[str]) -> None:
-    """Refuse to send anywhere the operator has not named in advance.
+    """Refuse anywhere the operator has excluded, when they have excluded anything.
 
-    An entry of `@example.gov` permits any address in that domain; anything else
-    must match in full, case-insensitively. An empty allowlist permits nothing,
-    which is why real sending requires configuring it.
+    An unset `SPILLTRACE_ALERT_RECIPIENTS` means no restriction: a report goes to
+    whatever valid addresses the sender typed. Setting it turns the variable into a
+    list of the only places mail may go -- an entry of `@example.gov` permits any
+    address in that domain, anything else must match in full, case-insensitively.
     """
     allowed = [entry.lower() for entry in allowed_recipients()]
     if not allowed:
-        raise DispatchError(
-            "sending is disabled because SPILLTRACE_ALERT_RECIPIENTS is not set. "
-            "List the permitted addresses (or @domains) there, or set "
-            "SPILLTRACE_EMAIL_DRY_RUN=1 to write the message to disk instead."
-        )
+        return
     exact = {entry for entry in allowed if not entry.startswith("@")}
     domains = {entry for entry in allowed if entry.startswith("@")}
     for address in recipients:
@@ -160,15 +159,23 @@ def dispatch_mode() -> dict[str, Any]:
     what will happen, instead of promising an email that no SMTP host can send.
     """
     dry_run = _env_bool("SPILLTRACE_EMAIL_DRY_RUN", not _smtp_host())
+    restricted = bool(allowed_recipients())
     return {
         "mode": "dryRun" if dry_run else "send",
         "smtpConfigured": bool(_smtp_host()),
-        "recipientsConfigured": bool(allowed_recipients()),
+        # Whether SPILLTRACE_ALERT_RECIPIENTS narrows where mail may go. False is the
+        # ordinary case and means "anywhere the sender types", not "nowhere".
+        "recipientsRestricted": restricted,
         "note": (
             "No SMTP host is configured, so a dispatch writes the message to disk "
             "as .eml beside the PDF and reports sent: false."
             if dry_run
-            else "SMTP is configured; dispatch sends to allowlisted recipients only."
+            else "SMTP is configured; dispatch sends to the addresses entered"
+            + (
+                ", limited to SPILLTRACE_ALERT_RECIPIENTS."
+                if restricted
+                else "."
+            )
         ),
     }
 

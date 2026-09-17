@@ -461,7 +461,13 @@ def score_completeness(vessel: dict[str, Any], weights: C.ScoringWeights) -> dic
     if fields < 0.995:
         bits.append(f"{(1 - fields) * 100:.0f}% of speed/course/heading fields empty")
     if len(bits) == 1:
-        bits.append("complete synthetic track")
+        # "synthetic" only when it is: the same sentence appears under a real vessel's
+        # score once an operator supplies a MarineCadastre file.
+        bits.append(
+            "complete synthetic track"
+            if vessel.get("synthetic", True)
+            else "complete track, no gaps or rejected rows"
+        )
     return _component("Data quality", maximum * quality, maximum, "; ".join(bits))
 
 
@@ -533,7 +539,13 @@ def score_vessel(
         "type": vessel.get("type"),
         "typeKey": vessel.get("typeKey"),
         "pattern": vessel.get("pattern"),
-        "synthetic": True,
+        # Carried from the feed rather than asserted. This was a constant `True` while the
+        # synthetic generator was the only source of vessels; a real MarineCadastre
+        # extract now reaches this function too, and labelling one of those vessels
+        # synthetic would be a false statement about a real ship on the screen where the
+        # shortlist is read. Defaults to True so a feed that omits the flag is described
+        # as demonstration data rather than silently promoted to real.
+        "synthetic": bool(vessel.get("synthetic", True)),
         "status": C.LABEL_CANDIDATE,
         "relevant": relevant,
         "relevanceReason": relevance_reason,

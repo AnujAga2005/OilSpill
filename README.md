@@ -41,7 +41,15 @@ scoring → previews
    never deleted, so the filter itself can be audited.
 7. **Rank** what survives by proximity, trajectory, timing, behavioural anomalies, type and data
    completeness — 100 points, every component and its evidence shown.
-8. **Show** all of it in a dashboard: six screens, no build step.
+8. **Show** all of it in a dashboard: seven screens, no build step.
+
+And it runs on **your** scene, not only the bundled ones: with the API running the app opens on a
+**New analysis** screen that takes a SAR GeoTIFF upload, with optional slots for a reference mask,
+ERA5 wind, CMEMS currents and a real AIS extract.
+The slots are independent rather than a bundle — ERA5 alone is a real improvement over the synthetic
+wind — and every file is re-checked against that scene's own footprint and window, so one that does
+not overlap is reported with a stated reason instead of being quietly ignored. Uploads are written
+to a gitignored directory outside the evaluated dataset and are never added to it.
 
 Every ranked vessel is labelled **"priority candidate for investigation"**. Nothing in this
 project calls a vessel guilty.
@@ -69,7 +77,7 @@ statement names as the format authority, so it can be diffed against a real dail
 curl -s http://localhost:8765/api/cases/demo/ais.csv | head -3
 ```
 
-Tests — **776, about 42 seconds:**
+Tests — **893, about 28 seconds:**
 
 ```bash
 .venv/bin/python -m pytest
@@ -146,13 +154,14 @@ Indian water** — see `DATA_AUDIT.md` for the full region table.
 |---|---|
 | `apps/web/` | the dashboard — vanilla ES modules, zero dependencies, no build |
 | `services/ml/` | SAR decoding, the U-Net, training, geometry |
-| `services/drift/` | forcing, particle advection, synthetic AIS in the MarineCadastre schema, the spill-age bound, vessel scoring and traffic filtering |
-| `services/api/` | the HTTP API (stdlib only apart from the PDF report), which also serves the dashboard |
+| `services/drift/` | forcing, particle advection, synthetic AIS in the MarineCadastre schema, a reader that turns a real extract into the same feed, the spill-age bound, vessel scoring and traffic filtering |
+| `services/api/` | the HTTP API (stdlib only apart from the PDF report), which also serves the dashboard and receives operator uploads |
 | `services/common/` | config, GeoTIFF/DIMAP/NetCDF readers, regions |
 | `scripts/` | the pipeline entry points |
 | `data/processed/` | audit, splits, metrics, stored cases, preview PNGs |
+| `data/uploads/` | operator-supplied files — gitignored, separate from `Oil/` and `Mask_oil/` |
 | `models/` | the trained checkpoint |
-| `docs/sih/` | six team documents: the problem, the domain, status, pitch, Q&A, PS compliance |
+| `docs/sih/` | fourteen team documents: the problem, the domain, status, pitch, Q&A, PS compliance, the architecture, the file-by-file reference, the UI walkthrough, the datasets, and the demo scripts |
 | `dist/` | the offline static bundle |
 
 Two third-party imports carry the whole pipeline — `numpy` and `cv2`. Two more sit off to one side:
