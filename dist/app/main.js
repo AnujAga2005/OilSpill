@@ -20,6 +20,7 @@ import * as U from "./ui.js";
 import * as X from "./exporters.js";
 
 import * as commandScreen from "./screens/command.js";
+import * as analysisScreen from "./screens/analysis.js";
 import * as satelliteScreen from "./screens/satellite.js";
 import * as slickScreen from "./screens/slick.js";
 import * as driftScreen from "./screens/drift.js";
@@ -27,6 +28,14 @@ import * as vesselsScreen from "./screens/vessels.js";
 import * as methodScreen from "./screens/methodology.js";
 
 const SCREENS = [
+  {
+    path: "/new",
+    title: "New analysis",
+    short: "New analysis",
+    icon: ICONS.upload,
+    module: analysisScreen,
+    group: "Case",
+  },
   {
     path: "/",
     title: "Command centre",
@@ -161,8 +170,13 @@ function frame() {
 
 // -- context ----------------------------------------------------------------
 
+const COMMAND_CENTRE = SCREENS.find((screen) => screen.path === "/");
+
 function activeScreen(route) {
-  return SCREENS.find((screen) => screen.path === route.path) || SCREENS[0];
+  // The fallback is the Command Centre by name, not by position. `SCREENS[0]` is the
+  // intake screen, and an unknown route landing on "upload something" rather than on the
+  // case would be a worse answer than the one the reader asked for.
+  return SCREENS.find((screen) => screen.path === route.path) || COMMAND_CENTRE;
 }
 
 function context(route) {
@@ -187,8 +201,66 @@ function context(route) {
     runAnalysis,
     cancelAnalysis,
     selectCase,
+    openSavedCases,
     announce,
   };
+}
+
+// -- the intake gate --------------------------------------------------------
+
+/**
+ * Whether this tab has already been past the intake screen.
+ *
+ * `sessionStorage`, not a module variable: a reload has to stay where the reader was, and
+ * not `localStorage`, because a machine that has run one analysis should still open on the
+ * intake screen tomorrow. Wrapped because a browser with storage disabled throws on access,
+ * and the worst that costs is one extra click.
+ */
+const PASS_KEY = "spilltrace.sawIntake";
+
+function sawIntake() {
+  try {
+    return window.sessionStorage.getItem(PASS_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+function markIntakeSeen() {
+  try {
+    window.sessionStorage.setItem(PASS_KEY, "1");
+  } catch {
+    /* storage disabled; the gate simply does not stick */
+  }
+}
+
+/** Leave the intake screen for the Command Centre, optionally on a named case. */
+function openSavedCases(caseId = null) {
+  markIntakeSeen();
+  // The route listener resolves the case and loads it, so nothing is loaded here: doing
+  // both would fetch the same document twice.
+  router.go("/", caseId ? { case: caseId, vessel: null } : {});
+}
+
+/**
+ * Open on the intake screen when the reader has not asked for anything in particular.
+ *
+ * Four conditions, and all four have to hold. **Live only**: the offline bundle has no API
+ * to upload to, so sending it to an intake screen would be sending it to a dead end -- it
+ * opens on its one stored case, and "New analysis" stays in the nav where it explains
+ * itself. **No `case` param**, because a pasted link names the case it wants. **The bare
+ * route**, because a link to `#/drift` is a link to the drift screen. And **not already
+ * past it** in this tab, so a reload does not throw the reader back to the front door.
+ *
+ * `replace`, not a push: the intake screen is where this tab started, not somewhere it
+ * navigated to, and Back should leave the app rather than cycle through a redirect.
+ */
+function maybeOpenIntake() {
+  const route = router.current();
+  if (api.apiMode() !== "live") return;
+  if (route.path !== "/" || route.get("case")) return;
+  if (sawIntake()) return;
+  router.go("/new", {}, { replace: true });
 }
 
 // -- rendering --------------------------------------------------------------
@@ -218,7 +290,7 @@ function render() {
     else link.removeAttribute("aria-current");
   }
 
-  mount(refs.topbarMeta, topbarMeta(state));
+  mount(refs.topbarMeta, topbarMeta(state, screen));
   mount(refs.topbarActions, topbarActions(state));
 
   const ctx = context(route);
@@ -256,6 +328,12 @@ function schedule() {
 
 function pageHeader(screen, state, ctx) {
   const scene = state.caseDoc?.scene;
+  // The intake screen is about choosing what to analyse, so it carries none of the
+  // case actions: exporting, printing or emailing a report for a case the reader has not
+  // asked for yet is an offer about the wrong thing. The picker goes with them -- the
+  // screen has its own door to the saved cases, and one that lands on the Command Centre
+  // rather than leaving the reader on the intake screen with a different case behind it.
+  const caseActions = screen.path !== "/new";
   return h(
     "header",
     { class: "page__head" },
@@ -267,18 +345,20 @@ function pageHeader(screen, state, ctx) {
     h(
       "div",
       { class: "page__actions no-print" },
-      caseSelector(state),
-      U.button("Export JSON", {
-        kind: "quiet",
-        small: true,
-        iconPath: ICONS.download,
-        disabled: !state.caseDoc,
-        onClick: () => {
-          X.downloadJson(X.exportName(state.caseDoc, "case", "json"), state.caseDoc);
-          announce("Case document downloaded.", { kind: "success" });
-        },
-      }),
-      state.caseDoc && api.apiMode() === "live"
+      caseActions ? caseSelector(state) : null,
+      caseActions
+        ? U.button("Export JSON", {
+            kind: "quiet",
+            small: true,
+            iconPath: ICONS.download,
+            disabled: !state.caseDoc,
+            onClick: () => {
+              X.downloadJson(X.exportName(state.caseDoc, "case", "json"), state.caseDoc);
+              announce("Case document downloaded.", { kind: "success" });
+            },
+          })
+        : null,
+      caseActions && state.caseDoc && api.apiMode() === "live"
         ? U.button("PDF Report", {
             kind: "quiet",
             small: true,
@@ -287,7 +367,7 @@ function pageHeader(screen, state, ctx) {
             title: "Generate and download the incident report PDF",
           })
         : null,
-      state.caseDoc && api.apiMode() === "live"
+      caseActions && state.caseDoc && api.apiMode() === "live"
         ? U.button("Email Report", {
             kind: "quiet",
             small: true,
@@ -297,14 +377,25 @@ function pageHeader(screen, state, ctx) {
               + "states whether it will be sent or written as a .eml",
           })
         : null,
-      U.button("Print", {
-        kind: "quiet",
-        small: true,
-        iconPath: ICONS.print,
-        onClick: X.printPage,
-      }),
+      caseActions && state.caseDoc && api.apiMode() === "live"
+        ? U.button("Save analysis", {
+            kind: "quiet",
+            small: true,
+            iconPath: ICONS.file,
+            onClick: () => nameCase(state, announce),
+            title: "Give this run a name, so the case picker shows it instead of the id",
+          })
+        : null,
+      caseActions
+        ? U.button("Print", {
+            kind: "quiet",
+            small: true,
+            iconPath: ICONS.print,
+            onClick: X.printPage,
+          })
+        : null,
     ),
-    scene
+    scene && caseActions
       ? h(
           "p",
           { class: "sr-only" },
@@ -332,21 +423,92 @@ function caseSelector(state) {
       h(
         "option",
         { value: entry.id, selected: entry.id === state.caseId },
-        `${entry.scene || entry.id}${entry.isDemo ? " · demo" : ""}`,
+        // The operator's own name for the run when there is one: a shelf of ids reads as
+        // scene numbers, which is exactly what a person renaming a case wanted to escape.
+        `${entry.label || entry.scene || entry.id}${entry.isDemo ? " · demo" : ""}`,
       ),
     ),
   );
 }
 
 /**
+ * Name the loaded case, so the picker shows that instead of its id.
+ *
+ * Deliberately not called "Save": the run was written to disk the moment it finished, and a
+ * button that implied otherwise would be claiming to do the one thing it does not do. What
+ * this writes is the name and the note — the sheet says so in as many words, because a
+ * reader who believed the opposite would think an unnamed case had been lost.
+ */
+async function nameCase(state, announceFn) {
+  const caseId = state.caseId;
+  if (!caseId) return;
+  const entry = (state.cases?.cases || []).find((row) => row.id === caseId);
+  const current = state.caseDoc?.label || entry?.label || "";
+  const currentNote = state.caseDoc?.description || entry?.description || "";
+
+  let nameInput = null;
+  let noteInput = null;
+  const confirmed = await U.dialog(
+    {
+      title: "Name this analysis",
+      lede:
+        "This run is already stored on the server — it was written when the pipeline " +
+        "finished. A name is what the case picker shows in place of the id.",
+      confirm: "Save name",
+      validate: () => ((nameInput?.value || "").trim() ? null : "Give the analysis a name."),
+    },
+    U.field({
+      label: "Analysis name",
+      value: current,
+      placeholder: "e.g. Malta channel, morning pass",
+      // No character count here on purpose: the cap lives on the server, and a number
+      // repeated in the client is a number that can disagree with the one enforced.
+      hint: "Shown in the case picker, in place of the case id.",
+      ref: (node) => {
+        nameInput = node;
+      },
+    }),
+    U.field({
+      label: "Description",
+      value: currentNote,
+      placeholder: "e.g. Re-run after the ERA5 file arrived",
+      hint: "Optional. A note to yourself about why this run exists.",
+      ref: (node) => {
+        noteInput = node;
+      },
+    }),
+  );
+  if (!confirmed) return;
+
+  const label = nameInput.value.trim();
+  const description = noteInput.value.trim();
+  try {
+    await api.saveCaseLabel(caseId, { label, description });
+    // Patch the loaded document rather than refetching it: the server changed two strings
+    // in it and nothing else, and a re-read would redraw every map on the screen. An empty
+    // description is a cleared one there, so it is removed here too.
+    if (state.caseDoc) {
+      const next = { ...state.caseDoc, label };
+      if (description) next.description = description;
+      else delete next.description;
+      store.set({ caseDoc: next });
+    }
+    await store.load("cases", api.cases);
+    announceFn(`Saved as “${label}”.`, { kind: "success" });
+  } catch (error) {
+    announceFn(`The name could not be saved: ${error?.message || error}`, { kind: "error" });
+  }
+}
+
+/**
  * Ask for recipients, then build the incident report and hand it to the dispatcher.
  *
- * The wording is decided by the server, not guessed here. `GET .../report` reports
- * whether an SMTP host and a recipient allowlist are configured, and with either one
- * missing the endpoint writes a `.eml` next to the PDF and sends nothing. A button that
- * said "email sent" in that state would be a lie, so the sheet states which of the two
- * will happen before the reader commits, and the completion message repeats whichever
- * the server actually did.
+ * The wording is decided by the server, not guessed here. `GET .../report` reports whether
+ * an SMTP host is configured and whether the operator has narrowed where mail may go, and
+ * with no SMTP host the endpoint writes a `.eml` next to the PDF and sends nothing. A button
+ * that said "email sent" in that state would be a lie, so the sheet states which of the two
+ * will happen before the reader commits, and the completion message repeats whichever the
+ * server actually did.
  */
 async function dispatchIncidentEmail(caseId, announceFn) {
   let dispatch = null;
@@ -378,7 +540,9 @@ async function dispatchIncidentEmail(caseId, announceFn) {
       label: "Recipients",
       type: "email",
       placeholder: "ops@example.gov, duty@example.gov",
-      hint: "Comma-separated. The server refuses any address outside its allowlist.",
+      hint: dispatch?.recipientsRestricted
+        ? "Comma-separated. This server is configured to refuse any address outside its own list."
+        : "Comma-separated. Any valid address.",
       ref: (node) => {
         input = node;
       },
@@ -426,15 +590,15 @@ function dispatchExplanation(dispatch) {
     return "No SMTP host is configured, so the server writes a .eml file beside the PDF " +
       "and sends nothing.";
   }
-  if (!dispatch.recipientsConfigured) {
-    return "SPILLTRACE_ALERT_RECIPIENTS is unset, so nothing may be sent; the server " +
-      "writes a .eml file beside the PDF.";
-  }
   return "SPILLTRACE_EMAIL_DRY_RUN is set, so the server writes a .eml file and sends nothing.";
 }
 
-function topbarMeta(state) {
+function topbarMeta(state, screen) {
   const scene = state.caseDoc?.scene;
+  // Nothing on the intake screen. A case is always loaded -- the app resolves one on boot --
+  // but naming it here would answer a question the reader has not asked, next to a title
+  // that says "New analysis". The case screens are where the identity belongs.
+  if (screen?.path === "/new") return null;
   if (state.caseStatus === "loading") return U.skeleton("220px", "14px");
   if (!scene) return h("span", { class: "muted" }, "no case loaded");
   return h(
@@ -549,7 +713,10 @@ async function runAnalysis(kind, options = {}) {
     );
     store.set({ job: { ...job, kind }, jobAbort: null });
     const id = job.result?.caseId || job.caseId || state.caseId;
-    router.setParams({ case: id });
+    // `go`, not `setParams`: a run started from the intake screen has to land on the
+    // finished case, and `setParams` keeps whatever path it was called from.
+    markIntakeSeen();
+    router.go("/", { case: id, vessel: null });
     await loadCase(id, { force: true });
     await store.load("cases", api.cases);
     announce("Analysis finished.", { kind: "success" });
@@ -594,6 +761,7 @@ async function boot() {
   // The probe settles live-versus-offline before any screen paints, so the mode badge
   // and the offline notice are right the first time rather than after a flicker.
   await api.probe();
+  maybeOpenIntake();
   store.load("health", api.health);
   store.load("cases", api.cases).then(() => {
     const wanted = resolveCaseId(router.current());

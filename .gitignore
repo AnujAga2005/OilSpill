@@ -21,6 +21,12 @@
 *.nc4
 /data/raw/
 
+# Operator uploads. Whatever someone drops into the Command Centre lands here and
+# nowhere else — a separate tree from /Oil/ and /Mask_oil/, so an upload can never
+# add to or shadow the audited dataset. It is somebody else's data, it is not ours
+# to publish, and it is rebuilt by uploading again. See services/api/.../uploads.py.
+/data/uploads/
+
 # -- generated intermediates -------------------------------------------------
 # Patch cache: ~242 MB of .npz rebuilt by scripts/run_preprocess.py. Two of the
 # three files are over GitHub's 100 MB hard limit on their own.

@@ -603,6 +603,508 @@
   background: var(--oil-text);
 }
 
+/* -- the New analysis screen ------------------------------------------- */
+
+/* The intake hero is the ordinary inverted panel with the whole form inside it: files, the
+ * four fields, then the button. The panel is the first thing on the app's first screen, and
+ * what belongs in that position is the thing the screen is for, so it is kept short enough
+ * to read in one look -- a title with the chips beside it rather than under, one line of
+ * description per slot, one line per field, and no figures in the aside. Everything below
+ * the rule inherits the dark ground, which is why the overrides at the end of this block
+ * exist: the slots, the inputs, the segmented control and the run bar are all written for a
+ * white card by default. */
+
+/* Title left, chips right. At a narrow width the chips wrap under, which is the only place
+ * there is room for them. */
+.intake-hero__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s4) var(--s6);
+}
+
+.intake-hero__lede {
+  flex: 1 1 380px;
+  min-width: 0;
+}
+
+.intake-hero__title {
+  margin-top: var(--s2);
+  font-family: var(--font-display);
+  font-size: var(--t-title2);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  max-width: 42ch;
+}
+
+/* Beside the title, so they cost no row of their own. */
+.intake-hero .hero__chips {
+  flex: 0 1 auto;
+  margin-top: 0;
+}
+
+/* `flex-basis: 100%` puts the form on its own row of the hero's wrap, under the prose.
+ * `position: relative` keeps it above the corner bloom, the same reason `.hero__main` is
+ * positioned. */
+.intake-upload {
+  position: relative;
+  flex: 1 1 100%;
+  margin-top: var(--s1);
+  padding-top: var(--s4);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* -- the same controls, on the dark ground ----------------------------- */
+
+.intake-hero .form-section__title,
+.intake-hero .form-section__hint {
+  color: var(--on-dark-tertiary);
+}
+
+.intake-hero .form-section__hint::before {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.intake-hero .upload-slot {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.17);
+}
+
+.intake-hero .upload-slot:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: none;
+}
+
+/* Cyan at full strength, not the light-mode wash: `--reference-dim` is a 13 % tint designed
+ * to sit on white and is invisible on near-black. */
+.intake-hero .upload-slot--filled,
+.intake-hero .upload-slot--filled:hover {
+  background: rgba(56, 165, 226, 0.16);
+  border-color: rgba(56, 165, 226, 0.55);
+}
+
+.intake-hero .upload-slot__head {
+  color: var(--on-dark);
+}
+
+.intake-hero .upload-slot__hint {
+  color: var(--on-dark-tertiary);
+}
+
+/* The graphic values, not the `-text` darkenings. Those are darkened *for* white, and on a
+ * near-black card the saturated palette is the legible one. */
+.intake-hero .upload-slot__req {
+  color: var(--oil);
+}
+
+.intake-hero .upload-slot__tick {
+  color: var(--agree);
+}
+
+.intake-hero .upload-slot__status .muted {
+  color: var(--on-dark-secondary);
+}
+
+.intake-hero .icon-tile--oil {
+  color: var(--oil);
+}
+
+.intake-hero .icon-tile--reference {
+  color: var(--reference);
+}
+
+.intake-hero .icon-tile--drift {
+  color: var(--drift);
+}
+
+/* Glass rather than the white of the light theme: a white tile on a tinted card is a hard
+ * bright spot at the one moment the card is already the brightest thing in the row. */
+.intake-hero .upload-slot--filled .upload-slot__tile {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.intake-hero .bar__track {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.intake-hero .field__label {
+  color: var(--on-dark-tertiary);
+}
+
+.intake-hero .field__hint {
+  color: var(--on-dark-tertiary);
+}
+
+/* `color-scheme` is doing real work here, not styling: without it the datetime field's
+ * native calendar button is drawn dark-on-dark by the browser and cannot be seen at all. */
+.intake-hero .input {
+  color-scheme: dark;
+  color: var(--on-dark);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+
+.intake-hero .input::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.intake-hero .input:focus-visible {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.intake-hero .segmented {
+  background: rgba(0, 0, 0, 0.28);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.intake-hero .segmented__item {
+  color: var(--on-dark-secondary);
+}
+
+.intake-hero .segmented__item:hover {
+  color: var(--on-dark);
+}
+
+.intake-hero .segmented__item[aria-pressed="true"],
+.intake-hero .segmented__item[aria-selected="true"] {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--on-dark);
+  box-shadow: none;
+}
+
+.intake-hero .upload-run {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.intake-hero .upload-run__note {
+  color: var(--on-dark-tertiary);
+}
+
+.intake-hero .notice {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--on-dark);
+}
+
+.intake-hero .notice--danger {
+  background: rgba(220, 53, 69, 0.18);
+  border-color: rgba(220, 53, 69, 0.4);
+}
+
+/* Offline: the panel holds the command that starts an API instead of the form. */
+.intake-hero .state {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.intake-hero .state__icon {
+  color: var(--on-dark-tertiary);
+}
+
+.intake-hero .state__title {
+  color: var(--on-dark);
+}
+
+.intake-hero .state__body {
+  color: var(--on-dark-secondary);
+}
+
+.intake-hero .state__cmd {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--on-dark);
+}
+
+/* -- what the run does ------------------------------------------------- */
+
+.intake-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--s5) var(--s6);
+}
+
+.intake-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+/* Also an `.icon-tile`, so the four stages carry the same colours their screens do. The
+ * ordinal is a badge on its corner, which is what `position` is for. */
+.intake-step__mark {
+  position: relative;
+}
+
+.intake-step__num {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--bg-elevated);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--on-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+.intake-step__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.intake-step__title {
+  font-size: var(--t-sub);
+  font-weight: 600;
+}
+
+.intake-step__body {
+  font-size: var(--t-footnote);
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+
+/* -- operator upload (New analysis) ------------------------------------- */
+
+/* A hairline heading above a group. Five file cards under a bare title read as five equal
+ * things; under a label with a count they read as one set with one of them required. */
+.form-section {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  margin-top: var(--s2);
+}
+
+.form-section__title {
+  flex: none;
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* The rule runs from the label to the right edge, so the group has a top without needing
+ * a box around it. */
+.form-section__hint {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--t-footnote);
+  color: var(--text-quaternary);
+  text-align: right;
+}
+
+.form-section__hint::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: calc(100% + var(--s3));
+  bottom: 5px;
+  border-top: 1px solid var(--line);
+}
+
+/* Five slots that wrap rather than scroll. The floor is set so that all five fit on one row
+ * of the panel at a laptop width -- a four-and-a-lonely-fifth wrap reads as though the last
+ * one were an afterthought, and the optional AIS extract is already the easiest to dismiss.
+ * Below that they go three, then two, then stack. */
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
+  gap: var(--s3);
+}
+
+.upload-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: var(--s3);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line-strong);
+  background: var(--sunken);
+  min-width: 0;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.upload-slot:hover {
+  border-color: var(--text-quaternary);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+/* A filled slot loses the dashed edge: the dash says "drop something here", and once
+ * something is in it the border should stop asking. */
+.upload-slot--filled {
+  border-style: solid;
+  border-color: var(--reference-line);
+  background: var(--reference-dim);
+}
+
+.upload-slot--filled:hover {
+  background: var(--reference-dim);
+  border-color: var(--reference-line);
+}
+
+.upload-slot__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--text);
+  font-size: var(--t-sub);
+  font-weight: 600;
+  min-width: 0;
+}
+
+.upload-slot__tile {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.upload-slot__tile svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* On a filled slot the card itself is tinted, and a `--reference`-toned tile would be the
+ * exact colour of the card under it. Lifting the tile to the elevated surface keeps its
+ * edge; the icon colour still says which kind of data the slot holds. */
+.upload-slot--filled .upload-slot__tile {
+  background: var(--bg-elevated);
+}
+
+/* Wraps rather than truncates. "CMEMS c…" is a worse answer than two lines: the name of the
+ * product is the one thing the card has to get across. */
+.upload-slot__label {
+  min-width: 0;
+}
+
+.upload-slot__req {
+  margin-left: auto;
+  flex: none;
+  font-size: var(--t-caption);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--oil-text);
+}
+
+/* One line about the file, not a paragraph: five paragraphs push the button that uses them
+   off the screen. The full description is the card's `title`. */
+.upload-slot__hint {
+  margin: 0;
+  font-size: var(--t-footnote);
+  color: var(--text-tertiary);
+  line-height: 1.45;
+}
+
+.upload-slot__status {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s1);
+  font-size: var(--t-footnote);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.upload-slot__tick {
+  color: var(--agree-text);
+  flex: none;
+  transform: translateY(2px);
+}
+
+.upload-slot__bar {
+  margin: var(--s1) 0;
+}
+
+/* The control sits on the floor of the card, so five cards of different note lengths still
+ * present their buttons on one line. */
+.upload-slot__foot {
+  margin-top: auto;
+  padding-top: 5px;
+}
+
+.upload-slot__pick {
+  width: 100%;
+  min-height: 30px;
+}
+
+/* A label cannot be `:disabled`, and a label pointing at a disabled input is already inert
+ * -- this only has to say so. */
+.upload-slot__pick.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* The input is `.sr-only` and cannot show a focus ring, so the visible control wears it. */
+.upload-slot input:focus-visible ~ .upload-slot__foot .upload-slot__pick {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Four across at a laptop width, on the same grid rhythm as the five slots above them. */
+.upload-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--s3) var(--s4);
+  align-items: start;
+}
+
+/* The action bar. A twenty-second job should not start from a button that looks like the
+ * four inputs above it. */
+.upload-run {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3) var(--s4);
+  margin-top: var(--s1);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-md);
+  background: var(--sunken);
+  border: 1px solid var(--line);
+}
+
+.upload-run__note {
+  margin: 0;
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .upload-run {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .upload-run__note {
+    text-align: left;
+  }
+}
+
+@media print {
+  /* Nothing to print: the whole panel is a control, and on paper it is a row of empty boxes
+   * with dashed edges where a finding should be, over four empty inputs. The stages and the
+   * case list below survive -- they are the only part of this screen that says anything. */
+  .intake-upload {
+    display: none;
+  }
+}
+
 /* -- footer ------------------------------------------------------------ */
 
 .footer {

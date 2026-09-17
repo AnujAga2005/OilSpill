@@ -28,7 +28,7 @@ slides 2–6** — fill it on all five, and the footer says *@SIH Idea submissio
 you leave alone.
 
 **The strategy in one sentence.** The template is written for teams describing something they
-intend to build. We have a running product with 776 passing tests, so every slide should carry a
+intend to build. We have a running product with 893 passing tests, so every slide should carry a
 measured number rather than an intention, and slide 3 should carry a screenshot of software that
 runs. At the idea stage almost everything submitted is a plan; that is the cheapest advantage we
 have and it costs nothing to use.
@@ -70,7 +70,7 @@ below ~16 pt.**
 - **10 automated stages:** detect slick → screen out look-alikes → measure geometry → **run drift
   backward** to origin + release window → **run it forward** to a forecast → reconstruct vessel
   traffic → filter irrelevant traffic → score and rank → dispatch report.
-- **Working prototype, not a concept:** 6 screens, **776 automated tests passing**, runs offline.
+- **Working prototype, not a concept:** 6 screens, **893 automated tests passing**, runs offline.
 
 ### How it addresses the problem
 
@@ -134,7 +134,7 @@ and this is the box that answers it literally.
 - **U-Net** segmentation, trained on **1,200 real Sentinel-1 pairs / 240 acquisitions used**.
 - **RK2 particle advection**, tidal streamfunction current + 3% windage. Seed 26143 —
   **reproduces bit-for-bit**.
-- **Standard-library HTTP API**; **zero-dependency frontend**, 398 KB plain ES modules, no build
+- **Standard-library HTTP API**; **zero-dependency frontend**, 442 KB plain ES modules, no build
   step, runs offline.
 - **ERA5 wind + CMEMS current** readers; **MERN** deployment layer.
 
@@ -142,7 +142,7 @@ and this is the box that answers it literally.
 
 One screenshot. Use **Screen 5 · Vessel attribution** with the traffic-filtering funnel and score
 breakdown visible — the densest single view of PS clause (c), and the screen no other team will
-have. Caption it: **6 screens · 776 tests passing · runs offline.**
+have. Caption it: **6 screens · 893 tests passing · runs offline.**
 
 Screenshot the case the picker labels `00223 · demo`. The old `00053` case predated the retrain and
 sat on a scene outside the current split, so nothing it showed could be defended in the Q&A that
@@ -264,5 +264,5 @@ is ~7%, and our demo case sits in the Central Mediterranean.
 
 **The final read-through question:** does the deck contain a number a judge could look up and
 verify? Ours has 0.769 vs 0.676, mean per-scene IoU 0.693, 26.90 km², 1,112 reports filtered to 2, 20.1 seconds,
-776 tests. A deck with verifiable numbers reads as a report on a working system. A deck without
+893 tests. A deck with verifiable numbers reads as a report on a working system. A deck without
 them reads as a plan.

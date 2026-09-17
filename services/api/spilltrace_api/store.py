@@ -159,6 +159,10 @@ def summarise(payload: dict[str, Any], path: Path | None = None) -> dict[str, An
     return {
         "id": payload.get("id"),
         "caseId": payload.get("caseId") or payload.get("id"),
+        # What a person called this run, when they named it. The case list prefers it over
+        # the id; nothing else in the document depends on it.
+        "label": payload.get("label"),
+        "description": payload.get("description"),
         "scene": scene.get("name"),
         "region": scene.get("region"),
         "mission": scene.get("mission"),

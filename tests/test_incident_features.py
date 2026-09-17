@@ -747,11 +747,10 @@ class TestRecipients:
 
 
 class TestAllowlist:
-    def test_an_unset_allowlist_permits_nothing(self, clean_env):
-        # The dispatch endpoint is unauthenticated. Without this, an open port is
-        # an open relay for whatever SMTP account the operator configured.
-        with pytest.raises(D.DispatchError, match="SPILLTRACE_ALERT_RECIPIENTS"):
-            D._check_allowlist(["anyone@example.com"])
+    def test_an_unset_allowlist_permits_anyone(self, clean_env):
+        # The ordinary case: a responder types the addresses and the report goes there.
+        # `SPILLTRACE_ALERT_RECIPIENTS` exists to narrow that, not to enable it.
+        D._check_allowlist(["anyone@example.com", "someone.else@example.org"])
 
     def test_an_exact_entry_permits_only_that_address(self, clean_env):
         clean_env.setenv("SPILLTRACE_ALERT_RECIPIENTS", "ops@coastguard.gov.in")
@@ -825,12 +824,38 @@ class TestDryRunDispatch:
         result = D.dispatch_case_email(load_case(), None)
         assert result["recipients"] == ["watch@coastguard.gov.in"]
 
-    def test_a_configured_host_with_no_allowlist_refuses_before_sending(self, clean_env, tmp_path):
+    def test_a_configured_host_with_no_allowlist_sends_where_it_was_asked_to(
+        self, clean_env, tmp_path
+    ):
+        # The ordinary deployment: a responder types the address and the report goes
+        # there. No SMTP conversation happens here -- `send_email` is the seam.
         clean_env.setattr(R, "REPORT_DIR", tmp_path)
         clean_env.setenv("SPILLTRACE_SMTP_HOST", "smtp.example.gov")
+        clean_env.setenv("SPILLTRACE_EMAIL_FROM", "duty@coastguard.gov.in")
+        sent = []
+
+        def record(message):
+            sent.append(message)
+            return "<recorded@test.example>"
+
+        clean_env.setattr(D, "send_email", record)
+        result = D.dispatch_case_email(load_case(), "anyone@example.com")
+        assert result["sent"] is True and result["dryRun"] is False
+        assert result["recipients"] == ["anyone@example.com"]
+        assert len(sent) == 1 and sent[0]["To"] == "anyone@example.com"
+        assert sent[0]["From"] == "duty@coastguard.gov.in"
+
+    def test_a_configured_allowlist_still_refuses_before_sending(self, clean_env, tmp_path):
+        # Setting the variable is how an operator locks an open port down, and that
+        # has to keep working: refused before the PDF is built, let alone sent.
+        clean_env.setattr(R, "REPORT_DIR", tmp_path)
+        clean_env.setenv("SPILLTRACE_SMTP_HOST", "smtp.example.gov")
+        clean_env.setenv("SPILLTRACE_EMAIL_FROM", "duty@coastguard.gov.in")
+        clean_env.setenv("SPILLTRACE_ALERT_RECIPIENTS", "@coastguard.gov.in")
+        clean_env.setattr(D, "send_email", lambda message: pytest.fail("should not send"))
         with pytest.raises(D.DispatchError, match="SPILLTRACE_ALERT_RECIPIENTS"):
             D.dispatch_case_email(load_case(), "attacker@evil.example")
-        assert not list(tmp_path.glob("*.eml")), "nothing should have been written"
+        assert not list(tmp_path.iterdir()), "nothing should have been written"
 
     def test_a_hostile_case_number_never_reaches_the_filesystem(self, clean_env, tmp_path):
         clean_env.setattr(R, "REPORT_DIR", tmp_path)
@@ -889,9 +914,13 @@ class TestDispatchEndpoint:
         assert payload["dispatchUrl"] == "/api/cases/demo/dispatch"
         assert payload["dispatch"]["mode"] == "dryRun"
         assert payload["dispatch"]["smtpConfigured"] is False
-        # No addresses: the endpoint is unauthenticated, so the allowlist itself
-        # is reported only as a boolean.
-        assert set(payload["dispatch"]) == {"mode", "smtpConfigured", "recipientsConfigured", "note"}
+        # False here means "anywhere the sender types", which is the default. No
+        # addresses cross the boundary: the endpoint is unauthenticated, so whether a
+        # restriction exists is reported only as a boolean.
+        assert payload["dispatch"]["recipientsRestricted"] is False
+        assert set(payload["dispatch"]) == {
+            "mode", "smtpConfigured", "recipientsRestricted", "note",
+        }
 
     def test_the_pdf_route_answers_503_rather_than_500_when_reportlab_is_absent(self):
         response = request("GET", "/api/cases/demo/report?format=pdf")

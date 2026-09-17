@@ -65,6 +65,13 @@
   --oil-text: #c2410c;
   --oil-dim: rgba(255, 138, 76, 0.14);
   --oil-line: rgba(255, 138, 76, 0.4);
+  /* Steel is a screened-out look-alike: a dark patch the screening test says is not oil.
+   * A neutral hue on purpose — every other colour on the locator already means something,
+   * and "not oil" should not read as a second kind of finding. */
+  --lookalike: #8ea2b8;
+  --lookalike-text: #4a5b6e;
+  --lookalike-dim: rgba(142, 162, 184, 0.13);
+  --lookalike-line: rgba(142, 162, 184, 0.34);
   /* Blue is supplied ground truth and the estimated origin. */
   --reference: #5ec8ff;
   --reference-text: #0369a1;
@@ -147,7 +154,7 @@
 
   --sidebar-w: 236px;
   --header-h: 60px;
-  --page-max: 1200px;
+  --page-max: 1440px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -173,6 +180,7 @@
     --text-tertiary: #555b64;
     --text-quaternary: #6f757e;
     --oil: #b34700;
+    --lookalike: #4a5b6e;
     --reference: #0b5f92;
     --agree: #146c50;
     --drift: #4c35a8;

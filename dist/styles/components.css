@@ -1858,6 +1858,122 @@
   padding-top: var(--s1);
 }
 
+/* The oil / look-alike split, under the locator map. The swatches repeat the map's own
+ * colours, so the key above and the counts here cannot drift apart. */
+.verdict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--line);
+}
+
+.verdict__head {
+  font-size: var(--t-footnote);
+}
+
+.verdict__row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+  font-size: var(--t-sub);
+}
+
+.verdict__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+  margin-top: 5px;
+}
+
+.verdict__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.verdict__count {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.verdict__area {
+  flex: none;
+  color: var(--text-secondary);
+  font-size: var(--t-footnote);
+  padding-top: 2px;
+}
+
+/* The saved-case shortlist on the intake screen. A list rather than a grid of cards: it is
+ * a way through to the Command Centre, not a second place to read a case. */
+.case-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+
+.case-list__item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.case-list__link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s2);
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.case-list__link:hover .case-list__name,
+.case-list__link:focus-visible .case-list__name {
+  text-decoration: underline;
+}
+
+.case-list__name {
+  font-weight: 600;
+}
+
+/* The arrow is the row's only affordance -- the link has no button and no underline until
+ * it is hovered -- so it brightens and steps right when the row is pointed at. */
+.case-list__go {
+  flex: none;
+  align-self: center;
+  color: var(--text-quaternary);
+  transition: color var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+
+.case-list__link:hover .case-list__go,
+.case-list__link:focus-visible .case-list__go {
+  color: var(--tint);
+  transform: translateX(2px);
+}
+
+.case-list__meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .case-list__item {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .case-list__meta {
+    text-align: left;
+  }
+}
+
 @media print {
   .card,
   .state,

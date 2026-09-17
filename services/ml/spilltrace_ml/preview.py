@@ -232,34 +232,43 @@ def render_scene_previews(
     probability: np.ndarray | None = None,
     out_dir: Path | None = None,
     max_side: int = 512,
+    name: str | None = None,
+    label: str | None = None,
 ) -> dict[str, Any]:
-    """Write the preview set for one scene and return its manifest entry."""
+    """Write the preview set for one scene and return its manifest entry.
+
+    ``name`` overrides the stem the files are written under, and ``label`` the provenance
+    string on the manifest. Both exist for an operator-supplied scene: its ``scene.name``
+    is a content hash rather than a dataset id, and its imagery is not the supplied
+    dataset, so neither default would be true of it.
+    """
     out_dir = out_dir or C.PREVIEW_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
+    stem = str(name or scene.name)
     factor = max(1, int(round(max(scene.height, scene.width) / max_side)))
 
     invalid_small = downsample_max(scene.invalid.astype(np.uint8), factor) > 0
     files: dict[str, str] = {}
     stretches: dict[str, Any] = {}
-    for index, name in enumerate(("vv", "vh")):
+    for index, band_name in enumerate(("vv", "vh")):
         small = downsample(scene.channels[index], factor)
         image, info = stretch(small, invalid_small)
-        path = out_dir / f"{scene.name}_{name}.png"
+        path = out_dir / f"{stem}_{band_name}.png"
         write_png(path, image)
-        files[name] = path.name
-        stretches[name] = info
+        files[band_name] = path.name
+        stretches[band_name] = info
 
     if scene.mask is not None:
         small = downsample_max(scene.mask.astype(np.uint8), factor)
         colour, alpha = mask_png(small, REFERENCE_RGB)
-        path = out_dir / f"{scene.name}_mask.png"
+        path = out_dir / f"{stem}_mask.png"
         write_png(path, colour, alpha)
         files["referenceMask"] = path.name
 
     if prediction is not None:
         small = downsample_max(np.asarray(prediction).astype(np.uint8), factor)
         colour, alpha = mask_png(small, OIL_RGB)
-        path = out_dir / f"{scene.name}_prediction.png"
+        path = out_dir / f"{stem}_prediction.png"
         write_png(path, colour, alpha)
         files["prediction"] = path.name
 
@@ -268,7 +277,7 @@ def render_scene_previews(
         # high-probability filament into the water around it and understate it.
         small = downsample_max(np.asarray(probability, dtype=np.float32), factor)
         colour, alpha = probability_png(small)
-        path = out_dir / f"{scene.name}_probability.png"
+        path = out_dir / f"{stem}_probability.png"
         write_png(path, colour, alpha)
         files["probability"] = path.name
 
@@ -282,12 +291,12 @@ def render_scene_previews(
             downsample_max(scene.mask.astype(np.uint8), factor),
             downsample_max(np.asarray(prediction).astype(np.uint8), factor),
         )
-        path = out_dir / f"{scene.name}_comparison.png"
+        path = out_dir / f"{stem}_comparison.png"
         write_png(path, image)
         files["comparison"] = path.name
 
     return {
-        "scene": scene.name,
+        "scene": stem,
         "downsampleFactor": factor,
         "previewSize": [
             int(scene.width // factor),
@@ -309,5 +318,5 @@ def render_scene_previews(
             "model predicted oil the reference does not mark, blue where the reference "
             "marks oil the model missed",
         },
-        "label": C.LABEL_SATELLITE,
+        "label": label or C.LABEL_SATELLITE,
     }

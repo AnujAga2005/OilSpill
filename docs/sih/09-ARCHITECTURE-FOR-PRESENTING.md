@@ -56,7 +56,7 @@ are in [document 12](12-PLAIN-LANGUAGE.md).
 | **Dice** | A near-identical overlap score to IoU, computed slightly differently. Reported because papers use either. |
 | **Precision / recall** | *Precision* 0.834 — of the pixels we call oil, 83% really are. *Recall* 0.907 — we find 91% of the real oil. |
 | **Baseline** | The simple classical method we compare against, so the AI's score means something. Ours is a dark-pixel detector at **0.676**. |
-| **Threshold** | The cutoff on the model's per-pixel confidence. Ours is **0.65**, chosen on validation data. |
+| **Threshold** | The cutoff on the model's per-pixel confidence. **Two of them**: **0.65** at patch scale (the precision and recall above are at this one) and **0.70** at whole-scene scale, which is what the interface shows. Each chosen on its own validation split, then applied unchanged to test. |
 | **Parameters** | The numbers inside the network learned during training. We have **1,963,953**. |
 | **Checkpoint** | The saved file holding the trained parameters — ours is **7 MB**. |
 | **Forward / backward pass** | Forward: image in, prediction out. Backward: the maths that works out how to correct every parameter. **We wrote both.** |
@@ -87,7 +87,7 @@ are in [document 12](12-PLAIN-LANGUAGE.md).
 |---|---|
 | **Monorepo** | One repository holding several independent programs that work together. |
 | **API** | The program that answers requests from the website and does the actual computing. |
-| **Endpoint / route** | One addressable thing the API can do — we have 19. |
+| **Endpoint / route** | One addressable thing the API can do — we have 21. |
 | **Job queue** | Long work is accepted immediately and polled, rather than making you wait. |
 | **JSON** | A plain text format for structured data — ours is human-readable, which is why results are auditable. |
 | **PNG** | The image format the preview pictures are written in. |
@@ -198,7 +198,7 @@ Read this top to bottom. Each box is one real program in the repository.
    ┌─────────────────────────────────────────────────────────────┐
    │  THE DASHBOARD            apps/web/                         │
    │  Plain HTML, CSS and JavaScript. No framework, no build.    │
-   │  Six screens. Talks to the API over HTTP.                   │
+   │  Seven screens. Talks to the API over HTTP.                 │
    └───────────────────────────┬─────────────────────────────────┘
                                │  HTTP: "build me a case for scene 00223"
                                ▼
@@ -231,7 +231,7 @@ Read this top to bottom. Each box is one real program in the repository.
    ┌─────────────────────────────────────────────────────────────┐
    │  THE RESULT               data/processed/cases/*.json       │
    │  One JSON file holding every number, polygon and label      │
-   │  the six screens display. The UI renders it; it computes    │
+   │  the case screens display. The UI renders it; it computes   │
    │  almost nothing itself.                                     │
    └─────────────────────────────────────────────────────────────┘
 ```
@@ -250,11 +250,12 @@ For each piece: **what it is** in plain words, **where it lives** so you can poi
 
 ### 9.4.1 The web dashboard — `apps/web/`
 
-**What it is.** Six screens of ordinary HTML, CSS and JavaScript. When you open it, your browser
-downloads about 400 KB of text files and runs them. There is no compilation step, no `npm install`,
+**What it is.** Seven screens of ordinary HTML, CSS and JavaScript. When you open it, your browser
+downloads about 442 KB of text files and runs them. There is no compilation step, no `npm install`,
 no framework.
 
-**Where:** `apps/web/app/` holds 14 JavaScript modules; `apps/web/styles/` holds 4 CSS files.
+**Where:** `apps/web/app/` holds 14 JavaScript modules and `apps/web/app/screens/` seven more, one
+per screen; `apps/web/styles/` holds 4 CSS files.
 
 **Why this way.** A hackathon demo has one fatal failure mode: the build breaks on the presentation
 laptop. A framework like React needs a build step — the code you write is not the code the browser
@@ -277,7 +278,7 @@ is no package.json in this repository."*
 built-in `http.server` module.
 
 **Why this way.** Flask and FastAPI are the normal choices. Both are third-party packages we would
-have to install, pin, and hope install correctly on the demo machine. Our API has maybe fifteen
+have to install, pin, and hope install correctly on the demo machine. Our API has twenty-one
 endpoints. `http.server` is not the right tool for a production web service under load — but it is
 entirely sufficient for one operator on a laptop, and it removes an entire class of failure.
 
@@ -287,6 +288,17 @@ validation) or Flask (simpler, more familiar). Both are reasonable; we chose zer
 **What it costs us.** We wrote our own routing, our own JSON serialisation helpers, and we handle
 concurrency ourselves. And this would not survive a thousand concurrent users — though nothing about
 this project would, since the bottleneck is that each analysis takes twenty seconds of CPU.
+
+**And the upload made that cost concrete.** A framework hands you request-body handling; the
+standard library hands you a socket. Refusing a 43 MB upload is not simply "return 400": on an
+HTTP/1.1 keep-alive connection the bytes the client already sent are still in the socket, and a
+handler that answers without reading them leaves the next request to be parsed starting from the
+middle of a GeoTIFF — which the base handler answers with a 501 HTML error page. So refusals happen
+in a deliberate order: **cheap checks before the body is read** (declared length against the cap,
+then the file extension), the body **drained** when we refuse after the client has begun sending,
+and the connection **closed** when a refusal comes after the body was read and draining would be
+guesswork. Five tests in `tests/test_uploads.py` exist purely to hold that behaviour in place, and
+two of them were written by breaking the server first and confirming they caught it.
 
 **How to say it:** *"This is the Python standard library's HTTP server. For a single-operator
 triage tool on a laptop, FastAPI's extra machinery is a liability, not an asset — because every
@@ -337,7 +349,7 @@ better tested by far — and a genuine risk of not installing.
 
 **What it costs us.** Our readers handle the specific subset of each format our data uses. Hand us a
 GeoTIFF with a different compression scheme, or an unusual NetCDF layout, and ours may reject it
-where `rasterio` would cope. We compensate with tests: 776 of them, including deliberately malformed
+where `rasterio` would cope. We compensate with tests: 893 of them, including deliberately malformed
 inputs.
 
 **How to say it:** *"We hand-wrote four file-format readers so the whole project needs two real

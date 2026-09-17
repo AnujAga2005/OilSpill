@@ -195,7 +195,19 @@ to say that; it shows you understand the deployment, not just the metric.
 
 ### Threshold
 
-The model outputs a probability per pixel. To get a binary mask you pick a cutoff. Raise it and precision goes up, recall goes down. It must be chosen on **validation** data and then applied unchanged to **test** data — choosing it on test is cheating, and a sharp judge may ask. We choose 0.8 on validation and report test at 0.8.
+The model outputs a probability per pixel. To get a binary mask you pick a cutoff. Raise it and precision goes up, recall goes down. It must be chosen on **validation** data and then applied unchanged to **test** data — choosing it on test is cheating, and a sharp judge may ask.
+
+We have **two** cutoffs, because we score at two scales and each one is chosen on its own validation data:
+
+| Scale | Cutoff | Chosen on |
+|---|---|---|
+| **Patch** (128 × 128 crops) | **0.65** | the validation patches, by maximising IoU |
+| **Whole scene** (2048 × 2048) | **0.70** | the validation scenes, by mean per-scene IoU |
+
+**The interface shows 0.70**, because a case is a whole scene. If a judge asks why they differ: a
+whole scene is nearly all open water, so it pays to be slightly more conservative before calling a
+pixel oil — the same model, a higher bar, fewer false alarms out in the water the patch sampler
+never showed it.
 
 ### Why patch metrics flatter every team's numbers
 

@@ -61,7 +61,7 @@ Memorise this table, not the script. If you know the six arrivals you can rebuil
 > So this is the workflow. One Sentinel-1 radar image goes in — this one is **Sentinel-1A**, IW
 > mode, dual polarisation, **2048 by 2048** pixels, taken on **4 August 2015** over the Central
 > Mediterranean, about 20 kilometres off Malta. One command runs the pipeline and everything on
-> these six screens comes out of that one run.
+> these six case screens comes out of that one run.
 >
 > It runs in **ten stages** and takes **20.1 seconds** on a laptop. No GPU, nothing over the
 > network.
@@ -476,7 +476,7 @@ opening, minimum-area filter
 > look-alike, run the ocean backwards to find where it came from, forwards to find where it's
 > going, then score the traffic against that zone and window.
 >
-> **776 tests pass.** The interface is **396 kilobytes** of plain JavaScript with **zero
+> **893 tests pass.** The interface is **442 kilobytes** of plain JavaScript with **zero
 > dependencies** and no build step. Everything you just watched ran offline, on this laptop, from a
 > bundled case file.
 >

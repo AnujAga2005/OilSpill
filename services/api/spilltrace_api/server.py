@@ -1,10 +1,10 @@
 """The SpillTrace HTTP API, on the standard library alone.
 
 Written against ``http.server`` rather than a framework because nothing here needs one:
-there are fourteen routes, one content negotiation decision, and no ORM. The parts that
-do need care are the parts a framework would not have solved anyway.
+twenty-one routes, one content negotiation decision, and no ORM. The parts that do need
+care are the parts a framework would not have solved anyway.
 
-Three design points worth stating:
+Four design points worth stating:
 
 * **Long work is a job, not a request.** A full case is roughly a minute of NumPy. The
   POST endpoints return ``202`` with a job id and the client polls; the job carries its
@@ -16,6 +16,10 @@ Three design points worth stating:
 * **Threaded, because HTTP/1.1 keep-alive plus a single thread deadlocks.** A browser
   holds its connection open, so a single-threaded server would stall every other request
   behind it.
+* **One POST carries a file rather than JSON.** ``/api/uploads`` is dispatched before the
+  body is parsed and streams to disk, because reading a 43 MB GeoTIFF into memory to
+  discover it is not JSON would be the wrong order of operations. See
+  :data:`BINARY_POST_ROUTES` and :mod:`spilltrace_api.uploads`.
 """
 
 from __future__ import annotations
@@ -50,11 +54,18 @@ from .reports import ReportUnavailable, build_case_number, generate_incident_rep
 from spilltrace_api import case as case_mod  # noqa: E402
 from spilltrace_api import jobs as jobs_mod  # noqa: E402
 from spilltrace_api import store as store_mod  # noqa: E402
+from spilltrace_api import uploads as uploads_mod  # noqa: E402
 from spilltrace_common import config as C  # noqa: E402
 from spilltrace_drift import marinecadastre  # noqa: E402
 
 WEB_ROOT = ROOT / "apps" / "web"
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+#: Caps for the two free-text fields a case can be named with. They arrive in a request
+#: body and land in a <select> option and a card hint, so they are bounded here rather
+#: than left to whatever a caller sends.
+LABEL_MAX = 120
+DESCRIPTION_MAX = 600
 
 MIME = {
     ".html": "text/html; charset=utf-8",
@@ -88,12 +99,21 @@ ROUTES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("vessels", re.compile(r"^/api/cases/([^/]+)/vessels$")),
     ("report", re.compile(r"^/api/cases/([^/]+)/report$")),
     ("dispatch", re.compile(r"^/api/cases/([^/]+)/dispatch$")),
+    ("case_label", re.compile(r"^/api/cases/([^/]+)/label$")),
     ("case", re.compile(r"^/api/cases/([^/]+)$")),
     ("job_result", re.compile(r"^/api/jobs/([^/]+)/result$")),
     ("job_cancel", re.compile(r"^/api/jobs/([^/]+)/cancel$")),
     ("jobs", re.compile(r"^/api/jobs$")),
     ("job", re.compile(r"^/api/jobs/([^/]+)$")),
+    ("upload_clear", re.compile(r"^/api/uploads/clear$")),
+    ("uploads", re.compile(r"^/api/uploads$")),
 )
+
+#: Routes whose request body is a file rather than JSON. ``do_POST`` must dispatch these
+#: before it tries to parse the body, or a 43 MB GeoTIFF is read into memory and then
+#: rejected as "not a JSON object". Kept as a set next to the table so the two cannot
+#: drift apart unnoticed.
+BINARY_POST_ROUTES = frozenset({"uploads"})
 
 
 def route(path: str) -> tuple[str, str | None]:
@@ -356,6 +376,7 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "jobs": lambda: self._json(200, {"jobs": [j.to_dict() for j in RUNNER.list()]}),
             "job": lambda: self._job(param),
             "job_result": lambda: self._job_result(param),
+            "uploads": lambda: self._json(200, self._upload_state()),
         }
         try:
             handler = handlers.get(name)
@@ -369,8 +390,23 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             self._fail(500, f"{type(exc).__name__}: {exc}", detail=traceback.format_exc(limit=4))
 
     def do_POST(self) -> None:  # noqa: N802
-        path, _query = self._split()
+        path, query = self._split()
         name, param = route(path)
+
+        # Dispatched before the body is touched. These routes carry a file, not JSON, and
+        # `_body` would read the whole thing into memory only to fail to parse it.
+        if name in BINARY_POST_ROUTES:
+            try:
+                if name == "uploads":
+                    self._upload(query)
+            except BrokenPipeError:
+                pass
+            except Exception as exc:  # noqa: BLE001
+                self._fail(
+                    500, f"{type(exc).__name__}: {exc}", detail=traceback.format_exc(limit=4)
+                )
+            return
+
         body = self._body()
         if body is None:
             self._fail(400, "request body is not a JSON object")
@@ -382,6 +418,11 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
                 self._submit(param, body, kind="drift")
             elif name == "dispatch":
                 self._dispatch(param, body)
+            elif name == "case_label":
+                self._label(param, body)
+            elif name == "upload_clear":
+                removed = uploads_mod.clear()
+                self._json(200, {"removed": removed, "uploads": uploads_mod.listing()})
             elif name == "job_cancel":
                 ok = RUNNER.cancel(param or "")
                 self._json(200 if ok else 409, {"cancelled": ok, "jobId": param})
@@ -667,8 +708,8 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
 
         # Validate recipient syntax before creating a job so obvious client errors are
         # returned immediately rather than becoming a failed background job. An empty
-        # request falls back to the configured allowlist, which is also what the
-        # dispatcher does.
+        # request falls back to SPILLTRACE_ALERT_RECIPIENTS when that is set, which is
+        # also what the dispatcher does; with it unset, an empty request is an error.
         try:
             parse_recipients(recipients if recipients else allowed_recipients())
         except DispatchError as exc:
@@ -700,6 +741,50 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "resultUrl": f"/api/jobs/{job.id}/result",
             "reportUrl": f"/api/cases/{case_id}/report?format=pdf",
         })
+
+    def _label(self, case_id: str | None, body: dict[str, Any]) -> None:
+        """Name a stored case, and optionally describe it.
+
+        Presentation only. The run is already on disk -- this writes what a person calls
+        it so the case list can show that instead of an id, and touches nothing the
+        pipeline measured. An empty string clears the field rather than storing "".
+        """
+        payload = self._case_or_404(case_id)
+        if payload is None:
+            return
+
+        updates: dict[str, Any] = {}
+        for field, limit in (("label", LABEL_MAX), ("description", DESCRIPTION_MAX)):
+            if field not in body:
+                continue
+            value = body[field]
+            if value is None:
+                updates[field] = None
+                continue
+            if not isinstance(value, str):
+                self._fail(400, f"{field} must be a string")
+                return
+            # Collapse newlines: this lands in a one-line <option> and a card hint.
+            cleaned = " ".join(value.split())
+            if len(cleaned) > limit:
+                self._fail(400, f"{field} is longer than {limit} characters")
+                return
+            updates[field] = cleaned or None
+        if not updates:
+            self._fail(400, "send a label and/or a description")
+            return
+
+        for field, value in updates.items():
+            if value is None:
+                payload.pop(field, None)
+            else:
+                payload[field] = value
+        try:
+            STORE.save(case_id or "", payload)
+        except store_mod.StoreError as exc:
+            self._fail(500, str(exc))
+            return
+        self._json(200, store_mod.summarise(payload))
 
     def _report(self, case_id: str | None, query: dict[str, str]) -> None:
         payload = self._case_or_404(case_id)
@@ -792,14 +877,143 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             return
         self._send(200, raw, "application/json")
 
+    # -- uploads -----------------------------------------------------------
+
+    def _upload_state(self) -> dict[str, Any]:
+        """What is on the server, and what each slot is for.
+
+        The rules travel with the listing rather than being duplicated in the client: the
+        caps and the accepted extensions are decided in ``config`` and enforced in
+        ``uploads``, and a form that disagreed with either would refuse a file the server
+        would have taken, or accept one it would not.
+        """
+        return {
+            "uploads": uploads_mod.listing(),
+            "slots": {
+                kind: {
+                    "maxBytes": C.UPLOAD_MAX_BYTES[kind],
+                    "suffixes": list(C.UPLOAD_SUFFIXES[kind]),
+                    "required": kind == "scene",
+                }
+                for kind in uploads_mod.KINDS
+            },
+            "note": (
+                "Uploaded files are stored outside the evaluated dataset and are never "
+                "added to it. Each one is checked against the scene on its own terms."
+            ),
+        }
+
+    def _upload(self, query: dict[str, str]) -> None:
+        """Receive one file into one slot.
+
+        The size is refused from ``Content-Length`` before a byte is read. If it passes,
+        the body is streamed straight to disk -- a CMEMS product is several hundred
+        megabytes and there is no reason to hold it in memory.
+        """
+        kind = str(query.get("kind") or "").strip().lower()
+        name = str(query.get("name") or "")
+        raw_length = self.headers.get("Content-Length")
+        try:
+            length = uploads_mod.check_length(
+                kind, int(raw_length) if raw_length else None
+            )
+            # Checked here rather than inside `store` so a wrong extension is refused before
+            # a byte of the body is read. `_drain` below can then leave the connection
+            # usable; a refusal discovered after the read could not.
+            uploads_mod.suffix_for(kind, name)
+        except uploads_mod.UploadTooLarge as exc:
+            # The one refusal that is about size, and so the one that earns a 413: the
+            # client can tell that the same file will never fit, rather than reading it as
+            # a complaint about the file's contents.
+            self._drain()
+            self._fail(413, str(exc))
+            return
+        except uploads_mod.UploadError as exc:
+            self._drain()
+            self._fail(400, str(exc))
+            return
+        except ValueError:
+            self._fail(400, f"Content-Length {raw_length!r} is not a number")
+            return
+
+        try:
+            upload = uploads_mod.store(kind, self.rfile, length, name)
+        except uploads_mod.UploadError as exc:
+            # `store` fails only after consuming the body, so there is nothing left to
+            # drain and the connection state is unknown. Closing it costs one handshake and
+            # guarantees the next request cannot be parsed out of a half-read stream -- the
+            # failure mode being a 501 from the base handler, which names nothing useful.
+            self.close_connection = True
+            self._fail(400, str(exc))
+            return
+        self._json(201, {"upload": upload.to_dict(), **self._upload_state()})
+
+    def _drain(self) -> None:
+        """Read and discard a rejected body so the connection stays usable.
+
+        ``protocol_version`` is HTTP/1.1, so the socket is kept alive between requests. An
+        unread body would be parsed as the start of the next request line. Capped: a body
+        that was refused for being too large is exactly the one not worth reading in full,
+        so past the cap the connection is closed instead.
+        """
+        try:
+            remaining = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            remaining = 0
+        if remaining > 4 * 1024 * 1024:
+            self.close_connection = True
+            return
+        while remaining > 0:
+            chunk = self.rfile.read(min(65536, remaining))
+            if not chunk:
+                break
+            remaining -= len(chunk)
+
     def _submit(self, scene: str | None, body: dict[str, Any], kind: str) -> None:
         if not scene or not SAFE_ID.match(scene):
             self._fail(400, f"invalid scene name {scene!r}")
             return
+
+        # Resolve every upload id the request carries into a path on disk, before anything
+        # else, so a stale id fails immediately with the slot named rather than a minute
+        # into a job.
         try:
-            case_mod.scene_paths(scene)
-        except (case_mod.CaseError, ValueError) as exc:
-            self._fail(404, str(exc))
+            supplied = {
+                f"{kind_name}_upload": uploads_mod.resolve(
+                    kind_name, body.get(f"{kind_name}Upload")
+                )
+                for kind_name in uploads_mod.KINDS
+            }
+        except uploads_mod.UploadError as exc:
+            self._fail(400, str(exc))
+            return
+        for kind_name in uploads_mod.KINDS:
+            requested = body.get(f"{kind_name}Upload")
+            if requested and supplied[f"{kind_name}_upload"] is None:
+                self._fail(
+                    404,
+                    f"no {kind_name} upload with id {requested!r} is on the server",
+                    hint="re-upload the file; the server may have been restarted",
+                )
+                return
+
+        # A case built on an uploaded scene does not need a dataset scene of that name --
+        # the id is only the label the case is stored under. Every other case does.
+        if supplied["scene_upload"] is None:
+            try:
+                case_mod.scene_paths(scene)
+            except (case_mod.CaseError, ValueError) as exc:
+                self._fail(404, str(exc))
+                return
+        elif STORE.exists(scene) and kind == "detect":
+            # Storing under an id that already holds a dataset case would overwrite it
+            # with a case built from different pixels under the same name. The store is
+            # keyed by id alone, so the only place to catch this is here.
+            self._fail(
+                409,
+                f"case {scene!r} already exists; choose another id for the uploaded scene",
+                hint="the case id is the label this result is stored under, so it has to be free",
+            )
             return
 
         defaults = C.DriftConfig()
@@ -816,6 +1030,13 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
                 ),
                 previews=bool(body.get("previews", True)),
                 seed=int(body.get("seed", defaults.seed)),
+                acquired_utc=(str(body["acquiredUtc"]) if body.get("acquiredUtc") else None),
+                band_order=(str(body["bandOrder"]) if body.get("bandOrder") else None),
+                # Presentation only, and capped here because it arrives in a request body.
+                # Deliberately absent from `request.key()`: a name must not change a seed.
+                label=(" ".join(str(body["label"]).split())[:LABEL_MAX] or None
+                       if body.get("label") else None),
+                **supplied,
             )
         except (TypeError, ValueError) as exc:
             self._fail(400, f"bad request parameters: {exc}")
