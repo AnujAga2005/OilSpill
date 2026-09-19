@@ -11,7 +11,7 @@ It has four parts, and they are meant to be read in order:
 | **1 — The project** | the mental model: what goes in, what comes out, the ten stages | §8.1 – §8.5 |
 | **2 — The domain** | SAR, look-alikes, U-Net, IoU, drift physics, AIS, scoring | §8.6 – §8.16 |
 | **3 — The pitch** | the seven screens as they exist today, and the eight-minute path | §8.17 – §8.25 |
-| **4 — Every file** | 93 source files: what each does, what it calls, what those calls do | §8.26 – §8.36 |
+| **4 — Every file** | 92 source files: what each does, what it calls, what those calls do | §8.26 – §8.36 |
 
 Documents 1–7 in this folder are shorter and task-shaped: [1](01-THE-PROBLEM.md) is the problem
 statement, [2](02-WHAT-YOU-NEED-TO-KNOW.md) is a faster domain primer, [3](03-STATUS-AND-ROADMAP.md)
@@ -134,9 +134,9 @@ services/common/      things every service needs: config, file-format readers, r
 services/ml/  the model and everything around it: audit, cache, train, geometry, look-alike
 services/drift/       physics, AIS, scoring, spill age
 services/api/         the HTTP server, the case builder, the store, jobs, PDF, email
-apps/web/ the dashboard: index.html, four CSS files, 18 ES modules. No build step.
+apps/web/ the dashboard: index.html, four CSS files, 22 ES modules. No build step.
 scripts/              the command-line entry points — this is what you actually run
-tests/     893 tests
+tests/     905 tests
 dist/       the built, self-contained bundle: `python -m http.server` in it and it works
 docs/sih/ these documents
 ```
@@ -1398,11 +1398,11 @@ module, and the browser does the rest. Same-origin only: **no analytics, no web 
 | File | Lines | What it does |
 |---|---|---|
 | `index.html` | 38 | four CSS links, one `<script type="module" src="app/main.js">`, an inline SVG favicon, and a `<noscript>` that tells you where the JSON is |
-| `app/main.js` | 775 | **the bootstrap.** `SCREENS` (the seven-entry table), `frame()` / `brand()` / `topbar()` / `sidenav()` build the chrome, `context(route)` builds the `ctx` object every screen receives, `render()` swaps the active screen, `boot()` starts it. Also `loadCase`, `selectCase`, `runAnalysis`, `cancelAnalysis`, `dispatchIncidentEmail`, `nameCase`, `pageHeader` (title and actions — nothing between the title and the first card), `caseSelector`. The intake gate is here too: `sawIntake`/`markIntakeSeen`/`openSavedCases`/`maybeOpenIntake`, four lines of `sessionStorage` that send a fresh visit to `/new` **only** when the API is live, the route is bare and no case was asked for |
+| `app/main.js` | 839 | **the bootstrap.** `SCREENS` (the seven-entry table), `frame()` / `brand()` / `topbar()` / `sidenav()` build the chrome, `context(route)` builds the `ctx` object every screen receives, `render()` swaps the active screen, `boot()` starts it. Also `loadCase`, `selectCase`, `runAnalysis`, `cancelAnalysis`, `dispatchIncidentEmail`, `nameCase`, `removeCase` (the **Delete analysis** confirmation, which names what goes and what does not and warns in red if the case is the seeded demo one), `pageHeader` (title and actions — nothing between the title and the first card), `caseSelector`. The intake gate is here too: `sawIntake`/`markIntakeSeen`/`openSavedCases`/`maybeOpenIntake`, four lines of `sessionStorage` that send a fresh visit to `/new` **only** when the API is live, the route is bare and no case was asked for |
 | `app/dom.js` | 278 | **the framework, in 278 lines.** `h(tag, props, ...children)` builds real DOM nodes — no virtual DOM, no diffing. `mount`, `append`, `frag`, `icon`, `trapFocus` (modal accessibility), `announce` (the toasts), `debounce`, `raf` |
-| `app/state.js` | 138 | one store. `get`, `set(patch)`, `subscribe(fn)`, `load(name, loader)` for async slices with a status key, `annotation`/`annotate` for the analyst's notes, `resetSelection` |
+| `app/state.js` | 168 | one store. `get`, `set(patch)`, `subscribe(fn)`, `load(name, loader)` for async slices with a status key, `annotation`/`annotate` for the analyst's notes, `resetSelection`. Also **a second, separate channel** — `emitProgress`/`subscribeProgress`/`runningJob` — that a running job's poll writes to instead of the store, so twenty seconds of progress updates do not rebuild the page twenty times |
 | `app/router.js` | 75 | a hash router. `parse`, `current`, `href`, `go`, `setParams`, `onRoute`, `start`. **Every view is a URL** |
-| `app/api.js` | 468 | the API client **with an offline fallback**. `apiMode()` reports live or offline; `probe()` decides which. `health`, `metrics`, `scenes`, `cases`, `loadCase`, `loadCaseLean`, `imageIndex`, `report`, `reportPdfUrl`, `dispatchEmail`, `imageUrl`, `evalImageUrl`, `csvUrl`. `submitDetect`/`submitDrift` + `runJob`/`awaitJob`/`jobStatus`/`cancelJob` for the polling loop. `uploadState`/`clearUploads`/`upload` for the operator upload, `saveCaseLabel` for naming a finished case — and `upload()` is **the one call that is not `fetch`**: it uses `XMLHttpRequest` for `request.upload.onprogress`, because `fetch` has no upload-progress event and a 370 MB CMEMS file would otherwise show ninety seconds of "uploading" that is indistinguishable from a hang |
+| `app/api.js` | 480 | the API client **with an offline fallback**. `apiMode()` reports live or offline; `probe()` decides which. `health`, `metrics`, `scenes`, `cases`, `loadCase`, `loadCaseLean`, `imageIndex`, `report`, `reportPdfUrl`, `dispatchEmail`, `imageUrl`, `evalImageUrl`, `csvUrl`. `submitDetect`/`submitDrift` + `runJob`/`awaitJob`/`jobStatus`/`cancelJob` for the polling loop. `uploadState`/`clearUploads`/`upload` for the operator upload, `saveCaseLabel` for naming a finished case — and `upload()` is **the one call that is not `fetch`**: it uses `XMLHttpRequest` for `request.upload.onprogress`, because `fetch` has no upload-progress event and a 370 MB CMEMS file would otherwise show ninety seconds of "uploading" that is indistinguishable from a hang |
 | `app/ui.js` | 640 | **the component library.** See below |
 | `app/format.js` | 176 | every number the UI prints goes through here. `km2`, `km`, `pct`, `num`, `int`, `metric`, `lat`, `lon`, `coord`, `utc`, `hours`, `seconds`, `bytes`, `bearing`, `axis`, `clip`, `slug`. `DASH` and `isMissing` are the missing-value contract — **a missing value renders as an em dash, never as 0** |
 | `app/icons.js` | 60 | `ICONS` and `BRAND_MARK` as SVG path strings. Authored here **so `h(..., {html})` never receives API data** — that is the XSS boundary |
@@ -1411,7 +1411,8 @@ module, and the browser does the rest. Same-origin only: **no analytics, no web 
 | `app/chart.js` | 212 | `lineChart`, `strip`, `stackBar` — hand-built SVG |
 | `app/charts.js` | 310 | the richer set: `lineChart`, `distributionStrip`, `histogram`, `sparkline`, `stackedBar` |
 | `app/exporters.js` | 273 | `candidatesCsv`, `slicksCsv`, `patchesCsv`, `driftCsv`, `downloadCsv`, `downloadJson`, `exportName`, `printPage` |
-| `app/upload.js` | 519 | **the operator upload form, on the New analysis screen.** `uploadPanel(ctx)` returns the whole form as one node — *Files*, then *Details*, then the button, in that order and in that one box, because a case id is required to run and a required field below the button that needs it is a form that lies about its own order. `SLOTS` is the five-entry table (scene required, mask/ERA5/CMEMS/AIS each optional and each **independent** — not a bundle, so ERA5 alone is a real improvement over the synthetic wind); each entry carries a one-line `note` the card shows and a full `hint` it carries as a tooltip, because five cards that each explain themselves in a paragraph push the button that uses them off the screen. `slotRow` renders one slot, `fields` the four controls, `send` streams one file, `run` starts the pipeline, `clearAll` empties the upload directory. `BAND_ORDERS` is the VH/VV toggle, needed because a bare GeoTIFF has no header to name its bands and a scene stored the other way round would be scored with the polarisations swapped. **`form` is at module scope on purpose**: the screen re-renders on every store change and a running job pushes progress about twice a second, so closure state would discard a chosen file halfway through a run. The whole form is **disabled when `apiMode()` is offline** — there is no server to receive the file, and it prints the command that starts one |
+| `app/progress.js` | 300 | **the run bar**, and the reason a running job no longer makes the page flicker. `STAGES` is the ten-stage table with each stage's median seconds across the twelve stored cases, so the bar is scaled by **time, not stage count** — decoding is half the run and scoring vessels is a fifteenth of a second. `stageIndex(log)` takes the *highest* matching stage rather than the last, so a drift job that reuses a stored detection cannot walk the bar backwards; `tileFraction(log)` reads detection's own `inference 64/361 tiles` line, which is the one stretch of the run that is counted rather than estimated; `fractionFor` clamps everything to just under the next boundary, so **arriving at a stage is always the server's word.** `runBar()` subscribes to the progress channel, writes to its own three nodes, and unsubscribes itself when its node leaves the document |
+| `app/upload.js` | 531 | **the operator upload form, on the New analysis screen.** `uploadPanel(ctx)` returns the whole form as one node — *Files*, then *Details*, then the button, in that order and in that one box, because a case id is required to run and a required field below the button that needs it is a form that lies about its own order. `SLOTS` is the five-entry table (scene required, mask/ERA5/CMEMS/AIS each optional and each **independent** — not a bundle, so ERA5 alone is a real improvement over the synthetic wind); each entry carries a one-line `note` the card shows and a full `hint` it carries as a tooltip, because five cards that each explain themselves in a paragraph push the button that uses them off the screen. `slotRow` renders one slot, `fields` the four controls, `send` streams one file, `run` starts the pipeline, `clearAll` empties the upload directory. `BAND_ORDERS` is the VH/VV toggle, needed because a bare GeoTIFF has no header to name its bands and a scene stored the other way round would be scored with the polarisations swapped. **`form` is at module scope on purpose**: the screen re-renders on every store change and a running job pushes progress about twice a second, so closure state would discard a chosen file halfway through a run. The whole form is **disabled when `apiMode()` is offline** — there is no server to receive the file, and it prints the command that starts one |
 
 ### `ui.js`, the components you will see referenced everywhere
 
@@ -1456,9 +1457,9 @@ Each exports exactly two things: a `LEDE` string and `render(ctx)`.
 
 ---
 
-## 8.33 `tests/` — 893 tests
+## 8.33 `tests/` — 905 tests
 
-`.venv/bin/python -m pytest` → **893 passed in ~28 s**. Nothing skipped.
+`.venv/bin/python -m pytest` → **905 passed in ~43 s**. Nothing skipped.
 
 | File | Lines | What it guards |
 |---|---|---|
@@ -1519,7 +1520,7 @@ hard-codes them.
 
 | You changed | Re-run | Because |
 |---|---|---|
-| anything in `services/` or `scripts/` | `pytest` | 893 tests, 28 seconds, no excuse |
+| anything in `services/` or `scripts/` | `pytest` | 905 tests, 43 seconds, no excuse |
 | the dataset, or `Oil/`/`Mask_oil/` contents | `run_audit.py` → `run_preprocess.py` → `run_train.py` → `run_scene_eval.py` | every downstream artefact derives from the audit |
 | `PreprocessConfig` (patch size, `max_scenes`) | the full chain above | the cache and the split both change |
 | the model or `TrainConfig` | `run_train.py` → `run_scene_eval.py` → rebuild the demo | `metrics.json` and `scene_metrics.json` both move |

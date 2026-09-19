@@ -250,6 +250,18 @@ export const saveCaseLabel = (caseId, fields) =>
   post(`/api/cases/${encodeURIComponent(caseId)}/label`, fields);
 
 /**
+ * Delete a stored analysis: the case document, its cached detection mask and its previews.
+ *
+ * Only pipeline output goes. The scene it was built from is untouched, and so is anything
+ * in `data/uploads/` -- `clearUploads` is what removes those. Returns
+ * `{deleted, removedPreviews, cases}`, the last being the refreshed list.
+ *
+ * @param {string} caseId
+ */
+export const deleteCase = (caseId) =>
+  post(`/api/cases/${encodeURIComponent(caseId)}/delete`, {});
+
+/**
  * Send one file to one slot.
  *
  * `XMLHttpRequest` rather than `fetch`, for one reason: a CMEMS product is around

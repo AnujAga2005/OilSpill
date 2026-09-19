@@ -18,7 +18,7 @@ image/mask pairs, measures the slick on a sphere, runs a Lagrangian particle sim
 to a probability envelope and forwards to a forecast, generates a clearly-labelled synthetic AIS
 fleet for that envelope, and ranks vessels on a transparent 100-point scale with every component
 and its evidence exposed. It runs offline on one laptop with two pipeline dependencies and no
-frontend dependencies at all. 893 automated tests pass.
+frontend dependencies at all. 905 automated tests pass.
 
 **Requirements (a), (b) and (c) of the problem statement are substantively satisfied**, clause by
 clause, in §3.7. One clause is not: the PS mentions EO (optical) imagery alongside SAR and we do
@@ -76,9 +76,9 @@ services/
 apps/web/                  the dashboard — 7 screens, vanilla ES modules, zero dependencies
 scripts/                   run_audit, run_preprocess, run_train, run_scene_eval,
                            run_api, build_web
-tests/                     893 tests
+tests/                     905 tests
 dist/                      the offline static bundle
-docs/sih/                  these fourteen documents
+docs/sih/                  these sixteen documents
 RUNBOOK.md                 how to run everything
 KNOWN-ISSUES.md            open defects, honestly stated — read before quoting a number
 DATA_AUDIT.md              the generated dataset audit
@@ -443,7 +443,7 @@ Plus the ranking caveat, in full:
 .venv/bin/python -m pytest
 ```
 
-**893 tests, about 28 seconds, all passing, nothing skipped.**
+**905 tests, about 43 seconds, all passing, nothing skipped.**
 
 Everything is seeded and reproducible:
 

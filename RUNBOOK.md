@@ -162,6 +162,8 @@ Full route list:
 | GET | `/api/jobs` · `/api/jobs/<id>` · `/api/jobs/<id>/result` | job queue |
 | POST | `/api/jobs/<id>/cancel` | cancel a job |
 | POST | `/api/cases/<id>/report` · `/api/cases/<id>/dispatch` | the printable report, and emailing it |
+| POST | `/api/cases/<id>/label` | name a stored case — what the case picker shows instead of the id |
+| POST | `/api/cases/<id>/delete` | **delete a stored case**: its JSON document, its cached `.mask.npz` detection mask and the preview PNGs it rendered. The scene it was built from is not touched, and only files inside the preview directory are unlinked — a manifest entry pointing outside it is ignored rather than followed |
 | GET | `/api/uploads` | what the operator has staged, and which slots are filled |
 | POST | `/api/uploads?kind=&name=` | **store one file.** The body is the file itself, not JSON — `kind` is one of `scene`, `mask`, `era5`, `cmems`, `ais` |
 | POST | `/api/uploads/clear` | delete every stored upload |
@@ -458,7 +460,7 @@ asserts that on every run.
 .venv/bin/python -m pytest
 ```
 
-893 tests, about 28 seconds. Add `-v` for names, or point it at one file:
+905 tests, about 43 seconds. Add `-v` for names, or point it at one file:
 
 ```bash
 .venv/bin/python -m pytest tests/test_api.py -v

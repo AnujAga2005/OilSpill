@@ -134,7 +134,7 @@ and this is the box that answers it literally.
 - **U-Net** segmentation, trained on **1,200 real Sentinel-1 pairs / 240 acquisitions used**.
 - **RK2 particle advection**, tidal streamfunction current + 3% windage. Seed 26143 —
   **reproduces bit-for-bit**.
-- **Standard-library HTTP API**; **zero-dependency frontend**, 442 KB plain ES modules, no build
+- **Standard-library HTTP API**; **zero-dependency frontend**, 477 KB plain ES modules, no build
   step, runs offline.
 - **ERA5 wind + CMEMS current** readers; **MERN** deployment layer.
 

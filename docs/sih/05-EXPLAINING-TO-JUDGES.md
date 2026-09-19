@@ -376,7 +376,7 @@ rather than imagining it is the whole chain.
 > `npm install`. Clone it and it runs offline."
 
 **"Is it tested?"**
-> "893 automated tests, about 28 seconds, all passing, nothing skipped. And the whole pipeline is
+> "905 automated tests, about 43 seconds, all passing, nothing skipped. And the whole pipeline is
 > seeded — run the
 > same case twice and every figure is byte-identical; only the timestamps change. That matters for
 > an evidentiary product: a result you can't reproduce is a result you can't defend."
@@ -563,7 +563,7 @@ a vessel guilty — points the same way. That consistency is the pitch. Lean on 
 ## 5.8 Final checklist before you walk in
 
 - [ ] The three numbers, cold: **1,200 pairs / 240 acquisitions used, none spanning two splits** ·
-      **0.769 vs 0.676 IoU** · **893 tests · whole pipeline offline in 20 s**
+      **0.769 vs 0.676 IoU** · **905 tests · whole pipeline offline in 20 s**
 - [ ] The fourth number ready for probing: **0.584 pooled scene IoU** (mean per scene 0.693)
 - [ ] The PS sentence permitting synthetic AIS, quotable
 - [ ] The seven minimum concepts from document 2 §2.9

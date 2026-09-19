@@ -282,7 +282,7 @@ sentence and the three numbers.**
 |---|---|
 | **1,200 real Sentinel-1 image/mask pairs, 240 acquisitions used, none spanning two splits** | real data, and a splitting rule you can defend — with the leak we found and fixed volunteered, not hidden |
 | **0.769 IoU vs 0.676 for the classical dark-spot baseline** | the ML earns its place, measured not asserted |
-| **893 automated tests; the whole pipeline runs offline on one scene in 20 seconds** | it is engineering, not a notebook |
+| **905 automated tests; the whole pipeline runs offline on one scene in 20 seconds** | it is engineering, not a notebook |
 
 Have **0.584 pooled scene IoU** ready as the fourth number the moment anyone probes — it is the
 lower of the two whole-scene figures, so offering it unprompted cannot be turned against you.

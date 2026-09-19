@@ -476,7 +476,7 @@ opening, minimum-area filter
 > look-alike, run the ocean backwards to find where it came from, forwards to find where it's
 > going, then score the traffic against that zone and window.
 >
-> **893 tests pass.** The interface is **442 kilobytes** of plain JavaScript with **zero
+> **905 tests pass.** The interface is **477 kilobytes** of plain JavaScript with **zero
 > dependencies** and no build step. Everything you just watched ran offline, on this laptop, from a
 > bundled case file.
 >

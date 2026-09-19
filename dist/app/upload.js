@@ -34,6 +34,7 @@ import { h, icon } from "./dom.js";
 import { ICONS } from "./icons.js";
 import * as F from "./format.js";
 import * as U from "./ui.js";
+import { runBar } from "./progress.js";
 
 /** The slots, in the order they are worth filling.
  *
@@ -103,10 +104,11 @@ const BAND_ORDERS = [
 /**
  * Form state, at module scope on purpose.
  *
- * The screen re-renders on every store change, and a running job pushes a progress update
- * roughly twice a second. Closure state would be rebuilt each time, so a file chosen at the
- * start of a run would vanish halfway through it. This is the state of a form the operator
- * is filling in, which outlives any one render of the screen.
+ * The screen re-renders on every store change. Closure state would be rebuilt each time,
+ * so a file chosen before a case switch or a finished job would vanish with it. This is
+ * the state of a form the operator is filling in, which outlives any one render of the
+ * screen. (Progress updates no longer re-render anything -- see `progress.js` -- but a
+ * store change still can, and this is what survives one.)
  */
 const form = {
   caseId: "",
@@ -116,6 +118,9 @@ const form = {
   /** kind -> {file, name, sizeBytes, uploadId, status, fraction, error} */
   slots: {},
   busy: false,
+  /** `busy` covers uploading and clearing too; this is the pipeline job alone, which is
+   *  the only one of the three that has stages to draw a bar from. */
+  running: false,
   error: null,
 };
 
@@ -212,15 +217,20 @@ function body(ctx, offline, paint) {
           onClick: () => clearAll(ctx, paint),
         }),
       ),
-      h(
-        "p",
-        { class: "small upload-run__note" },
-        !scene?.uploadId
-          ? "A two-band GeoTIFF with a geotransform is the one required input."
-          : !form.caseId.trim()
-            ? "Give the case an id above, then this runs."
-            : "About twenty seconds, then the Command centre opens on the result.",
-      ),
+      // While the job runs the note is replaced by the bar, in the same slot: the line that
+      // said how long this would take now says how far along it is. The bar repaints itself
+      // from the job's own stage lines and re-renders nothing around it.
+      form.running
+        ? runBar()
+        : h(
+            "p",
+            { class: "small upload-run__note" },
+            !scene?.uploadId
+              ? "A two-band GeoTIFF with a geotransform is the one required input."
+              : !form.caseId.trim()
+                ? "Give the case an id above, then this runs."
+                : "About twenty seconds, then the Command centre opens on the result.",
+          ),
     ),
   );
 }
@@ -476,6 +486,7 @@ async function run(ctx, paint) {
   }
 
   form.busy = true;
+  form.running = true;
   form.error = null;
   paint();
 
@@ -493,6 +504,7 @@ async function run(ctx, paint) {
   // only thing left here is to release the form afterwards.
   const job = await ctx.runAnalysis("detect", options);
   form.busy = false;
+  form.running = false;
   if (job) {
     // The files stay on the server: a second run with a different horizon should not need
     // a 43 MB re-upload. Only the staging form is reset.

@@ -100,6 +100,7 @@ ROUTES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("report", re.compile(r"^/api/cases/([^/]+)/report$")),
     ("dispatch", re.compile(r"^/api/cases/([^/]+)/dispatch$")),
     ("case_label", re.compile(r"^/api/cases/([^/]+)/label$")),
+    ("case_delete", re.compile(r"^/api/cases/([^/]+)/delete$")),
     ("case", re.compile(r"^/api/cases/([^/]+)$")),
     ("job_result", re.compile(r"^/api/jobs/([^/]+)/result$")),
     ("job_cancel", re.compile(r"^/api/jobs/([^/]+)/cancel$")),
@@ -420,6 +421,8 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
                 self._dispatch(param, body)
             elif name == "case_label":
                 self._label(param, body)
+            elif name == "case_delete":
+                self._delete_case(param)
             elif name == "upload_clear":
                 removed = uploads_mod.clear()
                 self._json(200, {"removed": removed, "uploads": uploads_mod.listing()})
@@ -785,6 +788,53 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             self._fail(500, str(exc))
             return
         self._json(200, store_mod.summarise(payload))
+
+    def _delete_case(self, case_id: str | None) -> None:
+        """Delete a stored analysis: the case document, its cached mask, its previews.
+
+        The counterpart to a run. Everything removed here was produced by the pipeline and
+        can be produced again by re-running it -- nothing under `Oil/` or `Mask_oil/` is
+        touched, and neither is anything in `data/uploads/`, which `POST /api/uploads/clear`
+        owns. Deleting a case therefore frees the id without losing the scene it was built
+        from.
+
+        Previews are unlinked by name from the case's own manifest and only when they
+        resolve inside the preview directory, so a case document carrying a path from
+        somewhere else cannot make this delete a file outside it.
+        """
+        payload = self._case_or_404(case_id)
+        if payload is None:
+            return
+
+        scene = str(case_id)
+        removed_previews = 0
+        previews = payload.get("previews") or {}
+        directory = self._preview_dir(previews).resolve()
+        for name in (previews.get("files") or {}).values():
+            if not isinstance(name, str) or not name:
+                continue
+            candidate = (directory / Path(name).name).resolve()
+            if candidate.parent != directory or not candidate.is_file():
+                continue
+            try:
+                candidate.unlink()
+                removed_previews += 1
+            except OSError:
+                # A preview that will not unlink is not a reason to keep the case: the
+                # count below reports what actually went.
+                pass
+
+        try:
+            existed = STORE.delete(scene)
+        except store_mod.StoreError as exc:
+            self._fail(500, str(exc))
+            return
+
+        self._json(200, {
+            "deleted": scene if existed else None,
+            "removedPreviews": removed_previews,
+            "cases": STORE.summaries(),
+        })
 
     def _report(self, case_id: str | None, query: dict[str, str]) -> None:
         payload = self._case_or_404(case_id)
