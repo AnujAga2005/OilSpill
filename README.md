@@ -77,7 +77,7 @@ statement names as the format authority, so it can be diffed against a real dail
 curl -s http://localhost:8765/api/cases/demo/ais.csv | head -3
 ```
 
-Tests — **893, about 28 seconds:**
+Tests — **905, about 43 seconds:**
 
 ```bash
 .venv/bin/python -m pytest

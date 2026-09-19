@@ -1235,6 +1235,88 @@
   }
 }
 
+/* -- run bar ------------------------------------------------------------ */
+
+/* The running job's progress, as a bar rather than a pulse. The fill is driven from the
+   stage lines the server sends, so its width is data; the transition below is only the
+   easing between two true positions, never motion of its own. */
+
+.runbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.runbar__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  font-size: var(--t-footnote);
+  min-width: 0;
+}
+
+.runbar__stage {
+  color: var(--text-secondary);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runbar__count,
+.runbar__time {
+  flex: none;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.runbar__track {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-strong);
+  overflow: hidden;
+}
+
+.runbar__fill {
+  height: 100%;
+  width: 0;
+  border-radius: 4px;
+  background: var(--tint);
+  transition: width 220ms linear;
+}
+
+/* The top bar has one line to spare, so stage text, track and clock sit on it together.
+   The track keeps a fixed width there: a track that resized with the stage name would
+   make the fill mean something different from one stage to the next. */
+.runbar--compact {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.runbar--compact .runbar__track {
+  width: 120px;
+  flex: none;
+  order: -1;
+}
+
+.runbar--compact .runbar__head {
+  gap: var(--s2);
+}
+
+.runbar--compact .runbar__stage {
+  max-width: 22ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The width still changes -- it is the information -- it just stops sliding to it. */
+  .runbar__fill {
+    transition: none;
+  }
+}
+
 /* -- progress log ------------------------------------------------------ */
 
 .joblog {

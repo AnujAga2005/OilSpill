@@ -589,6 +589,137 @@ class TestCaseLabel:
         assert plain.key() == named.key()
 
 
+# ---------------------------------------------------------------------------
+# Deleting a stored case
+# ---------------------------------------------------------------------------
+
+def _case_with_previews(directory: Path, case_id: str = "demo") -> dict[str, Any]:
+    """`sample_case` with its preview manifest pointing at a directory of real files.
+
+    The fixture's own manifest names the repository's preview directory, which is where the
+    dashboard's actual PNGs live. A delete test that used it unchanged would unlink them.
+    """
+    case = sample_case(case_id)
+    directory.mkdir(parents=True, exist_ok=True)
+    files = {}
+    for kind in ("vv", "prediction", "probability"):
+        name = f"{case_id}_{kind}.png"
+        (directory / name).write_bytes(b"\x89PNG\r\n\x1a\n")
+        files[kind] = name
+    case["previews"] = dict(case["previews"], directory=str(directory), files=files)
+    return case
+
+
+class TestCaseDelete:
+    """`POST /api/cases/<id>/delete` removes a run, and only what the run produced.
+
+    The endpoint is the counterpart to a run, so the tests are paired the same way as the
+    naming ones: half check that everything the pipeline wrote is actually gone, and half
+    check that nothing the pipeline merely *read* is -- a deleted case must free its id
+    without costing the operator the scene it was built from.
+    """
+
+    def test_the_document_and_its_cached_mask_both_go(self, store, tmp_path):
+        store.save("demo", _case_with_previews(tmp_path / "previews"))
+        store.save_mask("demo", np.zeros((4, 4), dtype=np.uint8), {"threshold": 0.5})
+        assert store.mask_path_for("demo").exists()
+
+        response = post("/api/cases/demo/delete", {}, api_only=True)
+
+        assert response.status == 200
+        assert response.json()["deleted"] == "demo"
+        assert not store.exists("demo")
+        assert not store.mask_path_for("demo").exists()
+
+    def test_the_previews_it_rendered_go_with_it(self, store, tmp_path):
+        directory = tmp_path / "previews"
+        store.save("demo", _case_with_previews(directory))
+
+        payload = post("/api/cases/demo/delete", {}, api_only=True).json()
+
+        assert payload["removedPreviews"] == 3
+        assert sorted(p.name for p in directory.iterdir()) == []
+
+    def test_a_preview_path_pointing_outside_its_directory_is_not_followed(
+        self, store, tmp_path
+    ):
+        """The manifest is data on disk, so it is treated as a name, never as a path.
+
+        `_case_or_404` will happily load a case document that was edited by hand, and the
+        only thing between a `../` in it and a deleted file elsewhere is that the name is
+        reduced to its basename and the result is required to resolve inside the directory.
+        """
+        directory = tmp_path / "previews"
+        outsider = tmp_path / "keep_me.png"
+        outsider.write_bytes(b"\x89PNG\r\n\x1a\n")
+        case = _case_with_previews(directory)
+        case["previews"]["files"]["vv"] = "../keep_me.png"
+        store.save("demo", case)
+
+        payload = post("/api/cases/demo/delete", {}, api_only=True).json()
+
+        assert outsider.exists()
+        # The two well-formed previews still went; only the escaping name was skipped.
+        assert payload["removedPreviews"] == 2
+
+    def test_another_case_is_left_whole(self, store, tmp_path):
+        """One id in, one id out. The store is a shelf, not a transaction log."""
+        store.save("demo", _case_with_previews(tmp_path / "a", "demo"))
+        keep = _case_with_previews(tmp_path / "b", "other")
+        store.save("other", keep)
+        store.save_mask("other", np.zeros((4, 4), dtype=np.uint8), {"threshold": 0.5})
+
+        post("/api/cases/demo/delete", {}, api_only=True)
+
+        assert store.load("other") == keep
+        assert store.mask_path_for("other").exists()
+        assert sorted(p.name for p in (tmp_path / "b").iterdir()) == [
+            "other_prediction.png",
+            "other_probability.png",
+            "other_vv.png",
+        ]
+
+    def test_the_response_carries_the_list_the_picker_rebuilds_from(self, store, tmp_path):
+        """The client replaces its case list from this, rather than re-fetching it.
+
+        A delete that returned only `{deleted}` would leave the picker showing the case it
+        just removed until the next load.
+        """
+        store.save("demo", _case_with_previews(tmp_path / "a", "demo"))
+        store.save("other", _case_with_previews(tmp_path / "b", "other"))
+
+        payload = post("/api/cases/demo/delete", {}, api_only=True).json()
+
+        assert [entry["id"] for entry in payload["cases"]] == ["other"]
+
+    def test_the_id_is_free_afterwards(self, store, tmp_path):
+        store.save("demo", _case_with_previews(tmp_path / "a", "demo"))
+        post("/api/cases/demo/delete", {}, api_only=True)
+        store.save("demo", _case_with_previews(tmp_path / "c", "demo"))
+        assert store.exists("demo")
+
+    def test_an_unknown_case_is_a_404(self, store):
+        response = post("/api/cases/nothing_here/delete", {}, api_only=True)
+        assert response.status == 404
+
+    def test_an_unsafe_case_id_is_refused_by_the_route_before_the_handler(self):
+        assert server_mod.route("/api/cases/../../etc/delete") == ("unknown", None)
+
+    def test_the_delete_route_is_not_swallowed_by_the_case_route(self):
+        """Three patterns now match `/api/cases/<something>`; order is what separates them."""
+        assert server_mod.route("/api/cases/demo/delete") == ("case_delete", "demo")
+        assert server_mod.route("/api/cases/demo/label") == ("case_label", "demo")
+        assert server_mod.route("/api/cases/demo") == ("case", "demo")
+
+    def test_a_case_with_no_previews_on_disk_still_deletes(self, store):
+        """A case built with `previews: false` has a manifest naming files that were
+        never rendered. It is still a case, and it still has to be removable."""
+        store.save("demo", sample_case())
+        payload = post("/api/cases/demo/delete", {}, api_only=True).json()
+        assert payload["deleted"] == "demo"
+        assert payload["removedPreviews"] == 0
+
+
 class TestEvalImages:
     def test_an_unknown_name_says_what_would_produce_it(self):
         response = get("/api/eval/no_such_strip.png", api_only=True)
@@ -1079,17 +1210,97 @@ class TestJobRunner:
     def test_the_client_reads_the_field_the_server_writes(self):
         """A cross-language shape check, because the failure mode is silent.
 
-        The header's progress line reads `message` and `log`. When it read a `progress`
-        array instead -- a field the server has never sent -- the line simply said
-        "working" for the whole minute, with nothing anywhere to indicate why.
+        The progress bar reads `message`, `log`, `state` and `elapsedSeconds`. When it read
+        a `progress` array instead -- a field the server has never sent -- the line simply
+        said "working" for the whole minute, with nothing anywhere to indicate why.
         """
         published = set(jobs_mod.Job(id="j", kind="detect", scene="s").to_dict())
-        assert {"message", "log", "state", "error"} <= published
+        assert {"message", "log", "state", "error", "elapsedSeconds"} <= published
 
-        client = (ROOT / "apps" / "web" / "app" / "main.js").read_text()
-        stage_fn = client.split("function jobStageLabel(job) {")[1].split("}")[0]
-        referenced = set(re.findall(r"job\.([A-Za-z]+)", stage_fn))
-        assert referenced <= published, f"main.js reads {referenced - published} from a job"
+        client = (ROOT / "apps" / "web" / "app" / "progress.js").read_text()
+        referenced = set(re.findall(r"job\??\.([A-Za-z]+)", client))
+        assert referenced <= published, f"progress.js reads {referenced - published} from a job"
+
+    def test_the_bar_recognises_every_line_the_pipeline_prints(self):
+        """The same silent failure, one level up.
+
+        `progress.js` turns a job's progress line into a position on the bar by matching
+        the text the pipeline writes. Rename a stage on the Python side and nothing breaks
+        -- the bar simply stops advancing and sits at whatever it last recognised. So the
+        lines are asserted from both ends: each one is still printed by the server, and
+        each one is still matched by a prefix in the client's stage table.
+        """
+        case_src = (ROOT / "services" / "api" / "spilltrace_api" / "case.py").read_text()
+        server_src = (ROOT / "services" / "api" / "spilltrace_api" / "server.py").read_text()
+        client = (ROOT / "apps" / "web" / "app" / "progress.js").read_text()
+
+        # (the line the job logs, the source that prints it). An f-string line is given as
+        # the literal prefix the server writes before the interpolated value.
+        lines = [
+            ('f"decoding {request.scene}"', "decoding scene_x", case_src),
+            ('"detecting oil"', "detecting oil", case_src),
+            ('"reusing the stored detection"', "reusing the stored detection", case_src),
+            ('"measuring slick geometry"', "measuring slick geometry", case_src),
+            (
+                '"screening dark patches for look-alikes"',
+                "screening dark patches for look-alikes",
+                case_src,
+            ),
+            ('"resolving drift forcing"', "resolving drift forcing", case_src),
+            ('"reconstructing backward drift"', "reconstructing backward drift", case_src),
+            ('"projecting forward drift"', "projecting forward drift", case_src),
+            (
+                '"reading the supplied AIS extract"',
+                "reading the supplied AIS extract",
+                case_src,
+            ),
+            ('"generating synthetic AIS"', "generating synthetic AIS", case_src),
+            ('"scoring vessels"', "scoring vessels", case_src),
+            ('"rendering previews"', "rendering previews", case_src),
+            (
+                '"loaded the stored detection mask"',
+                "loaded the stored detection mask",
+                server_src,
+            ),
+            (
+                '"no cached mask; re-running detection"',
+                "no cached mask; re-running detection",
+                server_src,
+            ),
+        ]
+
+        # Every prefix the client's stage table matches on.
+        prefixes = re.findall(r'line\.startsWith\("([^"]+)"\)', client)
+        assert prefixes, "progress.js publishes no stage prefixes to match against"
+
+        for literal, logged, source in lines:
+            assert f"say({literal})" in source, f"the server no longer logs {literal}"
+            assert any(logged.startswith(prefix) for prefix in prefixes), (
+                f"progress.js matches no stage for the line {logged!r}; "
+                "the bar will stop advancing there"
+            )
+
+    def test_the_tile_count_the_bar_reads_is_the_one_inference_writes(self):
+        """The one part of the bar that is a measurement rather than an estimate.
+
+        Tiled inference prints `inference 64/361 tiles` as it goes, and the bar parses the
+        two numbers out of it to place itself inside the detection stage. Change the wording
+        on the Python side and the bar silently falls back to the clock -- no error, just a
+        less truthful bar -- so the format is pinned from both ends.
+        """
+        case_src = (ROOT / "services" / "api" / "spilltrace_api" / "case.py").read_text()
+        client = (ROOT / "apps" / "web" / "app" / "progress.js").read_text()
+
+        assert 'progress(f"inference {done}/{total} tiles")' in case_src
+
+        pattern = re.search(r"/\^inference \(\\d\+\)\\/\(\\d\+\) tiles/", client)
+        assert pattern, "progress.js no longer parses the inference tile line"
+
+        # The literal the server would emit, matched with Python's equivalent of the
+        # client's regex, so a change to either side fails here rather than in a browser.
+        emitted = "inference 64/361 tiles"
+        match = re.match(r"^inference (\d+)/(\d+) tiles", emitted)
+        assert match and match.group(1) == "64" and match.group(2) == "361"
 
 
 # ---------------------------------------------------------------------------

@@ -75,6 +75,36 @@ export function set(patch) {
   }
 }
 
+// -- the running job's progress ---------------------------------------------
+
+/**
+ * Progress lines travel on their own channel, beside the store rather than through it.
+ *
+ * A job posts a line every few hundred milliseconds, and `set` notifies the renderer,
+ * which rebuilds the whole page -- fifteen full rebuilds in one twenty-second run, which
+ * is exactly what a flicker is. `state.job` therefore changes only when the job changes
+ * *state* -- queued, running, done, failed, cancelled -- because that is what screens
+ * branch on. The lines in between go only to whatever is drawing the progress bar, which
+ * writes to its own nodes and leaves the rest of the document alone.
+ */
+let running = null;
+const progressListeners = new Set();
+
+/** The most recent progress update, for a bar mounted mid-run. */
+export function runningJob() {
+  return running;
+}
+
+export function subscribeProgress(fn) {
+  progressListeners.add(fn);
+  return () => progressListeners.delete(fn);
+}
+
+export function emitProgress(job) {
+  running = job;
+  for (const fn of [...progressListeners]) fn(job);
+}
+
 // -- annotations ------------------------------------------------------------
 
 function loadAnnotations() {

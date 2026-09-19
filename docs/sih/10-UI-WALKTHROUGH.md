@@ -52,11 +52,12 @@ because no case has been asked for yet.
 | **PDF Report** *(live API only)* | Asks the server to build the incident report PDF. | Only appears when the API is running — the PDF is generated server-side from the case document. |
 | **Email Report** *(live API only)* | Opens a sheet asking for recipients, then hands the report to the dispatcher. | The sheet states up front whether it will *send* over SMTP or write a `.eml` file, because that depends on whether the server has credentials configured. A button that always said "sent" would lie. |
 | **Save analysis** *(live API only)* | Names the loaded case. The sheet says plainly that the run **is already stored** — it was written to disk the moment the pipeline finished — and that this gives it a name the case picker can show instead of an id. An optional description goes with it. | A demo machine fills up with `00119`, `00844`, `01041`. A name is what makes a shelf of finished runs readable a week later. It changes nothing about the computation. |
+| **Delete analysis** *(live API only)* | Removes the stored case: the JSON document, its cached detection mask and the preview PNGs it rendered. A confirmation sheet names what goes and what does not — **the scene it was built from is untouched, so the same run can be made again**, and uploaded files are left alone (Clear, on New analysis, is what removes those). Deleting the seeded demo case says so in red and tells you the command that rebuilds it. Afterwards the picker reloads and the app opens the next case, or New analysis if that was the last one. | A demo machine accumulates test runs. Without this the only way to tidy up is a shell, and a shell during a demo is a bad look. It deletes a *result*, never a source file — which is the same separation the upload path keeps. |
 | **Print** | Print stylesheet — nav and buttons drop out, the findings print. | |
 | **Live API / Offline demo badge** (top right) | **Live API** with a green dot when the local server is reachable. **Offline demo** when it is not. | Green means a real HTTP call just succeeded. Offline means the bundled demo case is being replayed from static files. Say which one is on — never claim live if the badge says offline. |
-| **Spinner + stage text + Cancel** | Appears only while an analysis job is running. The text is the pipeline's own current-stage message, not a guessed label. | "That's the pipeline naming its own stage in real time." **Cancel** stops the job. |
+| **Run bar + stage text + Cancel** | Appears only while an analysis job is running: a horizontal bar, the pipeline's own current-stage sentence, a `4/10` stage counter and the elapsed seconds. **Cancel** stops the job. | "That's the pipeline naming its own stage in real time — the bar is reading the server's log, not a timer someone guessed." See §10.13 for what the bar does and does not claim. |
 
-> **On New analysis, the picker and all five case buttons are gone.** Exporting, printing or
+> **On New analysis, the picker and all six case buttons are gone.** Exporting, printing or
 > emailing a report for a case the reader has not asked for yet is an offer about the wrong thing.
 > That screen has its own door to the saved cases, and it lands you on the Command centre.
 
@@ -252,7 +253,7 @@ thresholded mask and the dataset's own reference mask — the same pixels, four 
 | **Overlay opacity** (slider) | 0–100% | The label updates live as *"Overlay opacity · N%"*. Fading the overlay down shows the raw radar under it. |
 | **Before / after** (switch) | on/off | Splits or toggles the raw and overlaid view for a side-by-side read. |
 | **Show pixels** (switch) | on/off | Removes the smoothing so you see the 512 px preview as actual pixels. Hover text: *"Show the 512 px preview as the pixels it is, without smoothing."* |
-| **Run detection again** (button) | | Re-runs the detection job for this scene through the API. This is the only control on the screen that starts real work — it shows the spinner in the top bar. |
+| **Run detection again** (button) | | Re-runs the detection job for this scene through the API. This is the only control on the screen that starts real work — it shows the run bar in the top bar. |
 
 Below the images sits a small colour key: **VV backscatter, dB** / **Predicted oil** / **Supplied
 reference mask** — only the ones currently switched on.
@@ -496,7 +497,9 @@ Four, and only four. If someone asks "what actually runs when I click?", these a
 | **Run drift now** | Drift | The particle hindcast and forecast. |
 | **Cancel** (top bar) | Any, while running | Stops the running job. |
 
-(**Save analysis** writes two strings onto a case that is already on disk. It computes nothing.)
+(**Save analysis** writes two strings onto a case that is already on disk. It computes nothing.
+**Delete analysis** is the one control that destroys something — a stored result, never a source
+file.)
 
 Everything else on every screen either reads what the case file already holds or changes how
 something is displayed. That is a deliberate design rule: **reads never compute.** A page refresh
@@ -603,7 +606,7 @@ click-through safe. **On the offline bundle there is no gate at all**: that page
 the Command centre, because there is no API behind it to upload to.
 
 **After a run finishes, the Command centre opens on the finished case.** Not the intake screen with
-a spinner on it — the thing you asked for, with the numbers in it.
+a bar still on it — the thing you asked for, with the numbers in it.
 
 **Naming a run.** The pipeline writes the case to disk the moment it finishes; nothing about it is
 waiting on you. What **Save analysis** in the top bar does is give it a name — *"North Sea, evening
@@ -678,3 +681,45 @@ takes your own scene too — it opens by asking for one, you add wind or current
 and it runs the same pipeline locally and shows you the case a minute later, with every fallback
 labelled."*
 
+
+---
+
+## 10.13 The run bar — what it claims and what it doesn't
+
+While a job runs, the top bar carries a horizontal progress bar instead of a spinner. It is worth
+being able to explain, because **a progress bar is a claim**, and this one is careful about which
+part of it is a measurement.
+
+| Part | What it is |
+|---|---|
+| The filling bar | Position within the run, scaled by **time, not stage count**. |
+| The sentence | The pipeline's own log line, printed verbatim — `screening dark patches for look-alikes`. The bar never renames a stage. |
+| `4/10` | Which of the ten stages the server has announced. |
+| `12s` | Elapsed seconds, from the job's own clock. |
+
+**Why time and not stage count.** Decoding a 2048 × 2048 GeoTIFF takes about 9.5 seconds and scoring
+vessels takes a fifteenth of one. Ten evenly-spaced steps would put the bar past halfway a second
+and a half into a twenty-second run and then sit there. So each stage's width is the **median
+seconds it actually took across the twelve stored cases** in `data/processed/cases/` — a table that
+sums to 19.99 s, the same twenty seconds the intake screen promises.
+
+**What is measured and what is estimated — say this if you are asked:**
+
+- **The stage boundaries are facts.** The bar steps forward when the server prints a line.
+- **Between two lines it creeps**, at the rate that stage has historically taken, and it is clamped
+  so it can never cross a boundary the server has not announced. A stage that runs long parks the
+  bar at the line rather than inventing progress past it. It stops just short of 100 %; **arriving
+  is always the server's word, not the bar's guess.**
+- **Detection is the exception, and the better case.** It prints `inference 64/361 tiles` as it
+  goes, so across the second-heaviest stage of the run the bar is following a count, not a clock.
+
+**The other reason it exists — this is the one that shows.** Before it, every poll pushed the job
+into the store, the store notified the renderer, and the renderer rebuilt the entire page. Fifteen
+full rebuilds in one run, which is the flicker you could see. Progress now arrives on its own
+channel and the bar writes to its own three nodes; **nothing else on the screen is touched while a
+job runs.** Measured on a real 21-second run: two page renders during the pipeline, where there had
+been about fifteen.
+
+The code is `apps/web/app/progress.js`, and the stage lines it matches are asserted from both sides
+in `tests/test_api.py` — if someone renames a stage in `case.py`, a test fails rather than the bar
+silently stalling.

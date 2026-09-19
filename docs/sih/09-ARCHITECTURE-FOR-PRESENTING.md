@@ -251,7 +251,7 @@ For each piece: **what it is** in plain words, **where it lives** so you can poi
 ### 9.4.1 The web dashboard — `apps/web/`
 
 **What it is.** Seven screens of ordinary HTML, CSS and JavaScript. When you open it, your browser
-downloads about 442 KB of text files and runs them. There is no compilation step, no `npm install`,
+downloads about 477 KB of text files and runs them. There is no compilation step, no `npm install`,
 no framework.
 
 **Where:** `apps/web/app/` holds 14 JavaScript modules and `apps/web/app/screens/` seven more, one
@@ -349,7 +349,7 @@ better tested by far — and a genuine risk of not installing.
 
 **What it costs us.** Our readers handle the specific subset of each format our data uses. Hand us a
 GeoTIFF with a different compression scheme, or an unusual NetCDF layout, and ours may reject it
-where `rasterio` would cope. We compensate with tests: 893 of them, including deliberately malformed
+where `rasterio` would cope. We compensate with tests: 905 of them, including deliberately malformed
 inputs.
 
 **How to say it:** *"We hand-wrote four file-format readers so the whole project needs two real

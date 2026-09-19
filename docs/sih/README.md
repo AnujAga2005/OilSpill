@@ -1,8 +1,9 @@
 # SpillTrace — SIH 2026 team documents
 
-Fifteen documents plus one diagram. **If you have one evening and you're presenting: memorise 13,
+Sixteen documents plus one diagram. **If you have one evening and you're presenting: memorise 13,
 then read 14, 12, 9 and 10.** The rest are reference — read 1–6 in order some time, and use 2, 3, 5, 6
-as lookup. **If you want to drive the app yourself before then, 15 says which files to feed it.**
+as lookup. **If you want to drive the app yourself before then, 15 says which files to feed it, and
+16 is the order to read the source in.**
 
 ## The short version
 
@@ -27,8 +28,9 @@ as lookup. **If you want to drive the app yourself before then, 15 says which fi
 | 5 | **[Explaining it to the judges](05-EXPLAINING-TO-JUDGES.md)** | the question bank with written answers |
 | 6 | **[The PS-compliance slide](06-PS-COMPLIANCE.md)** | building the one slide that maps each PS clause to a screen and a number — and the handout to leave on the judges' table |
 | 7 | **[The idea-stage PPT](07-IDEA-PPT.md)** | filling the six-slide SIH IDEA template, slide by slide |
-| 8 | **[The whole project, taught from zero](08-THE-WHOLE-PROJECT.md)** | you have two or three sittings and want the full picture: the domain, the current UI screen by screen, and all 93 source files with what each one calls |
+| 8 | **[The whole project, taught from zero](08-THE-WHOLE-PROJECT.md)** | you have two or three sittings and want the full picture: the domain, the current UI screen by screen, and all 92 source files with what each one calls |
 | 15 | **[Test data for the New analysis screen](15-TEST-DATA.md)** | **you want to run the pipeline yourself.** Which five held-out scenes to upload and where they already sit on disk, why train-vs-test decides whether the result means anything, what the optional wind / current / AIS slots will accept, and a sixth scene that fails on purpose |
+| 16 | **[Reading the codebase](16-READING-THE-CODEBASE.md)** | **you want to understand the source, not just present it.** All 91 files in the order to read them — seven sittings, starting with the ten-stage pipeline as one continuous trace — plus which files to skip and which four answer the questions you will be asked |
 
 **Every number in these documents was read out of the project's own output files.** If a figure
 appears on stage, it should come from document 3.

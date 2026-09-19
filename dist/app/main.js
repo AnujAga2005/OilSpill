@@ -18,6 +18,7 @@ import * as router from "./router.js";
 import * as F from "./format.js";
 import * as U from "./ui.js";
 import * as X from "./exporters.js";
+import { runBar } from "./progress.js";
 
 import * as commandScreen from "./screens/command.js";
 import * as analysisScreen from "./screens/analysis.js";
@@ -386,6 +387,16 @@ function pageHeader(screen, state, ctx) {
             title: "Give this run a name, so the case picker shows it instead of the id",
           })
         : null,
+      caseActions && state.caseDoc && api.apiMode() === "live"
+        ? U.button("Delete analysis", {
+            kind: "quiet",
+            small: true,
+            iconPath: ICONS.trash,
+            onClick: () => removeCase(state, announce),
+            title: "Remove this stored case, its detection mask and its previews from the "
+              + "server — the scene it was built from is not touched",
+          })
+        : null,
       caseActions
         ? U.button("Print", {
             kind: "quiet",
@@ -497,6 +508,63 @@ async function nameCase(state, announceFn) {
     announceFn(`Saved as “${label}”.`, { kind: "success" });
   } catch (error) {
     announceFn(`The name could not be saved: ${error?.message || error}`, { kind: "error" });
+  }
+}
+
+/**
+ * Delete the open analysis, after a confirmation that names what goes.
+ *
+ * Only pipeline output is removed: the case document, its cached detection mask and its
+ * preview PNGs. The scene itself is untouched, which is why the dialog can promise the run
+ * is repeatable -- and says the command that repeats it. Uploaded files are a separate
+ * thing with a separate control, so this does not silently take those too.
+ */
+async function removeCase(state, announceFn) {
+  const caseId = state.caseId;
+  if (!caseId) return;
+  const entry = (state.cases?.cases || []).find((row) => row.id === caseId);
+  const name = state.caseDoc?.label || entry?.label || caseId;
+  const isDemo = Boolean(entry?.isDemo);
+
+  const confirmed = await U.dialog(
+    {
+      title: `Delete ${name}?`,
+      lede:
+        "The case document, its cached detection mask and its preview images are deleted " +
+        "from this server. The scene it was built from is not touched, so the same run " +
+        "can be made again.",
+      confirm: "Delete analysis",
+    },
+    U.notice(
+      isDemo
+        ? "This is the case the demo walkthrough uses. Rebuild it with " +
+            "`.venv/bin/python scripts/build_cases.py` before presenting."
+        : "Uploaded files are not affected — Clear, on the New analysis screen, is what " +
+            "removes those.",
+      { kind: isDemo ? "danger" : "" },
+    ),
+  );
+  if (!confirmed) return;
+
+  try {
+    const result = await api.deleteCase(caseId);
+    await store.load("cases", api.cases);
+    const remaining = store.get().cases?.cases || [];
+    const next = remaining.find((row) => row.isDemo)?.id || remaining[0]?.id || null;
+    announceFn(
+      `${name} deleted${result?.removedPreviews ? `, with ${F.int(result.removedPreviews)} preview images` : ""}.`,
+      { kind: "success" },
+    );
+    // Nowhere to go once the last case is gone, so go where a new one is started.
+    if (next) {
+      router.go("/", { case: next, vessel: null });
+      await loadCase(next, { force: true });
+    } else {
+      store.set({ caseDoc: null, caseId: null, caseStatus: "idle" });
+      router.go("/new", { case: null, vessel: null });
+    }
+  } catch (error) {
+    announceFn(`${name} could not be deleted: ${error?.message || error}`, { kind: "error" });
   }
 }
 
@@ -626,13 +694,10 @@ function topbarActions(state) {
     "div",
     { class: "inline no-print" },
     job && (job.state === "running" || job.state === "queued")
-      ? h(
-          "span",
-          { class: "inline small muted" },
-          h("span", { class: "spinner" }),
-          h("span", null, jobStageLabel(job)),
-          U.button("Cancel", { kind: "quiet", small: true, onClick: cancelAnalysis }),
-        )
+      ? runBar({
+          compact: true,
+          trailing: U.button("Cancel", { kind: "quiet", small: true, onClick: cancelAnalysis }),
+        })
       : null,
     h(
       "span",
@@ -649,19 +714,6 @@ function topbarActions(state) {
       mode === "offline" ? "Offline demo" : "Live API",
     ),
   );
-}
-
-/**
- * The line shown beside a running job's spinner.
- *
- * A job record carries `message` -- its most recent progress line -- and `log`, all of them
- * up to the server's cap. Both are plain sentences written by the pipeline stage that is
- * running, so this shows that text instead of guessing at a stage name from the client side.
- * Clipped because it goes in a single-line header slot.
- */
-function jobStageLabel(job) {
-  const line = job.message || (job.log || []).at(-1);
-  return line ? F.clip(String(line), 44) : "working";
 }
 
 // -- data -------------------------------------------------------------------
@@ -702,15 +754,25 @@ async function runAnalysis(kind, options = {}) {
   if (!scene) return null;
   const controller = new AbortController();
   store.set({ job: { state: "queued", kind, log: [] }, jobAbort: controller });
+  store.emitProgress({ state: "queued", kind, log: [] });
   announce(`${F.label(kind)} started.`);
   try {
     const job = await api.runJob(
       kind,
       scene,
       options,
-      (update) => store.set({ job: { ...update, kind } }),
+      (update) => {
+        const next = { ...update, kind };
+        // Every line goes to the progress bar, which repaints itself. Only a change of
+        // *state* goes to the store, because that is the only thing the rest of the app
+        // renders differently -- and a store change rebuilds the whole page, which at two
+        // updates a second is the flicker this split exists to remove.
+        store.emitProgress(next);
+        if (next.state !== store.get().job?.state) store.set({ job: next });
+      },
       controller.signal,
     );
+    store.emitProgress({ ...job, kind });
     store.set({ job: { ...job, kind }, jobAbort: null });
     const id = job.result?.caseId || job.caseId || state.caseId;
     // `go`, not `setParams`: a run started from the intake screen has to land on the
@@ -724,6 +786,7 @@ async function runAnalysis(kind, options = {}) {
   } catch (error) {
     if (error?.name === "AbortError") {
       store.set({ job: { state: "cancelled", kind, log: [] }, jobAbort: null });
+      store.emitProgress({ state: "cancelled", kind, log: [] });
       announce("Analysis cancelled.");
       return null;
     }
@@ -731,6 +794,7 @@ async function runAnalysis(kind, options = {}) {
       job: { state: "failed", kind, error: String(error?.message || error), log: [] },
       jobAbort: null,
     });
+    store.emitProgress({ state: "failed", kind, log: [] });
     announce(`Analysis failed: ${error?.message || error}`, { kind: "error" });
     return null;
   }
