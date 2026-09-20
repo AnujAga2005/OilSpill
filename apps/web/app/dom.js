@@ -177,6 +177,7 @@ const TOAST_GLYPH = { info: "info", success: "check", error: "warning", progress
 let liveRegion = null;
 let toastHost = null;
 let toastTimer = 0;
+let currentToast = null;
 
 export function announce(message, { kind = "info", action = null, silent = false } = {}) {
   if (!liveRegion) {
@@ -208,49 +209,85 @@ function toast(message, kind, action) {
   }
   clearTimeout(toastTimer);
 
-  const name = TOAST_GLYPH[kind];
-  mount(
-    toastHost,
-    h(
-      "div",
-      { class: `toast toast--${kind}`, onClick: dismissToast },
-      h(
-        "span",
-        { class: "toast__glyph" },
-        name ? icon(ICONS[name], { size: 15 }) : h("span", { class: "toast__pulse" }),
-      ),
-      h("p", { class: "toast__msg" }, message),
-      action?.href
-        ? h(
-            "a",
-            {
-              class: "toast__action",
-              href: action.href,
-              target: "_blank",
-              rel: "noopener",
-              download: action.download || null,
-              tabindex: "-1",
-              onClick: (event) => event.stopPropagation(),
-            },
-            action.label,
-          )
-        : null,
-      h(
-        "button",
-        { class: "toast__close", type: "button", tabindex: "-1", onClick: dismissToast },
-        icon(ICONS.close, { size: 13 }),
-      ),
-    ),
-  );
+  // Reuse the card that is already on screen rather than rebuilding it. A multi-step
+  // action -- email dispatch polls "queued" then "building" then "sent" -- would otherwise
+  // tear the node down and replay the `toast-in` entrance on every poll, which reads as a
+  // flashing toast. Updated in place, one toast stays put: the progress pulse keeps
+  // breathing, and when the outcome arrives the same card morphs to it and then leaves.
+  const live =
+    currentToast && currentToast.isConnected && !currentToast.classList.contains("is-leaving");
+  if (live) {
+    updateToast(currentToast, message, kind, action);
+  } else {
+    currentToast = buildToast(message, kind, action);
+    mount(toastHost, currentToast);
+  }
 
   const ms = TOAST_MS[kind] ?? TOAST_MS.info;
   if (ms) toastTimer = setTimeout(dismissToast, ms);
 }
 
+/** A fresh toast node, animated in. */
+function buildToast(message, kind, action) {
+  return h(
+    "div",
+    { class: `toast toast--${kind}`, onClick: dismissToast },
+    toastGlyph(kind),
+    h("p", { class: "toast__msg" }, message),
+    toastAction(action),
+    h(
+      "button",
+      { class: "toast__close", type: "button", tabindex: "-1", onClick: dismissToast },
+      icon(ICONS.close, { size: 13 }),
+    ),
+  );
+}
+
+/** Change an on-screen toast's kind, glyph, message and action without remounting it,
+ *  so the entrance animation does not replay. */
+function updateToast(card, message, kind, action) {
+  card.className = `toast toast--${kind}`;
+  card.querySelector(".toast__glyph").replaceWith(toastGlyph(kind));
+  const msg = card.querySelector(".toast__msg");
+  if (msg) msg.textContent = message;
+  const next = toastAction(action);
+  const existing = card.querySelector(".toast__action");
+  if (existing && next) existing.replaceWith(next);
+  else if (existing) existing.remove();
+  else if (next) card.insertBefore(next, card.querySelector(".toast__close"));
+}
+
+function toastGlyph(kind) {
+  const name = TOAST_GLYPH[kind];
+  return h(
+    "span",
+    { class: "toast__glyph" },
+    name ? icon(ICONS[name], { size: 15 }) : h("span", { class: "toast__pulse" }),
+  );
+}
+
+function toastAction(action) {
+  if (!action?.href) return null;
+  return h(
+    "a",
+    {
+      class: "toast__action",
+      href: action.href,
+      target: "_blank",
+      rel: "noopener",
+      download: action.download || null,
+      tabindex: "-1",
+      onClick: (event) => event.stopPropagation(),
+    },
+    action.label,
+  );
+}
+
 function dismissToast() {
   clearTimeout(toastTimer);
-  const card = toastHost?.firstElementChild;
+  const card = currentToast || toastHost?.firstElementChild;
   if (!card) return;
+  currentToast = null;
   card.classList.add("is-leaving");
   setTimeout(() => card.remove(), 220);
 }

@@ -95,6 +95,9 @@ const SCREENS = [
 const refs = {};
 let cleanups = [];
 let renderQueued = false;
+// The path last drawn, so the page entrance animation plays on a real screen change and
+// not on every data load that re-renders the screen already on view.
+let lastRenderedPath = null;
 
 // -- frame ------------------------------------------------------------------
 
@@ -309,11 +312,13 @@ function render() {
     });
   }
 
+  const entered = screen.path !== lastRenderedPath;
+  lastRenderedPath = screen.path;
   mount(
     refs.main,
     h(
       "div",
-      { class: "page" },
+      { class: entered ? "page page--enter" : "page" },
       pageHeader(screen, state, ctx),
       body,
       U.runFooter(state.caseDoc),
