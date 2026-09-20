@@ -1,10 +1,10 @@
 {
   "pipelineVersion": "spilltrace-0.1.0",
-  "generatedUtc": "2026-09-18T12:02:36Z",
+  "generatedUtc": "2026-09-20T02:23:35Z",
   "note": "A verified copy of apps/web. No bundler, no minifier and no content hashing: the interface is plain ES modules and runs from source. Cache behaviour comes from the server's Cache-Control headers, not from filenames.",
   "totals": {
     "files": 56,
-    "bytes": 3167725
+    "bytes": 3169874
   },
   "byExtension": {
     ".png": {
@@ -13,15 +13,15 @@
     },
     ".json": {
       "files": 7,
-      "bytes": 1326133
+      "bytes": 1326094
     },
     ".js": {
       "files": 22,
-      "bytes": 399933
+      "bytes": 401732
     },
     ".css": {
       "files": 4,
-      "bytes": 86323
+      "bytes": 86712
     },
     ".html": {
       "files": 1,
@@ -46,8 +46,8 @@
     },
     {
       "path": "app/dom.js",
-      "bytes": 9698,
-      "sha256": "de497ce338a88933128b9cea9a088b6f9d9bd7c4cb785cf67b4d426306235502"
+      "bytes": 11192,
+      "sha256": "66d5161bc64038c34f457a311df1b4fad3998542928a4a81503d1efe35c7be50"
     },
     {
       "path": "app/exporters.js",
@@ -71,8 +71,8 @@
     },
     {
       "path": "app/main.js",
-      "bytes": 29349,
-      "sha256": "384f131880d4efd01423f89465a820f01ba2fcc22cf59661bc3c3a53c9450640"
+      "bytes": 29654,
+      "sha256": "216d36f62d5a737bd6903eb8d6f39d7ff9f3428752277a3816d23744099b802b"
     },
     {
       "path": "app/mapview.js",
@@ -232,7 +232,7 @@
     {
       "path": "demo/health.json",
       "bytes": 1329,
-      "sha256": "8217396fa1c319725d605ea092979c0a86566978c4a12566f278e7284545dd6c"
+      "sha256": "db15e5d885e5f042912f0765c09d9c316157dc6d3ecc3fe225488ba396205c14"
     },
     {
       "path": "demo/images-demo.json",
@@ -276,8 +276,8 @@
     },
     {
       "path": "demo/report-demo.json",
-      "bytes": 297830,
-      "sha256": "ec1c7ddcb2fd7095ce950533d81c643e71ac145eda89a32fc35b7db637814ab8"
+      "bytes": 297791,
+      "sha256": "f82b78c8ffea72eeaf299ba43479ac8f100d9bab1812896b1e17972e868d689c"
     },
     {
       "path": "demo/scenes.json",
@@ -291,8 +291,8 @@
     },
     {
       "path": "styles/base.css",
-      "bytes": 10441,
-      "sha256": "a34a2c3cbce4598904dbd02b234a90a2a4587ccd3f2dfb2acbe63f36391f30b5"
+      "bytes": 10830,
+      "sha256": "ab4f39f0e2b787b36935cef0fd8a9f5fe2653ac1d930d172024e2925c6736bec"
     },
     {
       "path": "styles/components.css",

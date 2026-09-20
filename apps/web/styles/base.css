@@ -330,6 +330,13 @@ kbd,
   display: flex;
   flex-direction: column;
   gap: var(--s5);
+}
+
+/* The entrance plays on a genuine screen change, not on every re-render. Boot fires five
+ * independent data loads, each of which re-renders the current screen as it resolves;
+ * animating the page on all of them makes the whole view fade in from zero four or five
+ * times over. `render()` adds this class only when the screen path actually changed. */
+.page--enter {
   animation: rise var(--normal) var(--ease) both;
 }
 
@@ -523,7 +530,8 @@ kbd,
     padding: 0;
     overflow: visible;
   }
-  .page {
+  .page,
+  .page--enter {
     animation: none;
     gap: var(--s4);
     max-width: none;
