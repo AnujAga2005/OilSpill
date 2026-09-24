@@ -534,7 +534,7 @@ age card.
 |---|---|
 | A map doesn't draw | *"It renders on demand — one second."* Click the screen again. Don't apologise twice. |
 | A judge sees "Offline demo" | *"There's no server behind this. That's the point — it runs from the case file."* |
-| Someone asks for a live image | *"Not through the browser yet. You drop the scene on the machine and the case appears in a few minutes."* |
+| Someone asks for a live image | On the hosted deployment, *"Yes — upload a Sentinel-1 GeoTIFF and watch the ten stages run, about twenty seconds. The browser chunks a scene past the platform's 32 MiB cap automatically."* (The pre-built cases still open instantly if you'd rather not wait.) |
 | You blank on a number | Say the sentence without it. **Never guess a figure in front of a panel.** |
 | You're being rushed | Jump to §14.6 age card and §14.8 split protocol. Those two, then close. |
 

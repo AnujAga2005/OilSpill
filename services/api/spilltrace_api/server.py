@@ -959,10 +959,21 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
         The size is refused from ``Content-Length`` before a byte is read. If it passes,
         the body is streamed straight to disk -- a CMEMS product is several hundred
         megabytes and there is no reason to hold it in memory.
+
+        A file too large for a single request on this host -- Cloud Run rejects an HTTP/1
+        request over 32 MiB at its proxy, before the container sees it -- arrives instead as
+        ordered chunks that share a ``token`` and carry ``offset`` and ``total``. Those are
+        routed to :func:`uploads.store_chunk`, which appends each to one staging file and
+        finalises the completed file through the very same checks as a single-shot upload.
         """
         kind = str(query.get("kind") or "").strip().lower()
         name = str(query.get("name") or "")
         raw_length = self.headers.get("Content-Length")
+
+        if query.get("total") is not None:
+            self._upload_chunk(kind, name, query, raw_length)
+            return
+
         try:
             length = uploads_mod.check_length(
                 kind, int(raw_length) if raw_length else None
@@ -995,6 +1006,67 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             # failure mode being a 501 from the base handler, which names nothing useful.
             self.close_connection = True
             self._fail(400, str(exc))
+            return
+        self._json(201, {"upload": upload.to_dict(), **self._upload_state()})
+
+    def _upload_chunk(
+        self, kind: str, name: str, query: dict[str, str], raw_length: str | None
+    ) -> None:
+        """One chunk of a chunked upload. See :meth:`_upload` for why this path exists."""
+        try:
+            total = int(query.get("total") or "")
+            offset = int(query.get("offset") or 0)
+            chunk_length = int(raw_length) if raw_length else 0
+        except ValueError:
+            self._fail(400, "offset, total and Content-Length must be whole numbers")
+            return
+        token = str(query.get("token") or "")
+
+        try:
+            # The declared total, not the chunk's own length, is what the cap is about; the
+            # extension is refused before a byte is read. Both are drainable here.
+            uploads_mod.check_length(kind, total)
+            uploads_mod.suffix_for(kind, name)
+        except uploads_mod.UploadTooLarge as exc:
+            self._drain()
+            self._fail(413, str(exc))
+            return
+        except uploads_mod.UploadError as exc:
+            self._drain()
+            self._fail(400, str(exc))
+            return
+
+        try:
+            upload = uploads_mod.store_chunk(
+                kind,
+                self.rfile,
+                chunk_length,
+                offset=offset,
+                total=total,
+                token=token,
+                original_name=name,
+            )
+        except uploads_mod.ChunkOutOfOrder as exc:
+            # The body was not read (the offset is checked first), so the connection lives:
+            # tell the client the offset the staged file sits at and let it resync.
+            self._drain()
+            self._fail(409, str(exc), expectedOffset=exc.expected_offset)
+            return
+        except uploads_mod.UploadTooLarge as exc:
+            self._drain()
+            self._fail(413, str(exc))
+            return
+        except uploads_mod.UploadError as exc:
+            # Anything past the offset check has read part of the body; the stream state is
+            # unknown, so close as the single-shot path does on a mid-body failure.
+            self.close_connection = True
+            self._fail(400, str(exc))
+            return
+
+        if upload is None:
+            # A chunk landed and the file is not yet whole. Acknowledge how much is held so
+            # the client can confirm its own bookkeeping before sending the next chunk.
+            self._json(200, {"received": offset + chunk_length, "total": total})
             return
         self._json(201, {"upload": upload.to_dict(), **self._upload_state()})
 
@@ -1252,7 +1324,7 @@ def run(
     host: str = "127.0.0.1",
     port: int = 8765,
     serve_frontend: bool = True,
-    demo: bool = True,
+    demo: bool = False,
 ) -> None:
     handler = SpillTraceHandler if serve_frontend else ApiOnlyHandler
     server = ThreadingHTTPServer((host, port), handler)

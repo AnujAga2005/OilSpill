@@ -22,6 +22,7 @@ a particle hindcast; vessel attribution scores AIS tracks against the release zo
 for a spill.** The AIS traffic and ocean forcing shown are synthetic and labelled as
 such; the SAR scene, the model and the metrics are real.
 
-This Space runs the exact offline product — no GPU, no external calls. The committed demo
-case opens on the Command Centre; the "New analysis" upload path is inactive here because
-there is no raw dataset in the image.
+This deployment runs the exact product — no GPU, no external calls. The committed cases open
+on the Command Centre instantly. The **New analysis** screen is live: upload a Sentinel-1
+GeoTIFF of your own — a scene over 24 MiB is chunked automatically so it clears the platform's
+32 MiB request cap. The raw training dataset is not in the image.

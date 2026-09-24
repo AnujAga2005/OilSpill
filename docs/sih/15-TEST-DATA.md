@@ -10,6 +10,7 @@ into **`data/raw/sample_uploads/`** so you can point the file dialog at one fold
 scrolling through twelve hundred. Which six, and why those six and not any others, is the rest of this
 document.
 
+
 ---
 
 ## The one thing to understand first: train vs test
@@ -38,8 +39,11 @@ so each one is genuinely a fresh run you are watching for the first time.
 ## Five scenes to use — all on disk, all held-out
 
 Each row is a scene file in `Oil/` and its matching reference mask in `Mask_oil/`. All are two-band
-Sentinel-1A GRD GeoTIFFs, roughly **40 MB** each — comfortably inside the scene slot's 512 MB cap —
-and every one **carries its own acquisition time and band names in the embedded DIMAP header**. That
+Sentinel-1A GRD GeoTIFFs, roughly **40 MB** each — comfortably inside the scene slot's 512 MB cap, and
+on a hosted deployment the browser chunks anything over 24 MiB automatically so it clears the
+platform's 32 MiB per-request cap (a 42 MB scene sent whole would otherwise come back 413 from the
+proxy, not the app) — and every one **carries its own acquisition time and band names in the embedded
+DIMAP header**. That
 matters at the form: you can leave *Acquired (UTC)* and *Band order* alone, because a time in the file
 wins over anything typed, and the band names are read from the product. The case id even suggests
 itself from the filename. In practice you drop the file in and press the button.

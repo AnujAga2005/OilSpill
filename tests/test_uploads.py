@@ -713,9 +713,240 @@ class TestARefusalLeavesTheConnectionUsable:
 
 
 # ---------------------------------------------------------------------------
-# Submitting a case built on uploads
+# Chunked storing: one file that arrives in several pieces
 # ---------------------------------------------------------------------------
 
+
+def chunked(
+    kind: str,
+    body: bytes,
+    name: str,
+    *,
+    chunk_size: int,
+    token: str = "deadbeefcafe01",
+) -> U.Upload | None:
+    """Store a body in ``chunk_size`` pieces through :func:`store_chunk`.
+
+    Returns the finished ``Upload`` (from the last chunk) or ``None`` if the body was empty.
+    """
+    result: U.Upload | None = None
+    for offset in range(0, len(body), chunk_size):
+        piece = body[offset : offset + chunk_size]
+        result = U.store_chunk(
+            kind,
+            io.BytesIO(piece),
+            len(piece),
+            offset=offset,
+            total=len(body),
+            token=token,
+            original_name=name,
+        )
+    return result
+
+
+class TestStoreChunk:
+    def test_chunks_assemble_to_the_same_file_as_one_shot(self):
+        """The whole point: pieces and one request must land identically.
+
+        The id is the content hash, so a file that arrived in five chunks and the same file
+        sent whole are the same upload -- same id, same bytes, one file on disk. If they
+        differed, a judge who uploaded a large scene would get a different case id than the
+        single-shot path, and nothing downstream that keys on the id would line up.
+        """
+        body = TIFF_MAGIC + b"x" * (5 * 1024 * 1024)
+        one_shot = U.store("scene", io.BytesIO(body), len(body), "big.tif")
+        U.clear()
+        in_pieces = chunked("scene", body, "big.tif", chunk_size=1024 * 1024)
+        assert in_pieces is not None
+        assert in_pieces.upload_id == one_shot.upload_id
+        assert in_pieces.sha256 == hashlib.sha256(body).hexdigest()
+        assert in_pieces.size_bytes == len(body)
+        assert in_pieces.path.read_bytes() == body
+
+    def test_an_intermediate_chunk_returns_none_and_the_last_returns_the_upload(self):
+        body = TIFF_MAGIC + b"payload"
+        half = len(body) // 2
+        first = U.store_chunk(
+            "scene", io.BytesIO(body[:half]), half,
+            offset=0, total=len(body), token="feedface01", original_name="a.tif",
+        )
+        assert first is None
+        rest = body[half:]
+        last = U.store_chunk(
+            "scene", io.BytesIO(rest), len(rest),
+            offset=half, total=len(body), token="feedface01", original_name="a.tif",
+        )
+        assert last is not None
+        assert last.path.read_bytes() == body
+
+    def test_a_chunk_that_does_not_continue_the_file_is_refused_and_names_the_offset(self):
+        body = TIFF_MAGIC + b"x" * 100
+        U.store_chunk(
+            "scene", io.BytesIO(body[:40]), 40,
+            offset=0, total=len(body), token="0badc0de01", original_name="a.tif",
+        )
+        with pytest.raises(U.ChunkOutOfOrder) as caught:
+            U.store_chunk(
+                "scene", io.BytesIO(body[60:]), len(body) - 60,
+                offset=60, total=len(body), token="0badc0de01", original_name="a.tif",
+            )
+        # It carries where the staged file actually sits, so the client can resume from there.
+        assert caught.value.expected_offset == 40
+
+    def test_an_out_of_order_chunk_does_not_consume_its_body(self):
+        """The offset is checked before a byte is read, which is what makes 409 recoverable.
+
+        A ``BytesIO`` whose position is still zero after the refusal is the proof that the
+        body was left untouched -- the HTTP layer relies on exactly this to drain the chunk
+        and keep the connection usable.
+        """
+        body = TIFF_MAGIC + b"x" * 100
+        U.store_chunk(
+            "scene", io.BytesIO(body[:40]), 40,
+            offset=0, total=len(body), token="0ff5e701", original_name="a.tif",
+        )
+        stream = io.BytesIO(body[60:])
+        with pytest.raises(U.ChunkOutOfOrder):
+            U.store_chunk(
+                "scene", stream, len(body) - 60,
+                offset=60, total=len(body), token="0ff5e701", original_name="a.tif",
+            )
+        assert stream.tell() == 0
+
+    def test_an_oversized_total_is_refused_before_anything_is_written(self, upload_dirs):
+        cap = C.UPLOAD_MAX_BYTES["scene"]
+        with pytest.raises(U.UploadTooLarge, match="capped at"):
+            U.store_chunk(
+                "scene", io.BytesIO(TIFF_MAGIC), 4,
+                offset=0, total=cap + 1, token="ab" * 6, original_name="a.tif",
+            )
+        assert list((upload_dirs / "scenes").glob("*")) == []
+
+    def test_a_chunk_running_past_the_total_is_refused(self):
+        with pytest.raises(U.UploadError, match="past the declared"):
+            U.store_chunk(
+                "scene", io.BytesIO(TIFF_MAGIC + b"xxxx"), 8,
+                offset=0, total=4, token="cc" * 6, original_name="a.tif",
+            )
+
+    def test_an_assembled_file_that_is_not_a_tiff_is_refused_and_removed(self, upload_dirs):
+        body = b"this arrived in pieces but is still not a raster at all"
+        with pytest.raises(U.UploadError, match="not a TIFF"):
+            chunked("scene", body, "a.tif", chunk_size=8, token="dd" * 6)
+        # The staging file and any final file are gone; a bad upload leaves nothing behind.
+        assert list((upload_dirs / "scenes").glob("*")) == []
+
+    def test_a_bad_token_cannot_build_a_path(self):
+        for bad in ("../escape", "UPPER", "with space", "sh", ""):
+            with pytest.raises(U.UploadError, match="invalid upload token"):
+                U.store_chunk(
+                    "scene", io.BytesIO(TIFF_MAGIC), 4,
+                    offset=0, total=4, token=bad, original_name="a.tif",
+                )
+
+    def test_the_wrong_extension_is_refused_on_the_first_chunk(self):
+        with pytest.raises(U.UploadError, match="must be"):
+            U.store_chunk(
+                "scene", io.BytesIO(TIFF_MAGIC), 4,
+                offset=0, total=4, token="ee" * 6, original_name="a.png",
+            )
+
+
+class TestChunkedUploadEndpoint:
+    """The chunked path over the real handler, on one keep-alive connection as a browser uses.
+
+    The parameters ride in the query string -- ``&token=&offset=&total=`` -- and the body of
+    each request is just that chunk's bytes, so a proxy that caps a single request (Cloud Run
+    at 32 MiB) never sees one over the cap while any total up to the slot cap still gets in.
+    """
+
+    @staticmethod
+    def _chunk(name, token, offset, total, body):
+        path = f"/api/uploads?kind=scene&name={name}&token={token}&offset={offset}&total={total}"
+        return ("POST", path, body)
+
+    def test_two_chunks_assemble_into_one_accepted_upload(self):
+        body = TIFF_MAGIC + b"pixels-in-two-halves"
+        half = len(body) // 2
+        responses = send_pipeline(
+            [
+                self._chunk("big.tif", "aa" * 6, 0, len(body), body[:half]),
+                self._chunk("big.tif", "aa" * 6, half, len(body), body[half:]),
+            ]
+        )
+        assert [r.status for r in responses] == [200, 201]
+        # The intermediate chunk acknowledges how much is held; the last returns the upload.
+        assert responses[0].json()["received"] == half
+        upload = responses[1].json()["upload"]
+        assert upload["sizeBytes"] == len(body)
+        assert upload["sha256"] == hashlib.sha256(body).hexdigest()
+
+    def test_the_assembled_scene_is_then_visible_in_the_listing(self):
+        body = TIFF_MAGIC + b"assembled"
+        half = len(body) // 2
+        send_pipeline(
+            [
+                self._chunk("s.tif", "bb" * 6, 0, len(body), body[:half]),
+                self._chunk("s.tif", "bb" * 6, half, len(body), body[half:]),
+            ]
+        )
+        state = send("GET", "/api/uploads").json()
+        assert len(state["uploads"]["scene"]) == 1
+        assert state["uploads"]["scene"][0]["originalName"] == "s.tif"
+
+    def test_an_out_of_order_chunk_is_a_409_and_leaves_the_connection_usable(self):
+        """409, not a torn-down connection: the body was not read, so the client can resync.
+
+        The 409 carries ``expectedOffset`` so the browser knows where the staged file sits,
+        and the ``GET`` behind it on the same connection returns cleanly -- the proof that the
+        rejected chunk's body was drained rather than left to desync the next request.
+        """
+        body = TIFF_MAGIC + b"x" * 40
+        responses = send_pipeline(
+            [
+                self._chunk("s.tif", "cc" * 6, 0, len(body), body[:20]),
+                # Skips a stretch: offset 30 does not continue a file that sits at 20.
+                self._chunk("s.tif", "cc" * 6, 30, len(body), body[30:]),
+                ("GET", "/api/health", b""),
+            ]
+        )
+        assert [r.status for r in responses] == [200, 409, 200]
+        assert responses[1].json()["expectedOffset"] == 20
+
+    def test_an_oversized_total_is_refused_on_the_first_chunk(self, monkeypatch):
+        """The cap is about the declared total, not the chunk in hand.
+
+        A single small chunk that declares an over-cap total is refused 413 before it is
+        written -- the same answer the single-shot path gives, reached from the header alone.
+        """
+        monkeypatch.setitem(C.UPLOAD_MAX_BYTES, "scene", 8)
+        body = TIFF_MAGIC + b"x" * 4
+        responses = send_pipeline(
+            [
+                self._chunk("s.tif", "dd" * 6, 0, 9, body),
+                ("GET", "/api/health", b""),
+            ]
+        )
+        assert [r.status for r in responses] == [413, 200]
+        assert "capped at" in responses[0].json()["error"]
+
+    def test_an_assembled_non_tiff_is_a_400(self):
+        body = b"pieces that never make a raster"
+        half = len(body) // 2
+        responses = send_pipeline(
+            [
+                self._chunk("s.tif", "ee" * 6, 0, len(body), body[:half]),
+                self._chunk("s.tif", "ee" * 6, half, len(body), body[half:]),
+            ]
+        )
+        assert responses[0].status == 200
+        assert responses[1].status == 400
+        assert "not a TIFF" in responses[1].json()["error"]
+
+
+# ---------------------------------------------------------------------------
+# Submitting a case built on uploads
+# ---------------------------------------------------------------------------
 
 def sample_case(case_id: str = "demo") -> dict[str, Any]:
     """A minimal stored case, for the collision path."""
