@@ -30,8 +30,8 @@ COPY . .
 # Hugging Face Spaces routes to port 7860 by default.
 EXPOSE 7860
 
-# --host 0.0.0.0  : bind all interfaces so the platform can reach the server
-# --port 7860     : the port HF Spaces expects
-# --no-demo       : the demo/held-out case JSONs are already on disk (committed),
-#                   so there is nothing to build at boot and no raw scenes to look for
-CMD ["python", "scripts/run_api.py", "--host", "0.0.0.0", "--port", "7860", "--no-demo"]
+# Bind all interfaces, and take the port from $PORT when the platform assigns one
+# (Render, Cloud Run and friends inject it), falling back to 7860 otherwise. Shell form
+# so ${PORT:-7860} is expanded. --no-demo: the case JSONs are already committed on disk,
+# so there is nothing to build at boot and no raw scenes to look for.
+CMD python scripts/run_api.py --host 0.0.0.0 --port ${PORT:-7860} --no-demo
