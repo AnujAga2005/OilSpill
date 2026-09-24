@@ -31,6 +31,7 @@ as lookup. **If you want to drive the app yourself before then, 15 says which fi
 | 8 | **[The whole project, taught from zero](08-THE-WHOLE-PROJECT.md)** | you have two or three sittings and want the full picture: the domain, the current UI screen by screen, and all 92 source files with what each one calls |
 | 15 | **[Test data for the New analysis screen](15-TEST-DATA.md)** | **you want to run the pipeline yourself.** Which five held-out scenes to upload and where they already sit on disk, why train-vs-test decides whether the result means anything, what the optional wind / current / AIS slots will accept, and a sixth scene that fails on purpose |
 | 16 | **[Reading the codebase](16-READING-THE-CODEBASE.md)** | **you want to understand the source, not just present it.** All 91 files in the order to read them — seven sittings, starting with the ten-stage pipeline as one continuous trace — plus which files to skip and which four answer the questions you will be asked |
+| 17 | **[The demonstration video script](17-THE-VIDEO-SCRIPT.md)** | **you're recording a video, not presenting live.** A ~6-minute shot-by-shot script for the AICTE panel — how to open the app offline, screen/action cues and word-for-word voiceover per segment, a timing table, a 3:30 cut, and what never to say on camera |
 
 **Every number in these documents was read out of the project's own output files.** If a figure
 appears on stage, it should come from document 3.
