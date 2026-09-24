@@ -1,0 +1,46 @@
+# What never enters the Docker build context.
+#
+# Most of these are already untracked (see .gitignore), but Docker's build context is
+# the working directory on disk, NOT git — so without this file a local `docker build .`
+# would try to ship the ~40 GB dataset archive and the raw scenes. Keep it in sync with
+# .gitignore's "datasets" section.
+
+# -- version control and local tooling --
+.git
+.gitignore
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+
+# -- the datasets (~91 GB) — never needed in the image --
+/Oil/
+/Mask_oil/
+*.7z
+*.zip
+*.tar
+*.tar.gz
+*.nc
+*.nc4
+/data/raw/
+
+# -- runtime scratch, regenerated on demand --
+/data/uploads/
+/data/processed/cache/
+/data/processed/reports/
+
+# -- secrets: never bake credentials into a public image --
+.env
+.env.*
+!.env.example
+
+# -- editor / OS noise --
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
