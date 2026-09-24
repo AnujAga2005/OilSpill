@@ -81,7 +81,7 @@ async function fixture(name) {
  * @param {string} path - API path, e.g. `/api/cases/demo`
  * @param {string|null} fallback - fixture name to use offline, or null for none
  */
-async function get(path, fallback) {
+async function get(path, fallback, signal) {
   // Once the probe has settled on offline there is nothing to ask. Requesting anyway
   // would only produce a 404 from whatever is serving the bundle, and that answer is
   // indistinguishable from the API's own "not computed yet".
@@ -89,8 +89,11 @@ async function get(path, fallback) {
 
   let response;
   try {
-    response = await fetch(path, { headers: { Accept: "application/json" } });
+    response = await fetch(path, { headers: { Accept: "application/json" }, signal });
   } catch (cause) {
+    // A caller-driven abort (cancelling a long-poll) is not a transport failure -- it must
+    // surface as an abort, not be swallowed into offline mode with a stale fixture.
+    if (cause?.name === "AbortError") throw cause;
     // A transport failure means no server. Anything the bundle can answer, it answers.
     setMode("offline");
     if (fallback) return fixture(fallback);
@@ -441,7 +444,12 @@ export const submitDetect = (scene, options) =>
 export const submitDrift = (scene, options) =>
   post(`/api/cases/${encodeURIComponent(scene)}/drift`, options);
 
-export const jobStatus = (jobId) => get(`/api/jobs/${encodeURIComponent(jobId)}`, null);
+export const jobStatus = (jobId, waitSeconds = 0, signal) =>
+  get(
+    `/api/jobs/${encodeURIComponent(jobId)}${waitSeconds ? `?wait=${waitSeconds}` : ""}`,
+    null,
+    signal,
+  );
 
 export const cancelJob = (jobId) => post(`/api/jobs/${encodeURIComponent(jobId)}/cancel`, {});
 
@@ -483,18 +491,26 @@ export async function awaitJob(submitted, onProgress, signal) {
   if (!jobId) throw new ApiError("the server accepted no job", { payload: submitted, status: 500 });
   onProgress?.({ ...submitted, state: submitted.state || "queued", log: [] });
 
-  // Poll fast at first - a cached case finishes in well under a second - then ease off
-  // so a full minute of inference is not 120 requests.
-  let wait = 220;
   const deadline = Date.now() + POLL_CEILING_MS;
   for (;;) {
     if (signal?.aborted) {
       await cancelJob(jobId).catch(() => {});
       throw new DOMException("cancelled", "AbortError");
     }
-    await sleep(wait, signal);
-    wait = Math.min(Math.round(wait * 1.35), 1600);
-    const job = await jobStatus(jobId);
+    // Long-poll: the server holds this request open (up to POLL_HOLD_SECONDS) until the job
+    // advances or reaches a terminal state, so a run keeps an HTTP request in flight the
+    // whole time it computes. That is what stops a request-scoped-CPU host (Cloud Run) from
+    // throttling the background worker between polls -- the reason a ~20 s pipeline could
+    // otherwise crawl past the ceiling below and be reported failed while still running. The
+    // held request is the wait; the short pause after it only covers the round-trip so the
+    // connection is back before the worker loses its CPU allocation.
+    let job;
+    try {
+      job = await jobStatus(jobId, POLL_HOLD_SECONDS, signal);
+    } catch (error) {
+      if (error?.name === "AbortError") await cancelJob(jobId).catch(() => {});
+      throw error;
+    }
     onProgress?.(job);
     if (job.state === "done") return job;
     if (job.state === "failed") {
@@ -512,12 +528,23 @@ export async function awaitJob(submitted, onProgress, signal) {
         { payload: job, status: 504 },
       );
     }
+    await sleep(POLL_GAP_MS, signal);
   }
 }
 
 /** How long the browser watches one job before it stops waiting. A full-scene
  *  detection is ~19 s and a 1200-particle drift ~20 s, so five minutes is slack. */
 const POLL_CEILING_MS = 300_000;
+
+/** How many seconds the server may hold one poll open (its own cap matches). Keeping a
+ *  request in flight for the length of a run is what keeps a serverless instance's CPU
+ *  allocated to the background worker; without it detection is throttled between polls and
+ *  the run drags out. */
+const POLL_HOLD_SECONDS = 25;
+
+/** The gap between one held poll returning and the next starting -- just the round-trip, so
+ *  the connection is re-established before the instance loses its CPU allocation. */
+const POLL_GAP_MS = 150;
 
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {

@@ -28,6 +28,7 @@ import json
 import re
 import sys
 import threading
+import time
 import traceback
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -133,6 +134,24 @@ def route(path: str) -> tuple[str, str | None]:
 
 RUNNER = jobs_mod.JobRunner(workers=1)
 STORE = store_mod.CaseStore()
+
+#: The longest the job endpoint holds one poll open when asked to long-poll (see `_job`).
+#: Kept well under a serverless request timeout (Cloud Run's is 300s here) and under any
+#: proxy idle timeout, while long enough that a run keeps a connection in flight with only
+#: a network round-trip's gap between holds. A larger `?wait=` is clamped to this, not
+#: refused.
+MAX_POLL_HOLD_SECONDS = 25.0
+
+
+def _poll_hold_seconds(raw: str | None) -> float:
+    """Parse a `?wait=` value into a bounded number of seconds; 0 (answer at once) on
+    anything missing or unparseable."""
+    if raw is None:
+        return 0.0
+    try:
+        return max(0.0, min(MAX_POLL_HOLD_SECONDS, float(raw)))
+    except (TypeError, ValueError):
+        return 0.0
 
 _PATCH_METRICS = C.PROCESSED_DIR / "metrics.json"
 _SCENE_METRICS = C.PROCESSED_DIR / "scene_metrics.json"
@@ -375,7 +394,7 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "vessels": lambda: self._vessels(param),
             "report": lambda: self._report(param, query),
             "jobs": lambda: self._json(200, {"jobs": [j.to_dict() for j in RUNNER.list()]}),
-            "job": lambda: self._job(param),
+            "job": lambda: self._job(param, query),
             "job_result": lambda: self._job_result(param),
             "uploads": lambda: self._json(200, self._upload_state()),
         }
@@ -897,11 +916,27 @@ class SpillTraceHandler(BaseHTTPRequestHandler):
             "dispatch": dispatch_mode(),
         })
 
-    def _job(self, job_id: str | None) -> None:
+    def _job(self, job_id: str | None, query: dict[str, str] | None = None) -> None:
         job = RUNNER.get(job_id or "")
         if job is None:
             self._fail(404, f"job {job_id!r} not found")
             return
+        # Long-poll when the caller asks with `?wait=<seconds>`. The request is held open
+        # until the job reaches a terminal state or emits a new progress line, or the hold
+        # elapses -- so a run keeps an HTTP request in flight from start to finish. That is
+        # what makes a request-scoped-CPU host (Cloud Run) keep the CPU allocated to the
+        # instance: with the default, the background worker is throttled to almost nothing
+        # in the gaps between a client's discrete polls, so a ~20s pipeline drags out past
+        # the browser's five-minute watch limit. Absent the parameter the endpoint answers
+        # at once, so existing callers -- and the tests -- are unchanged.
+        hold = _poll_hold_seconds((query or {}).get("wait"))
+        if hold > 0 and job.state in ("queued", "running"):
+            deadline = time.monotonic() + hold
+            seen = len(job.log)
+            while time.monotonic() < deadline:
+                if job.state not in ("queued", "running") or len(job.log) != seen:
+                    break
+                time.sleep(0.1)
         # A dispatch result is four short strings and two booleans, so it rides along on
         # the poll rather than forcing a second request. A detect or drift result is the
         # whole case document, which is what `/result` is for.

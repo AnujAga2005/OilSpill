@@ -308,10 +308,21 @@ package we add is a thing that can fail to install on the machine we're presenti
 
 **What it is.** A list of work that has been asked for and not yet finished. When you press a
 button, the API does not make you wait twenty seconds staring at nothing. It immediately answers
-"accepted, here is a job id", and the browser then asks "how is job 7 doing?" every second.
+"accepted, here is a job id", and the browser then asks "how is job 7 doing?" — and the server
+**holds that question open until there is news** (a new progress line, or the job finishing), up to
+about 25 seconds, before answering. So the connection is re-asked a handful of times over a run
+rather than polled on a fast timer, and the progress log still updates the moment each stage lands.
 
-**Why this way.** A twenty-second request over HTTP is fragile — browsers time out, proxies drop
-connections, and if anything goes wrong the user has no idea how far it got. A job id gives us a
+**Why hold it open.** Two reasons. It is cheaper — a run is a few long requests, not a hundred
+short ones. And it is what makes the tool fast on a *serverless* host: Cloud Run (where the live
+demo runs) only powers an instance's CPU **while it is handling a request**. The pipeline runs on a
+background worker thread, so if the browser polled on a timer the worker would be throttled to
+almost nothing in the gaps between polls and a twenty-second run would crawl past five minutes.
+Keeping one request in flight for the length of the run keeps the CPU on — no always-on instance to
+pay for, so it still scales to zero and stays inside the free tier when idle.
+
+**Why a job id at all.** A twenty-second request over HTTP is fragile — browsers time out, proxies
+drop connections, and if anything goes wrong the user has no idea how far it got. A job id gives us a
 progress line and a log, which is what you actually want on screen during a demo.
 
 **The alternative we rejected.** A real queue — Celery, Redis, RabbitMQ. Correct for production,
