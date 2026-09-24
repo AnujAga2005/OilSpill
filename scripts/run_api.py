@@ -3,12 +3,13 @@
 
     .venv/bin/python scripts/run_api.py                 # API + dashboard on :8765
     .venv/bin/python scripts/run_api.py --port 9000
-    .venv/bin/python scripts/run_api.py --no-demo       # skip demo-case generation
+    .venv/bin/python scripts/run_api.py --demo          # also build the demo case if absent
     .venv/bin/python scripts/run_api.py --api-only      # no static files
     .venv/bin/python scripts/run_api.py --build-demo    # build the demo case and exit
 
-The demo case is built on first start if it is absent, so the dashboard has something to
-show without the operator having to know which endpoint to POST first.
+The server starts and serves whatever cases are already stored on disk. The offline demo
+case is *not* built on start unless you ask for it with --demo: it is a ~20s pipeline run,
+and every deployment and most local runs already have the cases they need committed.
 """
 
 from __future__ import annotations
@@ -29,7 +30,24 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1", help="bind address (default 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8765, help="port (default 8765)")
     parser.add_argument("--api-only", action="store_true", help="do not serve apps/web")
-    parser.add_argument("--no-demo", action="store_true", help="do not build the demo case")
+    # Building the demo case is opt-in. The two flags share a destination so `--demo` and
+    # `--no-demo` are exact opposites; the default is off, so a bare run never spends ~20s
+    # rebuilding a case at boot. `--no-demo` is kept (and is a no-op against the default) so
+    # existing callers -- the Dockerfile among them -- keep working unchanged.
+    demo = parser.add_mutually_exclusive_group()
+    demo.add_argument(
+        "--demo",
+        dest="demo",
+        action="store_true",
+        default=False,
+        help="build the offline demo case on start if it is absent",
+    )
+    demo.add_argument(
+        "--no-demo",
+        dest="demo",
+        action="store_false",
+        help="do not build the demo case (the default; kept for compatibility)",
+    )
     parser.add_argument(
         "--build-demo",
         action="store_true",
@@ -52,7 +70,7 @@ def main() -> int:
         host=args.host,
         port=args.port,
         serve_frontend=not args.api_only,
-        demo=not args.no_demo,
+        demo=args.demo,
     )
     return 0
 

@@ -87,6 +87,20 @@ class UploadTooLarge(UploadError):
     """
 
 
+class ChunkOutOfOrder(UploadError):
+    """A chunk of a chunked upload did not continue the staged file.
+
+    Its own class because it is recoverable and the others are not: the body was not touched
+    (the offset is checked before a byte is read), so the request can be answered 409 and the
+    client can restart the file, rather than the connection being torn down as for a body
+    that failed mid-write. Carries the offset the staged file actually sits at.
+    """
+
+    def __init__(self, message: str, *, expected_offset: int) -> None:
+        super().__init__(message)
+        self.expected_offset = expected_offset
+
+
 @dataclass(frozen=True)
 class Upload:
     """One stored file and what is known about it."""
@@ -231,15 +245,34 @@ def store(kind: str, body: BinaryIO, declared_length: int, original_name: str) -
             raise UploadError(
                 f"the upload ended early: {written} bytes arrived of {declared_length} declared"
             )
-        sha = digest.hexdigest()
-        upload_id = f"{_safe_stem(original_name)}-{sha[:_HASH_CHARS]}"
-        final = target_dir / f"{upload_id}{suffix}"
-        # Same bytes, same name: a repeated upload replaces its own identical file rather
-        # than accumulating copies.
-        staging.replace(final)
     except UploadError:
         staging.unlink(missing_ok=True)
         raise
+    except OSError as exc:
+        staging.unlink(missing_ok=True)
+        raise UploadError(f"the upload could not be written: {exc}") from exc
+
+    return _finalize(kind, staging, suffix, digest.hexdigest(), written, original_name)
+
+
+def _finalize(
+    kind: str, staging: Path, suffix: str, sha: str, size: int, original_name: str
+) -> Upload:
+    """Rename a fully-written staging file to its content-hash id, verify it, record it.
+
+    The tail shared by the single-shot :func:`store` and the chunked :func:`store_chunk`, so
+    a file that arrived in one request and one that arrived in ten land in exactly the same
+    way: the id is the content hash (same bytes, same name), the magic bytes are checked on
+    the assembled file, and a file that is not what it claims is removed rather than kept
+    under a name that implies it is valid.
+    """
+    upload_id = f"{_safe_stem(original_name)}-{sha[:_HASH_CHARS]}"
+    # Same bytes, same name: a repeated upload replaces its own identical file rather than
+    # accumulating copies. `.with_name` keeps the rename inside the staging file's own
+    # directory, so it stays on one filesystem and a half-written file is never seen final.
+    final = staging.with_name(f"{upload_id}{suffix}")
+    try:
+        staging.replace(final)
     except OSError as exc:
         staging.unlink(missing_ok=True)
         raise UploadError(f"the upload could not be written: {exc}") from exc
@@ -256,12 +289,117 @@ def store(kind: str, body: BinaryIO, declared_length: int, original_name: str) -
         kind=kind,
         upload_id=upload_id,
         path=final,
-        size_bytes=written,
+        size_bytes=size,
         sha256=sha,
         original_name=Path(str(original_name or "")).name[:128],
     )
     _write_sidecar(upload)
     return upload
+
+
+#: A chunked upload's staging file is keyed by a client-chosen token so the pieces of one
+#: upload append to one file and two uploads in flight never cross. Constrained to lowercase
+#: hex, exactly as :func:`resolve` constrains an id, so the token cannot build a path outside
+#: the slot's directory however the client mangles it.
+_CHUNK_TOKEN = re.compile(r"[0-9a-f]{8,64}")
+
+
+def _chunk_staging(kind: str, token: str, suffix: str) -> Path:
+    if not _CHUNK_TOKEN.fullmatch(str(token or "")):
+        raise UploadError("invalid upload token")
+    return directory_for(kind) / f".chunk-{token}{suffix}"
+
+
+def store_chunk(
+    kind: str,
+    body: BinaryIO,
+    chunk_length: int,
+    *,
+    offset: int,
+    total: int,
+    token: str,
+    original_name: str,
+) -> Upload | None:
+    """Append one chunk of a large upload; finalise and return it on the last one.
+
+    A file too big for a single request -- a client behind a proxy that caps request size,
+    as Cloud Run caps an HTTP/1 request at 32 MiB -- arrives in order as several sub-cap
+    requests that share one ``token``. Each is appended to one staging file at the ``offset``
+    it declares. The declared ``total`` is checked against the slot cap on every chunk, so an
+    oversized file is refused as early as a single-shot one is, not after gigabytes have
+    landed. The completed file then goes through the *same* :func:`_finalize` -- the same
+    hash-rename and the same magic-byte check -- as every other upload: the assembled bytes
+    are validated, never trusted for having arrived in pieces.
+
+    Returns the finished :class:`Upload` on the chunk that completes the file, else ``None``.
+    Raises :class:`ChunkOutOfOrder` (before reading the body) if the chunk does not continue
+    the staged file, so the caller can answer 409 and leave the connection usable.
+    """
+    if kind not in KINDS:
+        raise UploadError(f"unknown upload kind {kind!r}; expected one of {', '.join(KINDS)}")
+    suffix = suffix_for(kind, original_name)
+    if total <= 0:
+        raise UploadError("the upload is empty")
+    cap = C.UPLOAD_MAX_BYTES[kind]
+    if total > cap:
+        over = -(-total // (1024 * 1024))
+        raise UploadTooLarge(
+            f"a {kind} upload is capped at {cap // (1024 * 1024)} MB; this one declares "
+            f"{over} MB"
+        )
+    if chunk_length <= 0:
+        raise UploadError("the chunk is empty")
+    if offset < 0 or offset + chunk_length > total:
+        raise UploadError("the chunk runs past the declared total size")
+
+    target_dir = directory_for(kind)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    staging = _chunk_staging(kind, token, suffix)
+    current = staging.stat().st_size if staging.exists() else 0
+    if offset != current:
+        # Out of order, a duplicate, or a gap. The body is still unread, so this is the one
+        # chunk failure the connection survives: name where the staged file actually sits and
+        # let the client resume or restart, rather than silently leaving a hole in the file.
+        raise ChunkOutOfOrder(
+            f"chunk offset {offset} does not continue the staged file at {current}",
+            expected_offset=current,
+        )
+
+    written = 0
+    try:
+        with staging.open("ab") as handle:
+            while written < chunk_length:
+                buf = body.read(min(_CHUNK, chunk_length - written))
+                if not buf:
+                    break
+                written += len(buf)
+                handle.write(buf)
+        if written != chunk_length:
+            raise UploadError(
+                f"the chunk ended early: {written} bytes arrived of {chunk_length} declared"
+            )
+    except UploadError:
+        staging.unlink(missing_ok=True)
+        raise
+    except OSError as exc:
+        staging.unlink(missing_ok=True)
+        raise UploadError(f"the upload could not be written: {exc}") from exc
+
+    size = current + written
+    if size < total:
+        return None  # more chunks to come
+
+    # The last chunk landed. Hash the assembled file in one pass -- it was written across
+    # many requests, so unlike `store` there is no running digest to reuse -- then finalise.
+    digest = hashlib.sha256()
+    try:
+        with staging.open("rb") as handle:
+            for block in iter(lambda: handle.read(_CHUNK), b""):
+                digest.update(block)
+    except OSError as exc:
+        staging.unlink(missing_ok=True)
+        raise UploadError(f"the assembled upload could not be read back: {exc}") from exc
+    return _finalize(kind, staging, suffix, digest.hexdigest(), size, original_name)
 
 
 def _sidecar(kind: str, upload_id: str) -> Path:

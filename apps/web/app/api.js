@@ -271,6 +271,11 @@ export const deleteCase = (caseId) =>
  * and takes the slot and the operator's filename from the query string, so there is no
  * boundary to parse and nothing is buffered in memory on either side.
  *
+ * A file larger than {@link CHUNK_LIMIT} is sliced into ordered sub-cap chunks that share
+ * one token, because some hosts reject a large request at the proxy before the app sees it
+ * (Cloud Run caps an HTTP/1 request at 32 MiB). Small files keep the single-request path
+ * unchanged. Either way this resolves with the same `{upload, uploads, slots, note}`.
+ *
  * @param {"scene"|"mask"|"era5"|"cmems"|"ais"} kind
  * @param {File} file
  * @param {(fraction: number) => void} [onProgress] - 0..1, or called with NaN when the
@@ -288,14 +293,85 @@ export function upload(kind, file, onProgress, signal) {
       ),
     );
   }
-  const url =
+  const base =
     `/api/uploads?kind=${encodeURIComponent(kind)}` +
     `&name=${encodeURIComponent(file?.name || "")}`;
+  const size = file?.size || 0;
 
+  // Small enough for one request: the original single-shot path, behaviour unchanged.
+  if (size <= CHUNK_LIMIT) {
+    return sendPart(base, file, size, (frac) => onProgress?.(frac), signal).then(
+      (payload) => {
+        onProgress?.(1);
+        return payload;
+      },
+    );
+  }
+
+  // Too big for one request on a proxy that caps request size. Slice into ordered chunks
+  // that share a token; the server appends each and finalises on the last, so any size up
+  // to the slot cap goes through. Chunks must arrive in order, so they are sent in series.
+  const token = chunkToken();
+  return (async () => {
+    let sent = 0;
+    let final = null;
+    while (sent < size) {
+      const end = Math.min(sent + CHUNK_LIMIT, size);
+      const blob = file.slice(sent, end);
+      const url = `${base}&token=${token}&offset=${sent}&total=${size}`;
+      const from = sent;
+      const { status, payload } = await sendRaw(
+        url,
+        blob,
+        (loaded, total) =>
+          onProgress?.(total ? (from + loaded) / size : NaN),
+        signal,
+      );
+      const isLast = end >= size;
+      if (isLast && status === 201) {
+        setMode("live");
+        onProgress?.(1);
+        return payload;
+      }
+      if (!isLast && status === 200) {
+        setMode("live");
+        sent = end;
+        final = payload;
+        continue;
+      }
+      // 409 (offset resync), 413 (over the cap), 400 (bad chunk) or a wrong terminal
+      // status. Surface the server's own message -- it names the file and the reason.
+      throw new ApiError(payload?.error || `${status} from ${url}`, {
+        status,
+        payload,
+        url,
+      });
+    }
+    return final;
+  })();
+}
+
+//: Largest slice sent in one request. Kept well under the 32 MiB some proxies (Cloud Run)
+//: reject at, with margin for the query string and headers that ride alongside the body.
+const CHUNK_LIMIT = 24 * 1024 * 1024;
+
+/** A lowercase-hex token the server accepts (`[0-9a-f]{8,64}`), one per chunked upload. */
+function chunkToken() {
+  const uuid = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+  const hex = uuid.replace(/[^0-9a-f]/gi, "").toLowerCase();
+  return (hex + "0000000000000000").slice(0, Math.max(8, hex.length || 8));
+}
+
+/**
+ * One POST of a blob to the uploads endpoint. Resolves `{status, payload}` for any HTTP
+ * response so the caller can decide what each status means; rejects only when the request
+ * never completed -- a network drop (which flips the client to offline) or an abort.
+ */
+function sendRaw(url, blob, onBytes, signal) {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open("POST", url, true);
-    // Octet-stream, deliberately: the body is the file's bytes and nothing else.
+    // Octet-stream, deliberately: the body is the bytes and nothing else.
     request.setRequestHeader("Content-Type", "application/octet-stream");
     request.responseType = "text";
 
@@ -304,7 +380,10 @@ export function upload(kind, file, onProgress, signal) {
     const done = () => signal?.removeEventListener("abort", abort);
 
     request.upload.onprogress = (event) => {
-      onProgress?.(event.lengthComputable ? event.loaded / event.total : NaN);
+      onBytes?.(
+        event.lengthComputable ? event.loaded : NaN,
+        event.lengthComputable ? event.total : NaN,
+      );
     };
     request.onerror = () => {
       done();
@@ -323,24 +402,35 @@ export function upload(kind, file, onProgress, signal) {
       } catch {
         payload = null;
       }
-      if (request.status === 201) {
-        setMode("live");
-        onProgress?.(1);
-        resolve(payload);
-        return;
-      }
-      // The server's own message names the file and the reason -- "the bytes in this
-      // file are not a TIFF", "capped at 512 MB". Replacing it with a status code would
-      // throw away the only part an operator can act on.
-      reject(
-        new ApiError(payload?.error || `${request.status} from ${url}`, {
-          status: request.status,
-          payload,
-          url,
-        }),
-      );
+      resolve({ status: request.status, payload });
     };
-    request.send(file);
+    request.send(blob);
+  });
+}
+
+/**
+ * A whole file in one request, resolving its parsed body on 201 and rejecting otherwise --
+ * the single-shot contract the small-file path has always had.
+ */
+function sendPart(url, blob, total, onFraction, signal) {
+  return sendRaw(
+    url,
+    blob,
+    (loaded) => onFraction?.(total ? loaded / total : NaN),
+    signal,
+  ).then(({ status, payload }) => {
+    if (status === 201) {
+      setMode("live");
+      return payload;
+    }
+    // The server's own message names the file and the reason -- "the bytes in this file
+    // are not a TIFF", "capped at 512 MB". Replacing it with a status code would throw
+    // away the only part an operator can act on.
+    throw new ApiError(payload?.error || `${status} from ${url}`, {
+      status,
+      payload,
+      url,
+    });
   });
 }
 

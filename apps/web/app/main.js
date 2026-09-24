@@ -779,7 +779,11 @@ async function runAnalysis(kind, options = {}) {
     );
     store.emitProgress({ ...job, kind });
     store.set({ job: { ...job, kind }, jobAbort: null });
-    const id = job.result?.caseId || job.caseId || state.caseId;
+    // The finished detect/drift poll carries `scene` (the id the case is stored under) but
+    // not `result` -- that is inlined only for dispatch jobs -- so read the id off `scene`,
+    // and fall back to the id we submitted. `state.caseId` is the case that was open before
+    // the run and must be the last resort, or a run lands on whatever was showing before it.
+    const id = job.result?.caseId || job.scene || scene || state.caseId;
     // `go`, not `setParams`: a run started from the intake screen has to land on the
     // finished case, and `setParams` keeps whatever path it was called from.
     markIntakeSeen();
@@ -815,14 +819,25 @@ async function boot() {
   document.body.append(frame());
   store.subscribe(schedule);
   api.onModeChange(schedule);
+  // The screen+case the last scroll-to-top fired for. A route change that leaves both
+  // unchanged (a region or vessel selection) must not scroll -- see the handler below.
+  let lastScrollKey = null;
   router.onRoute((route) => {
     const wanted = resolveCaseId(route);
     if (wanted !== store.get().caseId) loadCase(wanted);
     else schedule();
-    // Focus the content region on navigation so a keyboard user does not have to tab
-    // back through the whole nav after every jump.
-    refs.main.focus({ preventScroll: true });
-    window.scrollTo({ top: 0 });
+    // Scroll to the top and move focus to the content only on a real navigation -- a
+    // different screen or a different case. Selecting a region or a vessel changes only a
+    // query param on the same screen, and the analyst is reading the detail that is already
+    // on screen: yanking them back to the top would lose their place mid-read.
+    const scrollKey = `${route.path} ${wanted}`;
+    if (scrollKey !== lastScrollKey) {
+      lastScrollKey = scrollKey;
+      // Focus the content region on navigation so a keyboard user does not have to tab
+      // back through the whole nav after every jump.
+      refs.main.focus({ preventScroll: true });
+      window.scrollTo({ top: 0 });
+    }
   });
 
   router.start();

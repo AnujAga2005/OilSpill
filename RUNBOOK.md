@@ -54,7 +54,7 @@ them. The left sidebar on desktop, the tab bar on a phone.
 
 | # | Screen | What to do on it |
 |---|--------|------------------|
-| — | **New analysis** | Where the app opens with the API up. One panel, in the order you work in it: five upload slots (only the SAR scene is required), then four fields — a **required case id** (suggested from the filename), an optional analysis name, the acquisition instant and the band order — then **Run the pipeline**, which processes the scene and lands you on the Command centre. **Load previous saved cases** skips straight to the stored ones — see §6c. |
+| — | **New analysis** | Where the app opens with the API up. One panel, in the order you work in it: five upload slots (only the SAR scene is required), then four fields — a **required case id** (suggested from the filename), an optional analysis name, the acquisition instant and the band order — then **Run the pipeline**, which processes the scene and lands you on the Command centre. A scene larger than 24 MiB is chunked automatically so it clears the platform's 32 MiB request cap (see §4). **Load previous saved cases** skips straight to the stored ones — see §6c. |
 | 1 | **Command centre** | Read the headline slick area, then the four numbered answers below it — *how large*, *when released*, *how old*, *how many vessels*. Each one links to the screen that shows its working. Acquisition, provenance and stage timings are folded away underneath; click a heading to open one. Click **Open investigation** to start the walkthrough. |
 | 2 | **Imagery** | Switch **band** between VV and VH. Switch **overlay** between prediction, reference mask and agreement. Drag the split handle on the before/after viewer. Toggle the layer switches. Click any thumbnail in *All layers*. **Run detection again** re-segments the scene. |
 | 3 | **Slick** | Read the measured extent and the per-region table. Click a row to see that region's detail. Press **Edit boundary** and drag a handle — the analyst ring is stored separately from the model ring and measured with the same spherical formula. Export **GeoJSON** or **CSV**. |
@@ -165,7 +165,7 @@ Full route list:
 | POST | `/api/cases/<id>/label` | name a stored case — what the case picker shows instead of the id |
 | POST | `/api/cases/<id>/delete` | **delete a stored case**: its JSON document, its cached `.mask.npz` detection mask and the preview PNGs it rendered. The scene it was built from is not touched, and only files inside the preview directory are unlinked — a manifest entry pointing outside it is ignored rather than followed |
 | GET | `/api/uploads` | what the operator has staged, and which slots are filled |
-| POST | `/api/uploads?kind=&name=` | **store one file.** The body is the file itself, not JSON — `kind` is one of `scene`, `mask`, `era5`, `cmems`, `ais` |
+| POST | `/api/uploads?kind=&name=` | **store one file.** The body is the file itself, not JSON — `kind` is one of `scene`, `mask`, `era5`, `cmems`, `ais`. A file larger than one request can carry on the host (see below) is sent as ordered chunks with `&token=&offset=&total=` and reassembled server-side through the same checks |
 | POST | `/api/uploads/clear` | delete every stored upload |
 
 The upload route is the one that does not take a JSON body, so `curl --data-binary` is the way in:
@@ -177,6 +177,15 @@ curl -s -X POST "http://localhost:8765/api/uploads?kind=scene&name=my_scene.tif"
 It refuses before reading where it can: an oversized `Content-Length` earns a **413** and a wrong
 extension a **400**, both decided from the headers rather than after a 43 MB transfer. A file that
 passes those and then fails its magic-byte check is a 400 too, but that one costs you the upload.
+
+**Chunked upload (why a 42 MB scene still goes through in the browser).** Cloud Run's front-end
+proxy rejects any HTTP/1 request over **32 MiB** before it reaches the container — a scene sent whole
+would come back **413** from the platform, not the app. The frontend slices a file over 24 MiB into
+chunks and posts each as its own request carrying a shared `token`, an `offset` and the `total`; the
+server appends each to one staging file and, on the last chunk, runs the *identical* finalise path as
+a single-shot upload — content-hash id, magic-byte verify, sidecar. An out-of-order chunk is answered
+**409** with the `expectedOffset` and the connection is left usable. `curl` above still sends small
+files whole; the chunking is the browser's job.
 
 Run the API without the dashboard:
 
